@@ -11,7 +11,7 @@ class AppViewModelThemeTest {
     fun `each stored preference maps to the same-named choice`() {
         assertEquals(ThemeChoice.SYSTEM, ThemePreference.SYSTEM.toChoice())
         assertEquals(ThemeChoice.NIGHT_GLASS, ThemePreference.NIGHT_GLASS.toChoice())
-        assertEquals(ThemeChoice.WARM_MINIMAL, ThemePreference.WARM_MINIMAL.toChoice())
+        assertEquals(ThemeChoice.IVOIRE, ThemePreference.IVOIRE.toChoice())
     }
 
     @Test

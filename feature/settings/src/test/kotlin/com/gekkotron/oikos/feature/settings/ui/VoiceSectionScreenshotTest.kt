@@ -19,7 +19,7 @@ class VoiceSectionScreenshotTest {
     val compose = createComposeRule()
 
     private fun show(tts: TtsAvailability) = compose.setContent {
-        OikosTheme(ThemeChoice.WARM_MINIMAL) { VoiceSection(VoiceSettingsUi(ttsAvailability = tts), onToggle = {}) }
+        OikosTheme(ThemeChoice.IVOIRE) { VoiceSection(VoiceSettingsUi(ttsAvailability = tts), onToggle = {}) }
     }
 
     @Test

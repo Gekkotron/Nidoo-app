@@ -5,7 +5,7 @@
     <string name="settings_theme">Thème</string>
     <string name="settings_theme_system">Suivre le système</string>
     <string name="settings_theme_night">Night Glass</string>
-    <string name="settings_theme_warm">Warm Minimal</string>
+    <string name="settings_theme_ivoire">Ivoire</string>
     <string name="settings_rooms">Pièces</string>
     <string name="settings_rooms_summary">Ordre des pièces, attribution des appareils</string>
     <string name="settings_connection">Connexion</string>
@@ -24,7 +24,7 @@
     <string name="settings_cancel">Annuler</string>
     <string name="settings_about">À propos</string>
     <string name="settings_version">Oikos %1$s</string>
-    <string name="settings_notice">Copyright 2026 Gekkotron. Oikos inclut les polices Inter et Fraunces, sous licence SIL Open Font License 1.1.</string>
+    <string name="settings_notice">Copyright 2026 Gekkotron. Oikos inclut les polices Inter et Manrope, sous licence SIL Open Font License 1.1.</string>
     <string name="settings_licences">Licences open source</string>
     <string name="rooms_order_hint">Faites glisser pour changer l\'ordre des pièces sur l\'accueil.</string>
     <string name="rooms_unassigned">Non assigné</string>

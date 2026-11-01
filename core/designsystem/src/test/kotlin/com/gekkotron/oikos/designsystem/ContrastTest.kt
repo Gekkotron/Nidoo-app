@@ -33,7 +33,7 @@ class ContrastTest {
     fun `night glass text pairs reach 4_5 to 1`() = assertAll(NightGlassColors)
 
     @Test
-    fun `warm minimal text pairs reach 4_5 to 1`() = assertAll(WarmMinimalColors)
+    fun `ivoire text pairs reach 4_5 to 1`() = assertAll(IvoireColors)
 
     private fun assertAll(colors: OikosColors) {
         for ((name, pair) in pairs(colors)) {

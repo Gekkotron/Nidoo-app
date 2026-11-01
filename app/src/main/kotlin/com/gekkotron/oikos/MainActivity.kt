@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
             val theme by app.theme.collectAsStateWithLifecycle()
             val dark = when (theme) {
                 ThemeChoice.NIGHT_GLASS -> true
-                ThemeChoice.WARM_MINIMAL -> false
+                ThemeChoice.IVOIRE -> false
                 ThemeChoice.SYSTEM, null -> isSystemInDarkTheme()
             }
             // The bar icons follow the chosen theme, not the system one (the default style would).

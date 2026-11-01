@@ -20,7 +20,7 @@ Oikos talks **MQTT** directly. It connects to your local broker at home and goes
 | `:core:state` | Jinja-subset templates, one mapper per kind, `StateStore`, optimistic `CommandTracker` |
 | `:core:source` | HA MQTT Discovery parser and `MqttDiscoverySource` |
 | `:core:demo` | In-process demo broker with a fake house (discovery, state, echoed commands, live power) |
-| `:core:designsystem` | Night Glass / Warm Minimal tokens, bundled Inter + Fraunces, cards, pill, chips |
+| `:core:designsystem` | Night Glass / Ivoire tokens, bundled Inter + Manrope, cards, pill, chips |
 | `:feature:home` | Home screen: rooms, cards, control sheet |
 | `:app` | Hilt graph, Navigation 3, demo-mode wiring |
 
@@ -43,7 +43,7 @@ Build and test: `./gradlew check koverXmlReport`.
 - Automatic switching between direct Wi-Fi and the encrypted gateway.
 - Device discovery via `homeassistant/…/config`, plus `oikos/ui/…` overrides (rename, rooms, order, card style).
 - Home, Energy (live power flow) and Security screens.
-- Night Glass (dark) and Warm Minimal (light) themes.
+- Night Glass (dark) and Ivoire (light) themes.
 - Push notifications, with the device token registered over MQTT.
 - History: sensor and energy charts (24 h, 7 d, 30 d, kWh per day) read from the OikosHistory service. It is found automatically at `http://<broker host>:8090` (OikosHistory runs next to Mosquitto); Settings → History service (or `history.url` in the setup QR, `tools/setup-qr.py --history-url`) only overrides that. Away from home, add `<broker host>:8090` to the gateway key's rules once.
 

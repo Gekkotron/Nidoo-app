@@ -1,0 +1,10 @@
+{
+  "uniqueId": "googlefonts:manrope",
+  "artifactVersion": "variable",
+  "name": "Manrope",
+  "description": "Manrope typeface, bundled by Oikos.",
+  "website": "https://github.com/googlefonts/manrope",
+  "licenses": [
+    "OFL-1.1"
+  ]
+}

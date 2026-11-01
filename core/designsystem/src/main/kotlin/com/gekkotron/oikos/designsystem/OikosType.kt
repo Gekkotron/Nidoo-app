@@ -18,7 +18,7 @@ private fun variable(res: Int, weight: Int) =
 val Inter = FontFamily(
     variable(R.font.inter, 400), variable(R.font.inter, 500), variable(R.font.inter, 600), variable(R.font.inter, 700),
 )
-val Fraunces = FontFamily(variable(R.font.fraunces, 400), variable(R.font.fraunces, 500))
+val Manrope = FontFamily(variable(R.font.manrope, 600), variable(R.font.manrope, 700))
 
 @Immutable
 data class OikosType(
@@ -29,12 +29,12 @@ data class OikosType(
     val body: TextStyle,
 )
 
-/** Night Glass titles are bold Inter; Warm Minimal titles use the Fraunces serif (spec §5.1). */
+/** Night Glass titles are bold Inter; Ivoire titles use Manrope bold. */
 fun oikosType(dark: Boolean) = OikosType(
     display = if (dark) {
         TextStyle(fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 26.sp, letterSpacing = (-0.02).em)
     } else {
-        TextStyle(fontFamily = Fraunces, fontWeight = FontWeight.Medium, fontSize = 28.sp)
+        TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 28.sp, letterSpacing = (-0.03).em)
     },
     cardName = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
     cardValue = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp),

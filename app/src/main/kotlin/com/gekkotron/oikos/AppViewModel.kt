@@ -27,7 +27,7 @@ import javax.inject.Inject
 internal fun ThemePreference.toChoice(): ThemeChoice = when (this) {
     ThemePreference.SYSTEM -> ThemeChoice.SYSTEM
     ThemePreference.NIGHT_GLASS -> ThemeChoice.NIGHT_GLASS
-    ThemePreference.WARM_MINIMAL -> ThemeChoice.WARM_MINIMAL
+    ThemePreference.IVOIRE -> ThemeChoice.IVOIRE
 }
 
 @HiltViewModel

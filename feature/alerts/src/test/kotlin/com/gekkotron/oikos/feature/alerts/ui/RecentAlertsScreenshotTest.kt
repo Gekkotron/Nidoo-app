@@ -45,8 +45,8 @@ class RecentAlertsScreenshotTest {
     }
 
     @Test
-    fun `rows with the banner in Warm Minimal`() {
-        val bitmap = render(ThemeChoice.WARM_MINIMAL, "recent-banner-warm", DemoAlerts.all(now).take(3), off = true)
+    fun `rows with the banner in Ivoire`() {
+        val bitmap = render(ThemeChoice.IVOIRE, "recent-banner-warm", DemoAlerts.all(now).take(3), off = true)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) > 0.6f)
     }

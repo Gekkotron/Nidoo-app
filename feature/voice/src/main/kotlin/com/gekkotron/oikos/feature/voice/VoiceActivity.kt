@@ -48,7 +48,7 @@ class VoiceActivity : ComponentActivity() {
             setContent {
                 val dark = when (theme) {
                     ThemeChoice.NIGHT_GLASS -> true
-                    ThemeChoice.WARM_MINIMAL -> false
+                    ThemeChoice.IVOIRE -> false
                     ThemeChoice.SYSTEM -> isSystemInDarkTheme()
                 }
                 // Transparent bars: the translucent window otherwise draws them black over the app behind.
@@ -98,5 +98,5 @@ class VoiceActivity : ComponentActivity() {
 private fun ThemePreference.toChoice(): ThemeChoice = when (this) {
     ThemePreference.SYSTEM -> ThemeChoice.SYSTEM
     ThemePreference.NIGHT_GLASS -> ThemeChoice.NIGHT_GLASS
-    ThemePreference.WARM_MINIMAL -> ThemeChoice.WARM_MINIMAL
+    ThemePreference.IVOIRE -> ThemeChoice.IVOIRE
 }

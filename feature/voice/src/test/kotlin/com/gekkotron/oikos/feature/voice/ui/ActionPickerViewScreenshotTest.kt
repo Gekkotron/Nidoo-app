@@ -30,7 +30,7 @@ class ActionPickerViewScreenshotTest {
 
     @Test fun actionPicker_light_light() {
         var picked: Pair<VoiceAction, Boolean>? = null
-        show(ThemeChoice.WARM_MINIMAL, pickerEntity("l1", "Plafonnier", Kind.LIGHT, "salon")) { a, r -> picked = a to r }
+        show(ThemeChoice.IVOIRE, pickerEntity("l1", "Plafonnier", Kind.LIGHT, "salon")) { a, r -> picked = a to r }
         rule.onNodeWithText("Plafonnier").assertExists()
         rule.onNodeWithText("Salon").assertExists()
         rule.onNodeWithText("Lire l'état").assertExists()
@@ -44,7 +44,7 @@ class ActionPickerViewScreenshotTest {
     }
 
     @Test fun actionPicker_sensor_light() {
-        show(ThemeChoice.WARM_MINIMAL, pickerEntity("s1", "Température", Kind.SENSOR, "salon"))
+        show(ThemeChoice.IVOIRE, pickerEntity("s1", "Température", Kind.SENSOR, "salon"))
         rule.onNodeWithText("Lire la valeur").assertExists()
         rule.onNodeWithText("Lire l'état").assertDoesNotExist()
         rule.onNodeWithText("Allumer").assertDoesNotExist()
@@ -59,7 +59,7 @@ class ActionPickerViewScreenshotTest {
     @Test fun actionPicker_alarm_light() {
         val alarm: VoiceEntity = pickerEntity("a1", "Alarme", Kind.ALARM_PANEL, "salon")
             .copy(alarmModes = setOf(AlarmMode.HOME, AlarmMode.AWAY))
-        show(ThemeChoice.WARM_MINIMAL, alarm)
+        show(ThemeChoice.IVOIRE, alarm)
         listOf("Lire l'état", "Armer (présent)", "Armer (absent)", "Désarmer").forEach { rule.onNodeWithText(it).assertExists() }
     }
 }

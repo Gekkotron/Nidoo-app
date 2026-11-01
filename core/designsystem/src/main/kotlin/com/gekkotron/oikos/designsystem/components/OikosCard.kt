@@ -46,7 +46,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 private val LONG_PRESS_KEYS = setOf(Key.Enter, Key.DirectionCenter, Key.NumPadEnter)
 
 /**
- * The base card: glass (Night Glass) or paper (Warm Minimal); `on` switches to the amber gradient or
+ * The base card: glass (Night Glass) or paper (Ivoire); `on` switches to the amber gradient or
  * the inverted card. Height is a minimum only, so text can grow at 200 % font scale (spec §5.3).
  */
 @Composable

@@ -42,7 +42,7 @@ class IconsSmokeTest {
     @Test
     fun `every static glyph draws, with and without an accent`() {
         compose.setContent {
-            OikosTheme(ThemeChoice.WARM_MINIMAL) {
+            OikosTheme(ThemeChoice.IVOIRE) {
                 Row {
                     OikosGlyph.entries.forEach { glyph ->
                         StaticIcon(glyph)

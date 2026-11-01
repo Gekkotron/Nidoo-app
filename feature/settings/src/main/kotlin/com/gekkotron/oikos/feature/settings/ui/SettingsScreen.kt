@@ -163,7 +163,7 @@ fun SettingsScreen(
                 Column(Modifier.selectableGroup()) {
                     OikosRadioRow(stringResource(R.string.settings_theme_system), state.theme == ThemePreference.SYSTEM, { onTheme(ThemePreference.SYSTEM) })
                     OikosRadioRow(stringResource(R.string.settings_theme_night), state.theme == ThemePreference.NIGHT_GLASS, { onTheme(ThemePreference.NIGHT_GLASS) })
-                    OikosRadioRow(stringResource(R.string.settings_theme_warm), state.theme == ThemePreference.WARM_MINIMAL, { onTheme(ThemePreference.WARM_MINIMAL) })
+                    OikosRadioRow(stringResource(R.string.settings_theme_ivoire), state.theme == ThemePreference.IVOIRE, { onTheme(ThemePreference.IVOIRE) })
                 }
             }
             NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)

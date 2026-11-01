@@ -72,9 +72,9 @@ class HistoryScreenshotTest {
     }
 
     @Test
-    fun `a line in Warm Minimal`() {
+    fun `a line in Ivoire`() {
         val state = HistoryUi(title = "Boiler", room = "Garage", live = 420.0, unit = "W", range = HistoryRange.D7, content = line())
-        val bitmap = render(ThemeChoice.WARM_MINIMAL, "history-line-warm", state)
+        val bitmap = render(ThemeChoice.IVOIRE, "history-line-warm", state)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) > 0.6f)
     }
@@ -88,9 +88,9 @@ class HistoryScreenshotTest {
     }
 
     @Test
-    fun `not recorded in Warm Minimal`() {
+    fun `not recorded in Ivoire`() {
         val state = HistoryUi(title = "Lamp", content = ChartContent.NotRecorded)
-        val bitmap = render(ThemeChoice.WARM_MINIMAL, "history-not-recorded-warm", state)
+        val bitmap = render(ThemeChoice.IVOIRE, "history-not-recorded-warm", state)
         assertTrue(bitmap.distinctColors() > 4)
         assertTrue(bitmap.luminanceAt(4, 4) > 0.6f)
     }

@@ -24,7 +24,7 @@ class ThemeTest {
     fun `night glass is dark`() = assertEquals(NightGlassColors, colorsFor(ThemeChoice.NIGHT_GLASS))
 
     @Test
-    fun `warm minimal is light`() = assertEquals(WarmMinimalColors, colorsFor(ThemeChoice.WARM_MINIMAL))
+    fun `ivoire is light`() = assertEquals(IvoireColors, colorsFor(ThemeChoice.IVOIRE))
 
     @Test
     @Config(qualifiers = "night")
@@ -32,5 +32,5 @@ class ThemeTest {
 
     @Test
     @Config(qualifiers = "notnight")
-    fun `system follows a light system`() = assertEquals(WarmMinimalColors, colorsFor(ThemeChoice.SYSTEM))
+    fun `system follows a light system`() = assertEquals(IvoireColors, colorsFor(ThemeChoice.SYSTEM))
 }

@@ -51,8 +51,8 @@ class AlertDetailScreenshotTest {
     }
 
     @Test
-    fun `resolved alert in Warm Minimal`() {
-        val bitmap = render(ThemeChoice.WARM_MINIMAL, "alert-detail-warm", DetailState.Found(DemoAlerts.all(now)[2], null))
+    fun `resolved alert in Ivoire`() {
+        val bitmap = render(ThemeChoice.IVOIRE, "alert-detail-warm", DetailState.Found(DemoAlerts.all(now)[2], null))
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) > 0.6f)
     }
@@ -65,9 +65,9 @@ class AlertDetailScreenshotTest {
     }
 
     @Test
-    fun `chips and the media surface have a visible edge in Warm Minimal`() {
+    fun `chips and the media surface have a visible edge in Ivoire`() {
         val alert = DemoAlerts.all(now)[2].copy(videoUrl = "http://192.168.1.20:5000/clip.mp4")
-        val bitmap = render(ThemeChoice.WARM_MINIMAL, "alert-detail-warm-chips", DetailState.Found(alert, null), VideoState.Failed(com.gekkotron.oikos.alerts.media.MediaFailure.Gone))
+        val bitmap = render(ThemeChoice.IVOIRE, "alert-detail-warm-chips", DetailState.Found(alert, null), VideoState.Failed(com.gekkotron.oikos.alerts.media.MediaFailure.Gone))
         val page = bitmap.getPixel(4, 600)
         // The text node sits inside the chip's 12 dp side padding, so the chip's left edge is ~36 px left of the text at xxhdpi.
         // The 1 dp border band must be the chipBorder colour (#D9D0C2), not the page colour or text anti-aliasing.

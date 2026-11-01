@@ -36,6 +36,6 @@ private fun Sheet(choice: ThemeChoice) = OikosTheme(choice) {
 @Composable
 private fun IconsNightGlass() = Sheet(ThemeChoice.NIGHT_GLASS)
 
-@Preview(name = "Icons — Warm Minimal")
+@Preview(name = "Icons — Ivoire")
 @Composable
-private fun IconsWarmMinimal() = Sheet(ThemeChoice.WARM_MINIMAL)
+private fun IconsIvoire() = Sheet(ThemeChoice.IVOIRE)
