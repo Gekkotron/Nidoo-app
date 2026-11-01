@@ -24,9 +24,10 @@ interface WidgetScheduler {
     fun send(id: String, command: WidgetCommand, code: String?)
 }
 
+/** [workManager] stays last so callers can pass it as a trailing lambda. */
 class WorkManagerWidgetScheduler(
-    private val workManager: () -> WorkManager,
     private val now: () -> Long = System::currentTimeMillis,
+    private val workManager: () -> WorkManager,
 ) : WidgetScheduler {
     private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
