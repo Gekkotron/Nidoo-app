@@ -77,7 +77,10 @@ class MqttDiscoverySourceDashboardsTest {
         val entities = h.source.entities.value
         assertEquals(setOf("light_a"), entities.filterValues { it.ui.favorite }.keys)
         assertFalse(entities.keys.any { "dashboards" in it })
-        assertFalse(h.source.journal().any { "dashboards" in it.toString() && "override" in it.toString().lowercase() })
+        val keys = h.source.journal().keys
+        for (t in listOf("dashboards/evening", "ambiances/soir", "_home", "_types")) assertFalse("oikos/ui/$t" in keys, "oikos/ui/$t leaked into overrides")
+        assertTrue("oikos/ui/light_a" in keys)
+        assertEquals(3, h.diagnostics.size)
     }
 
     @Test
@@ -88,6 +91,8 @@ class MqttDiscoverySourceDashboardsTest {
         runCurrent()
         assertTrue(sink.retained.isEmpty())
         assertTrue(h.source.entities.value.isEmpty())
+        assertFalse("oikos/ui/dashboards/a/b" in h.source.journal().keys)
+        assertEquals(listOf("oikos/ui/dashboards/a/b: not an override, ignored"), h.diagnostics.map { it.message })
     }
 
     @Test
