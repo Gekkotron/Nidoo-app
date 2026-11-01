@@ -77,7 +77,7 @@ class PushStatusTest {
         val publisher = RecordingPublisher()
         val registrar = PushRegistrar(FakeTargets(), FakeFcmTokens(), publisher, store, queue, { PushRegistrar.DeviceInfo("p", "en") }, { at })
         var enabled = true
-        val source = DefaultPushStatusSource(FakeTargets(), store, queue, registrar, { enabled }, backgroundScope)
+        val source = DefaultPushStatusSource(FakeTargets(), store, queue, registrar, { enabled }, kotlinx.coroutines.CoroutineScope(backgroundScope.coroutineContext + Dispatchers.Default))
 
         registrar.register()
         assertEquals(PushStatus.Registered(at), awaitStatus(source) { it is PushStatus.Registered })
