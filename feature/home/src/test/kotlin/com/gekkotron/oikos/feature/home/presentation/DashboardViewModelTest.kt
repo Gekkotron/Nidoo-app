@@ -23,7 +23,9 @@ import kotlinx.coroutines.CompletableDeferred
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.Dispatchers
@@ -95,8 +97,14 @@ class DashboardViewModelTest {
     @After
     fun tearDown() {
         // Stop the ViewModel and DataStore before Main goes away, or a late DataStore write dispatches into a dead Main.
-        rigs.forEach { it.vm.viewModelScope.cancel() }
-        prefsScope.cancel()
+        // cancel() only requests it: a coroutine still cancelling can be resumed from DataStore's thread after
+        // resetMain, so wait for every job to finish while Main is still set.
+        runBlocking {
+            withTimeout(10_000) {
+                rigs.forEach { it.vm.viewModelScope.coroutineContext.job.cancelAndJoin() }
+                prefsScope.coroutineContext.job.cancelAndJoin()
+            }
+        }
         Dispatchers.resetMain()
     }
 
