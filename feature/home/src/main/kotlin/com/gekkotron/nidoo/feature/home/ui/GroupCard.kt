@@ -1,0 +1,137 @@
+package com.gekkotron.nidoo.feature.home.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.gekkotron.nidoo.designsystem.NidooDimens
+import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.components.NidooCard
+import com.gekkotron.nidoo.designsystem.components.PendingDot
+import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
+import com.gekkotron.nidoo.designsystem.icons.StaticIcon
+import com.gekkotron.nidoo.feature.home.R
+import com.gekkotron.nidoo.feature.home.presentation.CardUi
+import com.gekkotron.nidoo.feature.home.presentation.CardValue
+import com.gekkotron.nidoo.feature.home.presentation.GroupCommands
+import com.gekkotron.nidoo.model.Command
+import com.gekkotron.nidoo.model.Kind
+
+/** Room groups spec §3: one wide card for a room's shutters or lights. */
+@Composable
+internal fun GroupCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, onSendGroup: (String, Command) -> Unit, modifier: Modifier = Modifier) {
+    val name = groupName(card)
+    val valueText = if (card.available) cardValueText(card.value) else stringResource(R.string.value_unavailable)
+    val room = card.areaName ?: stringResource(R.string.area_unassigned)
+    val description = stringResource(R.string.card_description, name, valueText, room)
+    val onText = stringResource(R.string.value_on)
+    val offText = stringResource(R.string.value_off)
+    val staleText = stringResource(R.string.card_stale)
+    NidooCard(
+        modifier = modifier
+            .testTag("card-${card.id}")
+            .alpha(if (card.stale) 0.6f else 1f)
+            .semantics {
+                contentDescription = description
+                if (card.kind == Kind.LIGHT) stateDescription = if (card.on) onText else offText
+                if (card.stale) stateDescription = staleText
+            },
+        on = card.on,
+        accent = false,
+        enabled = card.available,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = stringResource(if (card.kind == Kind.COVER) R.string.action_customize else R.string.action_controls),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            KindIcon(iconSpec(card))
+            Spacer(Modifier.weight(1f))
+            if (card.pending) PendingDot()
+            Text(
+                stringResource(R.string.group_badge, card.members.size),
+                style = NidooTheme.type.label,
+                color = NidooTheme.colors.warning,
+                modifier = Modifier.padding(start = 8.dp)
+                    .background(NidooTheme.colors.warningContainer, RoundedCornerShape(50))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(name, style = NidooTheme.type.cardName, color = LocalContentColor.current.copy(alpha = 0.72f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(valueText, style = NidooTheme.type.cardValue)
+            }
+            when (card.kind) {
+                Kind.COVER -> CoverButtons(card, onSendGroup)
+                Kind.LIGHT -> LightToggleButton(card, onSendGroup)
+                else -> Unit
+            }
+        }
+        (card.value as? CardValue.CoverGroup)?.let { MiniBars(it.positions) }
+    }
+}
+
+@Composable
+private fun CoverButtons(card: CardUi, onSendGroup: (String, Command) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        GroupButton("▲", stringResource(R.string.action_group_open), "group-open-${card.id}", card.available) { onSendGroup(card.id, Command.Open) }
+        GroupButton("■", stringResource(R.string.action_group_stop), "group-stop-${card.id}", card.available) { onSendGroup(card.id, Command.Stop) }
+        GroupButton("▼", stringResource(R.string.action_group_close), "group-close-${card.id}", card.available) { onSendGroup(card.id, Command.Close) }
+    }
+}
+
+@Composable
+private fun LightToggleButton(card: CardUi, onSendGroup: (String, Command) -> Unit) {
+    val label = stringResource(if (card.on) R.string.action_group_lights_off else R.string.action_group_lights_on)
+    val accent = if (card.on) NidooTheme.colors.warning else null
+    FilledTonalIconButton(
+        onClick = { onSendGroup(card.id, GroupCommands.toggle(card)) },
+        enabled = card.available,
+        modifier = Modifier.size(NidooDimens.minTouch).testTag("group-toggle-${card.id}").semantics { contentDescription = label },
+    ) { StaticIcon(NidooGlyph.BULB, accent) }
+}
+
+@Composable
+private fun GroupButton(glyph: String, label: String, tag: String, enabled: Boolean, onClick: () -> Unit) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(NidooDimens.minTouch).testTag(tag).semantics { contentDescription = label },
+    ) { Text(glyph) }
+}
+
+/** One bar per member, filled left to right to its position. Decorative: the summary text carries the meaning. */
+@Composable
+private fun MiniBars(positions: List<Int>) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(14.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (p in positions) {
+            Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(NidooTheme.colors.cardBorder)) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(p / 100f).background(NidooTheme.colors.warning.copy(alpha = 0.85f)))
+            }
+        }
+    }
+}

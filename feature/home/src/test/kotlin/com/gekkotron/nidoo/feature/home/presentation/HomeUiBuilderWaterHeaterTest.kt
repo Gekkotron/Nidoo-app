@@ -1,0 +1,100 @@
+package com.gekkotron.nidoo.feature.home.presentation
+
+import com.gekkotron.nidoo.feature.home.testEntity
+import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.Capabilities
+import com.gekkotron.nidoo.model.EntityState
+import com.gekkotron.nidoo.model.Kind
+import com.gekkotron.nidoo.model.StateValue
+import com.gekkotron.nidoo.transport.LinkState
+import com.gekkotron.nidoo.transport.TransportMode
+import java.util.Locale
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class HomeUiBuilderWaterHeaterTest {
+    private fun build(
+        mode: String?,
+        modes: List<String> = listOf("off", "eco", "performance"),
+        companions: List<Pair<String, String>> = listOf("force_power" to "wh_device"),
+    ): CardUi {
+        val wh = testEntity(
+            "wh", Kind.WATER_HEATER, "Water heater", area = "garage", deviceId = "wh_device",
+            capabilities = Capabilities(hvacModes = modes, minTemp = 40.0, maxTemp = 65.0, tempStep = 1.0),
+        )
+        val numbers = companions.map { (id, device) ->
+            testEntity(id, Kind.NUMBER, "Force power", area = "garage", deviceId = device,
+                capabilities = Capabilities(min = 0.0, max = 100.0, step = 10.0))
+        }
+        val entities = (listOf(wh) + numbers).associateBy { it.uniqueId }
+        val states = mapOf("wh" to EntityState("wh", StateValue.Climate(mode, 60.0, 52.0)))
+        val ui = HomeUiBuilder.build(
+            entities, states, listOf(Area("garage", "Garage")), RoomFilter.All,
+            LinkState.Connected(TransportMode.DEMO), Locale.US,
+        )
+        return ui.card("wh") ?: error("water heater card missing")
+    }
+
+    @Test
+    fun `tap opens the sheet`() {
+        assertEquals(TapAction.OPEN_SHEET, build("eco").tap)
+        assertTrue(build("eco").hasSheet)
+    }
+
+    @Test
+    fun `on follows heating`() {
+        assertTrue(build("performance").on)
+        assertTrue(build("eco").on)
+        assertEquals(false, build("off").on)
+        assertEquals(false, build(null).on)
+    }
+
+    @Test
+    fun `card carries the heater view`() {
+        assertEquals(HeaterChip.Mode("eco"), build("eco").heater?.chip)
+    }
+
+    @Test
+    fun `force toggle only when both performance and eco`() {
+        assertEquals(false, build("eco").forceToggle)
+        assertEquals(true, build("performance").forceToggle)
+        assertNull(build("eco", modes = listOf("off", "electric", "gas")).forceToggle)
+        assertNull(build("eco", modes = listOf("eco")).forceToggle)
+        assertNull(build("heat", modes = emptyList()).forceToggle)
+    }
+
+    @Test
+    fun `water heater sheet shows same-device numbers as companions`() {
+        val card = build("eco")
+        assertEquals(listOf("force_power"), card.companions.map { it.id })
+    }
+
+    @Test
+    fun `water heater sheet without companions`() {
+        val card = build("eco", companions = emptyList())
+        assertEquals(emptyList(), card.companions)
+    }
+
+    @Test
+    fun `companions filter out numbers from other devices`() {
+        val card = build("eco", companions = listOf("force_power" to "wh_device", "other" to "another_device"))
+        assertEquals(listOf("force_power"), card.companions.map { it.id })
+    }
+
+    @Test
+    fun `a heater named after its device is titled once and its power numbers by their own name`() {
+        // As DiscoveryParser names the WaterHeaterController: heater `name: null`, numbers "Power N".
+        val wh = testEntity("wh", Kind.WATER_HEATER, "Water heater", deviceId = "dev").copy(deviceName = "Water heater")
+        val power = testEntity("p0", Kind.NUMBER, "Water heater Power 1", deviceId = "dev", capabilities = Capabilities(min = 0.0, max = 100.0))
+            .copy(deviceName = "Water heater", label = "Power 1")
+        val ui = HomeUiBuilder.build(
+            mapOf("wh" to wh, "p0" to power), emptyMap(), emptyList(), RoomFilter.All,
+            LinkState.Connected(TransportMode.DEMO), Locale.US,
+        )
+        val card = ui.card("wh")!!
+        assertEquals("Water heater", card.name)
+        assertEquals(listOf("Power 1"), card.companions.map { it.name })
+    }
+}

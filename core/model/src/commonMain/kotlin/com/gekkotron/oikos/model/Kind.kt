@@ -1,3 +1,0 @@
-package com.gekkotron.oikos.model
-
-enum class Kind { LIGHT, SWITCH, COVER, CLIMATE, SENSOR, BINARY_SENSOR, ALARM_PANEL, NUMBER, SELECT, BUTTON, VACUUM, WATER_HEATER }

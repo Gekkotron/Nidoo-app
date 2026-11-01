@@ -1,6 +1,6 @@
 <resources>
     <string name="common_back">Back</string>
-    <string name="welcome_title">Welcome to Oikos</string>
+    <string name="welcome_title">Welcome to Nidoo</string>
     <string name="welcome_tagline">Your home, live. Connect to your MQTT broker to get started.</string>
     <string name="welcome_scan">Scan setup code</string>
     <string name="welcome_manual">Enter manually</string>
@@ -8,10 +8,10 @@
     <string name="welcome_locked">Your saved connection couldn\'t be unlocked — scan again.</string>
     <string name="scan_title">Scan the setup code</string>
     <string name="scan_waiting">Waiting for camera permission…</string>
-    <string name="scan_denied">Oikos needs the camera to read the setup code. Allow it in Settings, or enter the settings manually.</string>
+    <string name="scan_denied">Nidoo needs the camera to read the setup code. Allow it in Settings, or enter the settings manually.</string>
     <string name="scan_open_settings">Open settings</string>
-    <string name="scan_error_not_oikos">This QR code isn\'t an Oikos setup code.</string>
-    <string name="scan_error_version">This setup code needs a newer version of Oikos (format %1$d).</string>
+    <string name="scan_error_not_nidoo">This QR code isn\'t a Nidoo setup code.</string>
+    <string name="scan_error_version">This setup code needs a newer version of Nidoo (format %1$d).</string>
     <string name="scan_error_field">This setup code has an invalid value: %1$s.</string>
     <string name="manual_title">Broker settings</string>
     <string name="manual_host">Host</string>
@@ -51,7 +51,7 @@
     <string name="connect_continue">Continue</string>
     <string name="save_failed">Couldn\'t save the connection on this phone. Try again.</string>
     <string name="notifications_title">Stay informed</string>
-    <string name="notifications_body">Oikos can alert you about the alarm, doors, cameras, energy and more, with a picture and quick actions such as Disarm. You can change this any time in Settings.</string>
+    <string name="notifications_body">Nidoo can alert you about the alarm, doors, cameras, energy and more, with a picture and quick actions such as Disarm. You can change this any time in Settings.</string>
     <string name="notifications_turn_on">Turn on notifications</string>
     <string name="notifications_continue">Continue</string>
     <string name="notifications_not_now">Not now</string>

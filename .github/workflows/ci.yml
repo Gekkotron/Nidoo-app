@@ -20,7 +20,7 @@ jobs:
       matrix:
         group:
           - name: core
-            # KMP (oikos.kmp.jvm.library) modules use :jvmTest; Android library modules use :test.
+            # KMP (nidoo.kmp.jvm.library) modules use :jvmTest; Android library modules use :test.
             # Per-module koverXmlReport (not the root one) keeps the job scoped to :core:*;
             # the root koverXmlReport aggregates ALL subprojects and dragged :app and :feature:*
             # test tasks into this job, causing cross-module flakes.
@@ -120,6 +120,6 @@ jobs:
         if: matrix.group.name == 'app' && success()
         uses: actions/upload-artifact@v4
         with:
-          name: oikos-debug-apk
+          name: nidoo-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: ignore

@@ -1,12 +1,12 @@
 plugins {
-    id("oikos.android.library")
-    id("oikos.android.compose")
-    id("oikos.hilt")
-    id("oikos.serialization")
+    id("nidoo.android.library")
+    id("nidoo.android.compose")
+    id("nidoo.hilt")
+    id("nidoo.serialization")
 }
 
 android {
-    namespace = "com.gekkotron.oikos.feature.settings"
+    namespace = "com.gekkotron.nidoo.feature.settings"
 }
 
 dependencies {

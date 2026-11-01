@@ -14,9 +14,9 @@
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
-        <!-- FCM data messages from OikosPush (push alerts spec §5.2). Only Google Play services binds to it. -->
+        <!-- FCM data messages from NidooPush (push alerts spec §5.2). Only Google Play services binds to it. -->
         <service
-            android:name="com.gekkotron.oikos.push.OikosMessagingService"
+            android:name="com.gekkotron.nidoo.push.NidooMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -25,7 +25,7 @@
 
         <!-- Notification action buttons (push alerts spec §5.2). Not exported: only our own PendingIntents reach it. -->
         <receiver
-            android:name="com.gekkotron.oikos.push.ReplyReceiver"
+            android:name="com.gekkotron.nidoo.push.ReplyReceiver"
             android:exported="false" />
     </application>
 </manifest>

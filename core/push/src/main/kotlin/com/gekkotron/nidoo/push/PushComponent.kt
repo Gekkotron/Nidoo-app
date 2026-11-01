@@ -1,0 +1,16 @@
+package com.gekkotron.nidoo.push
+
+/**
+ * What the Android entry points (service, receivers) need. `:core:push` has no Hilt: `:app` builds the objects and
+ * `NidooApplication` hands them out through [PushComponentProvider].
+ */
+interface PushComponent {
+    val ingestor: AlertIngestor
+    val registrar: PushRegistrar
+    val replies: ReplyQueue
+    val presenceRefresher: PresenceRefresher
+}
+
+interface PushComponentProvider {
+    fun pushComponent(): PushComponent
+}

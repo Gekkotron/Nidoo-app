@@ -1,6 +1,6 @@
 plugins {
-    id("oikos.jvm.library")
-    id("oikos.serialization")
+    id("nidoo.jvm.library")
+    id("nidoo.serialization")
 }
 
 dependencies {

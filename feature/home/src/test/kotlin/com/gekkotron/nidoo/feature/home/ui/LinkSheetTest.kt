@@ -1,0 +1,155 @@
+package com.gekkotron.nidoo.feature.home.ui
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
+import com.gekkotron.nidoo.transport.LinkState
+import com.gekkotron.nidoo.transport.Route
+import com.gekkotron.nidoo.transport.TransportMode
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import kotlin.test.assertTrue
+import kotlin.test.assertEquals
+
+@RunWith(AndroidJUnit4::class)
+@Config(qualifiers = "w411dp-h914dp")
+class LinkSheetTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private fun show(
+        link: LinkState,
+        onOpenSettings: () -> Unit = {},
+        route: Route? = null,
+        onRouteChange: (Route) -> Unit = {},
+    ) = compose.setContent {
+        NidooTheme {
+            HomeScreen(
+                HomeUiState(loading = false, link = link), {}, {}, { _, _ -> },
+                onOpenSettings = onOpenSettings, route = route, onRouteChange = onRouteChange,
+            )
+        }
+    }
+
+    private fun openSheet() = compose.onNodeWithText("Offline").performClick()
+
+    @Test
+    fun `the sheet explains the link and links to Settings, without set-up or rooms buttons`() {
+        var opened = false
+        show(LinkState.Connected(TransportMode.DEMO), onOpenSettings = { opened = true })
+        compose.onNodeWithText("Demo").performClick()
+        compose.onNodeWithText("exploring the demo house", substring = true).assertExists()
+        compose.onNodeWithText("Set up connection again").assertDoesNotExist()
+        compose.onNodeWithText("Assign rooms").assertDoesNotExist()
+        compose.onNodeWithText("Connection settings").performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun `the gear opens Settings`() {
+        var opened = 0
+        show(LinkState.Connected(TransportMode.DEMO), onOpenSettings = { opened++ })
+        compose.onNode(hasContentDescription("Settings")).performClick()
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun `rejected credentials explain themselves`() {
+        show(LinkState.Offline(LinkState.Offline.REJECTED))
+        compose.onNodeWithText("Offline").performClick()
+        compose.onNodeWithText("The broker rejected the username or password.").assertExists()
+    }
+
+    @Test
+    fun `offline reasons are described in words, not as raw constants`() {
+        var link by mutableStateOf<LinkState>(LinkState.Offline(LinkState.Offline.CLOSED))
+        compose.setContent {
+            NidooTheme { HomeScreen(HomeUiState(loading = false, link = link), {}, {}, { _, _ -> }) }
+        }
+        compose.onNodeWithText("Offline").performClick()
+        compose.onNodeWithText("The connection was closed.").assertExists()
+        link = LinkState.Offline(LinkState.Offline.FAILED)
+        compose.onNodeWithText("Couldn't start the connection.").assertExists()
+        link = LinkState.Offline(LinkState.Offline.PAUSED)
+        compose.onNodeWithText("Paused while Nidoo is in the background.").assertExists()
+        link = LinkState.Offline("something new")
+        compose.onNodeWithText("Offline.").assertExists()
+        compose.onNodeWithText("something new", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "fr-w411dp-h914dp")
+    fun `offline reasons are translated`() {
+        show(LinkState.Offline(LinkState.Offline.CLOSED))
+        compose.onNodeWithText("Hors ligne").performClick()
+        compose.onNodeWithText("La connexion a été fermée.").assertExists()
+        compose.onNodeWithText("closed", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `reconnecting shows the attempt`() {
+        show(LinkState.Reconnecting(3))
+        compose.onNodeWithText("Reconnecting…").performClick()
+        compose.onNodeWithText("Reconnecting (attempt 3)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `status description is announced with polite live region`() {
+        show(LinkState.Connected(TransportMode.DIRECT))
+        compose.onNodeWithText("Wi-Fi direct").performClick()
+        val statusNode = compose.onNodeWithText("Connected directly to your broker.")
+        assertEquals(LiveRegionMode.Polite, statusNode.fetchSemanticsNode().config[SemanticsProperties.LiveRegion])
+    }
+
+    @Test
+    fun `no route row without a gateway`() {
+        show(LinkState.Connected(TransportMode.DIRECT))
+        compose.onNodeWithText("Wi-Fi direct").performClick()
+        compose.onNodeWithText("Automatic").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the route row shows the choice and reports a new one`() {
+        var picked: Route? = null
+        show(LinkState.Connected(TransportMode.GATEWAY), route = Route.AUTO, onRouteChange = { picked = it })
+        compose.onNodeWithText("Gateway").performClick() // the pill; the sheet's "Gateway" option is not shown yet
+        compose.onNodeWithText("Automatic").assertIsSelected()
+        compose.onNodeWithText("Home network").assertIsNotSelected()
+        compose.onNodeWithText("Home network").performClick()
+        assertEquals(Route.DIRECT, picked)
+    }
+
+    @Test
+    fun `gateway refusals explain themselves`() {
+        show(LinkState.Offline(LinkState.Offline.KEY_REJECTED))
+        openSheet()
+        compose.onNodeWithText("didn't accept this phone's key", substring = true).assertExists()
+    }
+
+    @Test
+    fun `a clock refusal suggests automatic time`() {
+        show(LinkState.Offline(LinkState.Offline.CLOCK_SKEW))
+        openSheet()
+        compose.onNodeWithText("automatic date and time", substring = true).assertExists()
+    }
+
+    @Test
+    fun `other gateway refusals have their own text`() {
+        show(LinkState.Offline(LinkState.Offline.GATEWAY_REFUSED))
+        openSheet()
+        compose.onNodeWithText("The gateway refused access to the broker.").assertExists()
+    }
+}

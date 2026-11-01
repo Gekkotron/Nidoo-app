@@ -12,6 +12,6 @@
             android:launchMode="singleTask"
             android:taskAffinity=""
             android:configChanges="orientation|screenSize|smallestScreenSize|keyboardHidden|layoutDirection|fontScale|uiMode"
-            android:theme="@style/Theme.OikosVoice.Translucent" />
+            android:theme="@style/Theme.NidooVoice.Translucent" />
     </application>
 </manifest>

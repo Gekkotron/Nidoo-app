@@ -57,7 +57,7 @@
     <string name="link_rejected">Le broker a refusé le nom d\'utilisateur ou le mot de passe.</string>
     <string name="link_offline">Hors ligne.</string>
     <string name="link_offline_closed">La connexion a été fermée.</string>
-    <string name="link_offline_paused">En pause pendant qu\'Oikos est en arrière-plan.</string>
+    <string name="link_offline_paused">En pause pendant qu\'Nidoo est en arrière-plan.</string>
     <string name="link_offline_not_configured">Aucune connexion n\'est configurée.</string>
     <string name="link_offline_not_started">Pas encore connecté.</string>
     <string name="link_offline_failed">Impossible de démarrer la connexion.</string>

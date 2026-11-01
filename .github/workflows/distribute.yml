@@ -46,10 +46,10 @@ jobs:
           SIGNING_ALIAS: ${{ secrets.SIGNING_ALIAS }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
-          echo "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/oikos-release.jks"
+          echo "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/nidoo-release.jks"
           umask 077
           cat > app/signing.properties <<EOF
-          storeFile=$RUNNER_TEMP/oikos-release.jks
+          storeFile=$RUNNER_TEMP/nidoo-release.jks
           keyAlias=$SIGNING_ALIAS
           storePassword=$SIGNING_PASSWORD
           keyPassword=$SIGNING_PASSWORD

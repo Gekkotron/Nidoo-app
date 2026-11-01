@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <receiver
-            android:name=".ui.OikosWidgetReceiver"
+            android:name=".ui.NidooWidgetReceiver"
             android:exported="true"
             android:label="@string/widget_name">
             <intent-filter>
@@ -9,7 +9,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/oikos_widget_info" />
+                android:resource="@xml/nidoo_widget_info" />
         </receiver>
         <receiver
             android:name=".voice.VoiceGlanceReceiver"
@@ -20,7 +20,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/oikos_voice_widget_info" />
+                android:resource="@xml/nidoo_voice_widget_info" />
         </receiver>
         <activity
             android:name=".config.WidgetConfigActivity"
@@ -36,6 +36,6 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.OikosWidget.Translucent" />
+            android:theme="@style/Theme.NidooWidget.Translucent" />
     </application>
 </manifest>

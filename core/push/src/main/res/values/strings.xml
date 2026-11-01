@@ -11,7 +11,7 @@
     <string name="push_channel_climate">Climate</string>
     <string name="push_channel_climate_desc">Heating, cooling and temperature</string>
     <string name="push_channel_system">System</string>
-    <string name="push_channel_system_desc">Service status and messages from Oikos</string>
+    <string name="push_channel_system_desc">Service status and messages from Nidoo</string>
     <string name="push_channel_misc">Other</string>
     <string name="push_channel_misc_desc">Everything else</string>
     <string name="push_reply_failed">Couldn\'t send %1$s</string>

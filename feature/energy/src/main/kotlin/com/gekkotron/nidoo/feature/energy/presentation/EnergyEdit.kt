@@ -1,0 +1,32 @@
+package com.gekkotron.nidoo.feature.energy.presentation
+
+import com.gekkotron.nidoo.model.ConsumerIcon
+import com.gekkotron.nidoo.model.EnergyRole
+import com.gekkotron.nidoo.model.Entity
+import com.gekkotron.nidoo.model.UiOverride
+
+/** The details sheet's editable fields for one sensor. */
+data class SensorEdit(val name: String, val role: EnergyRole?, val invert: Boolean, val icon: ConsumerIcon? = null, val meter: String? = null)
+
+/**
+ * Turns an edit into the sensor's new override. Only name, role, invert, icon and meter change, so the room, favourite and
+ * order set on Home survive; a blank name goes back to the discovered one, and an untouched name stays as stored.
+ */
+object EnergyEdit {
+    fun from(entity: Entity) = SensorEdit(entity.name, entity.ui.energyRole, entity.ui.energyInvert, ConsumerIcon.of(entity.ui.energyIcon), entity.ui.energyMeter)
+
+    fun apply(entity: Entity, edit: SensorEdit): UiOverride {
+        val typed = edit.name.trim()
+        return entity.ui.copy(
+            name = when {
+                typed == entity.name -> entity.ui.name
+                typed.isEmpty() -> null
+                else -> typed
+            },
+            energyRole = edit.role,
+            energyInvert = edit.invert && edit.role?.signed == true,
+            energyIcon = edit.icon?.key.takeIf { edit.role == EnergyRole.CONSUMER },
+            energyMeter = edit.meter.takeIf { edit.role?.power == true || edit.role == EnergyRole.WATER },
+        )
+    }
+}

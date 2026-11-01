@@ -1,4 +1,4 @@
 <resources>
     <!-- The code keypad floats over the home screen: no window background, no title. -->
-    <style name="Theme.OikosWidget.Translucent" parent="@android:style/Theme.Translucent.NoTitleBar" />
+    <style name="Theme.NidooWidget.Translucent" parent="@android:style/Theme.Translucent.NoTitleBar" />
 </resources>

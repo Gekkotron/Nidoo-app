@@ -1,9 +1,9 @@
 plugins {
-    id("oikos.kmp.library")
+    id("nidoo.kmp.library")
 }
 
 kotlin {
     android {
-        namespace = "com.gekkotron.oikos.shared"
+        namespace = "com.gekkotron.nidoo.shared"
     }
 }

@@ -1,11 +1,11 @@
 plugins {
-    id("oikos.android.library")
-    id("oikos.serialization")
-    id("oikos.room")
+    id("nidoo.android.library")
+    id("nidoo.serialization")
+    id("nidoo.room")
 }
 
 android {
-    namespace = "com.gekkotron.oikos.alerts"
+    namespace = "com.gekkotron.nidoo.alerts"
 }
 
 // Exported schemas as unit-test assets, so MigrationTestHelper can build the v1 database (localized alerts spec §5.1).

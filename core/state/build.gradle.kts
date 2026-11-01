@@ -1,5 +1,5 @@
 plugins {
-    id("oikos.kmp.jvm.library")
+    id("nidoo.kmp.jvm.library")
 }
 
 kotlin {

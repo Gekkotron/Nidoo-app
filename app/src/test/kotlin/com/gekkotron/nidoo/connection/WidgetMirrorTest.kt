@@ -1,0 +1,142 @@
+package com.gekkotron.nidoo.connection
+
+import com.gekkotron.nidoo.feature.widget.model.LinkStatus
+import com.gekkotron.nidoo.feature.widget.model.TileValue
+import com.gekkotron.nidoo.feature.widget.model.WidgetConfig
+import com.gekkotron.nidoo.feature.widget.model.WidgetSnapshot
+import com.gekkotron.nidoo.feature.widget.store.WidgetConfigStore
+import com.gekkotron.nidoo.feature.widget.store.WidgetSnapshotStore
+import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.Bindings
+import com.gekkotron.nidoo.model.Capabilities
+import com.gekkotron.nidoo.model.Command
+import com.gekkotron.nidoo.model.CommandFailure
+import com.gekkotron.nidoo.model.CommandResult
+import com.gekkotron.nidoo.model.Device
+import com.gekkotron.nidoo.model.Entity
+import com.gekkotron.nidoo.model.EntityState
+import com.gekkotron.nidoo.model.Kind
+import com.gekkotron.nidoo.model.StateValue
+import com.gekkotron.nidoo.model.UiOverride
+import com.gekkotron.nidoo.source.EntitySource
+import com.gekkotron.nidoo.transport.LinkState
+import com.gekkotron.nidoo.transport.TransportMode
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import java.time.Instant
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class WidgetMirrorTest {
+    private object B : Bindings
+
+    private fun entity(id: String, name: String) = Entity(id, null, name, Kind.SWITCH, null, null, null, Capabilities(), B)
+
+    private class MemConfigs(map: Map<Int, WidgetConfig> = emptyMap()) : WidgetConfigStore {
+        override val configs = MutableStateFlow(map)
+        override suspend fun get(appWidgetId: Int) = configs.value[appWidgetId]
+        override suspend fun put(appWidgetId: Int, config: WidgetConfig) {
+            configs.value = configs.value + (appWidgetId to config)
+        }
+        override suspend fun remove(appWidgetIds: IntArray) {
+            configs.value = configs.value - appWidgetIds.toSet()
+        }
+        override suspend fun allIds() = configs.value.values.flatMap { it.uniqueIds }.toSet()
+    }
+
+    private class MemSnapshots : WidgetSnapshotStore {
+        val flow = MutableStateFlow(WidgetSnapshot())
+        override val snapshot: Flow<WidgetSnapshot> = flow
+        override suspend fun current() = flow.value
+        override suspend fun update(transform: (WidgetSnapshot) -> WidgetSnapshot) {
+            flow.value = transform(flow.value)
+        }
+        override suspend fun clear() {
+            flow.value = WidgetSnapshot()
+        }
+    }
+
+    /** A connected foreground source whose states the test drives. */
+    private class LiveSource(entities: List<Entity>) : EntitySource {
+        private val states = MutableStateFlow<Map<String, EntityState>>(emptyMap())
+        override val link: StateFlow<LinkState> = MutableStateFlow(LinkState.Connected(TransportMode.DIRECT))
+        override val entities: StateFlow<Map<String, Entity>> = MutableStateFlow(entities.associateBy { it.uniqueId })
+        override val devices: StateFlow<Map<String, Device>> = MutableStateFlow(emptyMap())
+        override val areas: StateFlow<List<Area>> = MutableStateFlow(emptyList())
+        override val shortcuts: kotlinx.coroutines.flow.StateFlow<Map<String, com.gekkotron.nidoo.voice.VoiceShortcut>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
+        override suspend fun saveShortcut(shortcut: com.gekkotron.nidoo.voice.VoiceShortcut) {}
+        override suspend fun deleteShortcut(id: String) {}
+        override val commandFailures: SharedFlow<CommandFailure> = MutableSharedFlow()
+        override fun states(): Flow<Map<String, EntityState>> = states
+        override suspend fun send(uniqueId: String, command: Command): CommandResult = CommandResult.Accepted
+        override suspend fun setOverride(uniqueId: String, override: UiOverride) {}
+        override suspend fun setAreas(areas: List<Area>) {}
+
+        fun emit(id: String, value: StateValue) {
+            states.value = states.value + (id to EntityState(id, value, lastUpdate = Instant.ofEpochMilli(1_000)))
+        }
+    }
+
+    @Test
+    fun mirrors_only_configured_ids_debounced() = runTest {
+        val source = LiveSource(listOf(entity("s", "Kettle"), entity("x", "Other")))
+        val snaps = MemSnapshots()
+        var updates = 0
+        WidgetMirror(flowOf(source), MemConfigs(mapOf(1 to WidgetConfig(listOf("s")))), snaps, { updates++ }, { false }, backgroundScope, now = { 5L }).start()
+        runCurrent()
+        source.emit("s", StateValue.OnOff(true))
+        source.emit("x", StateValue.OnOff(true))
+        source.emit("s", StateValue.OnOff(false))
+        advanceTimeBy(500)
+        runCurrent()
+        assertEquals(0, updates)
+        advanceTimeBy(600)
+        runCurrent()
+        assertEquals(1, updates)
+        assertEquals(setOf("s"), snaps.flow.value.tiles.keys)
+        assertEquals(TileValue.OnOff(false), snaps.flow.value.tiles["s"]?.value)
+        assertEquals(LinkStatus.FRESH, snaps.flow.value.link)
+        assertEquals(5L, snaps.flow.value.lastFresh)
+    }
+
+    @Test
+    fun no_source_means_no_writes() = runTest {
+        val snaps = MemSnapshots()
+        var updates = 0
+        WidgetMirror(flowOf(null), MemConfigs(mapOf(1 to WidgetConfig(listOf("s")))), snaps, { updates++ }, { false }, backgroundScope).start()
+        advanceUntilIdle()
+        assertEquals(0, updates)
+        assertEquals(WidgetSnapshot(), snaps.flow.value)
+    }
+
+    @Test
+    fun no_widgets_means_no_writes() = runTest {
+        val source = LiveSource(listOf(entity("s", "Kettle")))
+        var updates = 0
+        WidgetMirror(flowOf(source), MemConfigs(), MemSnapshots(), { updates++ }, { false }, backgroundScope).start()
+        source.emit("s", StateValue.OnOff(true))
+        advanceUntilIdle()
+        assertEquals(0, updates)
+    }
+
+    @Test
+    fun never_declares_removed() = runTest {
+        val source = LiveSource(emptyList())
+        val snaps = MemSnapshots()
+        WidgetMirror(flowOf(source), MemConfigs(mapOf(1 to WidgetConfig(listOf("gone")))), snaps, {}, { false }, backgroundScope).start()
+        source.emit("other", StateValue.OnOff(true))
+        advanceUntilIdle()
+        assertEquals(null, snaps.flow.value.tiles["gone"])
+    }
+}

@@ -1,11 +1,11 @@
 # kotlinx.serialization: keep the generated $$serializer companions for @Serializable classes.
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt
--keep,includedescriptorclasses class com.gekkotron.oikos.**$$serializer { *; }
--keepclassmembers class com.gekkotron.oikos.** {
+-keep,includedescriptorclasses class com.gekkotron.nidoo.**$$serializer { *; }
+-keepclassmembers class com.gekkotron.nidoo.** {
     *** Companion;
 }
--keepclasseswithmembers class com.gekkotron.oikos.** {
+-keepclasseswithmembers class com.gekkotron.nidoo.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

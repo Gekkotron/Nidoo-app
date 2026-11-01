@@ -1,5 +1,5 @@
 plugins {
-    id("oikos.root")
+    id("nidoo.root")
 }
 
 tasks.register("increaseBuildNumber") {
