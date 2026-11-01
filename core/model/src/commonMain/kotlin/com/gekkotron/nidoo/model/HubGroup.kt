@@ -7,7 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 
-/** Device identifier Nidoo-OS stamps on every group entity it publishes. */
+/** Device identifier Nidoo stamps on every group entity it publishes. */
 const val HUB_GROUP_DEVICE_ID = "nidoo_group"
 
 /** A hub-owned group as the app sees it (hub cover groups spec §1). */

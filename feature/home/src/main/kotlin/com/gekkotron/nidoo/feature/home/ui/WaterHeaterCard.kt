@@ -31,7 +31,7 @@ internal fun inletText(card: CardUi, inlet: Double): String {
 }
 
 /**
- * The water heater card body below the name (water heater view spec §5, after Nidoo-os): the tank temperature
+ * The water heater card body below the name (water heater view spec §5, after Nidoo): the tank temperature
  * under a "Tank" caption, the activity chip and the cold-water inlet line. The tank glyph above already glows
  * while heating, since the card is "on" exactly then.
  */
@@ -51,7 +51,7 @@ internal fun WaterHeaterDetails(card: CardUi, heater: HeaterView, valueText: Str
         heater.inlet?.let { inlet ->
             val muted = LocalContentColor.current.copy(alpha = 0.72f)
             Row {
-                // Decorative arrow, as in Nidoo-os; only the text is read out.
+                // Decorative arrow, as in Nidoo; only the text is read out.
                 Text("↓ ", style = NidooTheme.type.label, color = muted, modifier = Modifier.clearAndSetSemantics { })
                 Text(inletText(card, inlet), style = NidooTheme.type.label, color = muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

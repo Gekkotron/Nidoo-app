@@ -14,7 +14,7 @@
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
-        <!-- FCM data messages from NidooPush (push alerts spec §5.2). Only Google Play services binds to it. -->
+        <!-- FCM data messages from the hub's push service (push alerts spec §5.2). Only Google Play services binds to it. -->
         <service
             android:name="com.gekkotron.nidoo.push.NidooMessagingService"
             android:exported="false">

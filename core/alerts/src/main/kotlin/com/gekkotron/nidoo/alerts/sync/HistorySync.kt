@@ -58,7 +58,7 @@ class HistorySync(
         }
         var added = 0
         for (alert in alerts) {
-            // No title: a cancel NidooPush stored on its own. It resolves what we have; it is never a row.
+            // No title: a cancel the hub's push service stored on its own. It resolves what we have; it is never a row.
             if (alert.title.isNotBlank() && repository.insertIfMissing(alert)) added++
             if (alert.resolved) repository.markResolved(alert.id)
         }

@@ -25,7 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Locale
 
-/** Water heater view spec §5: the Nidoo-os card (tank temperature, activity chip, inlet line). */
+/** Water heater view spec §5: the Nidoo card (tank temperature, activity chip, inlet line). */
 @RunWith(AndroidJUnit4::class)
 class WaterHeaterCardTest {
     @get:Rule

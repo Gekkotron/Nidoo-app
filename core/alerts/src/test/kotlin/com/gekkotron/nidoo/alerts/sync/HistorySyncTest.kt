@@ -132,7 +132,7 @@ class HistorySyncTest {
     }
 
     @Test
-    fun `the real NidooPush history payload is stored`(): Unit = runBlocking {
+    fun `the real push history payload is stored`(): Unit = runBlocking {
         val real = """[{"v":1,"id":"smoke-1","channel":"misc","severity":"info","title":"NidooPush smoke test","body":"Hello","actions":[],"silent":false,"sent_at":1791406022,"source":"smoke"}]"""
         assertEquals(1, sync.handle(real))
         assertEquals("NidooPush smoke test", repo.byId("smoke-1").first()!!.title)

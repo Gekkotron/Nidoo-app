@@ -3,7 +3,7 @@ package com.gekkotron.nidoo.flows
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** The slice of a Nidoo-OS flow (automation) the UI reads; everything else is ignored. */
+/** The slice of a Nidoo flow (automation) the UI reads; everything else is ignored. */
 @Serializable
 data class FlowDto(
     val id: String,

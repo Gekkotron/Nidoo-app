@@ -26,7 +26,7 @@ interface RegistrationQueue {
 
 suspend fun RegistrationQueue.isActive(): Boolean = active.first()
 
-/** Spec §5.4: when and how this install tells NidooPush its FCM token. */
+/** Spec §5.4: when and how this install tells the hub's push service its FCM token. */
 class PushRegistrar(
     private val targets: PushTargets,
     private val tokens: FcmTokens,
@@ -137,7 +137,7 @@ class PushRegistrar(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Best effort: the token is useless to NidooPush once its retained entry is gone.
+            // Best effort: the token is useless to the push service once its retained entry is gone.
         }
         store.clear()
         _lastError.value = null

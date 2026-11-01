@@ -57,7 +57,7 @@ def main():
     parser.add_argument("--gateway-key-file")
     parser.add_argument("--broker-host", help="the broker as the gateway sees it (optional)")
     parser.add_argument("--no-gateway", action="store_true", help="remove the gateway section")
-    parser.add_argument("--history-url", help="override the NidooHistory URL (default: http://<broker host>:8090), e.g. http://192.168.1.91:8090")
+    parser.add_argument("--history-url", help="override the history API URL (default: http://<broker host>:8090), e.g. http://192.168.1.91:8090")
     parser.add_argument("--no-history", action="store_true", help="remove the history section")
     parser.add_argument("--frigate-url", help="Frigate's address, e.g. http://192.168.1.91:8971 (login) or http://192.168.1.91:5000")
     parser.add_argument("--frigate-user", help="Frigate username (optional)")

@@ -69,7 +69,7 @@ val NightGlassColors = NidooColors(
     shadow = Color.Transparent,
 )
 
-/** Ivoire, ported from the Nidoo-OS web tokens (`tokens.css`, `[data-theme="light"]`). */
+/** Ivoire, ported from the Nidoo web tokens (`tokens.css`, `[data-theme="light"]`). */
 val IvoireColors = NidooColors(
     isDark = false,
     backgroundTop = Color(0xFFF3F0E8),

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-/** The history topic is subscribed while a real (direct) profile is live; the demo has no NidooPush (spec §6.2, §7.6). */
+/** The history topic is subscribed while a real (direct) profile is live; the demo has no push service (spec §6.2, §7.6). */
 internal fun historyFilters(state: ProfileState): Set<String> =
     if ((state as? ProfileState.Ready)?.profile is ConnectionProfile.Direct) setOf(PushTopics.HISTORY) else emptySet()
 

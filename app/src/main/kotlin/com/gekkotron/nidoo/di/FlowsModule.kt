@@ -23,7 +23,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object FlowsModule {
     /**
-     * The hub's flows: toggles go to the same host as NidooHistory (the profile's history URL), over the LAN or
+     * The hub's flows: toggles go to the same host as the hub's history API (the profile's history URL), over the LAN or
      * the gateway. The demo and no profile have no hub, so the client fails without a request.
      */
     @Provides

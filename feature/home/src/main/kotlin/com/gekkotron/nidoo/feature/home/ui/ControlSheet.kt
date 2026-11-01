@@ -301,7 +301,7 @@ internal fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSend
         }
     }
 
-    // The stepper only appears with a target to step from, as in Nidoo-os.
+    // The stepper only appears with a target to step from, as in Nidoo.
     val target = climate?.target
     if (target != null) {
         Text(stringResource(R.string.sheet_target))

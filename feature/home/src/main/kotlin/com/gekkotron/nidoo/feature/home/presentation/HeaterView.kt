@@ -5,7 +5,7 @@ import com.gekkotron.nidoo.model.StateValue
 import kotlin.math.roundToInt
 
 /**
- * What a water heater card shows beyond its temperature, ported from Nidoo-os `HeaterView::from_state`
+ * What a water heater card shows beyond its temperature, ported from Nidoo `HeaterView::from_state`
  * (crates/nidoo-web/src/cards/water_heater.rs). [heating] is also the card highlight: retune it here only.
  */
 data class HeaterView(

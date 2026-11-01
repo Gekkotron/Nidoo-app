@@ -5,7 +5,7 @@ import com.gekkotron.nidoo.model.StateValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** Ports Nidoo-os `crates/nidoo-web/src/cards/water_heater.rs` tests one for one, plus the app's own edges. */
+/** Ports Nidoo `crates/nidoo-web/src/cards/water_heater.rs` tests one for one, plus the app's own edges. */
 class HeaterViewTest {
     private fun of(mode: String?, attributes: Map<String, Any?>) =
         HeaterView.of(EntityState("wh", StateValue.Climate(mode, null, 58.5), attributes))

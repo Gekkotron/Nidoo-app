@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.gekkotron.nidoo.designsystem.NidooTheme
 
 /**
- * Water-heater tank, Nidoo-os `.heater__tank` ported to Compose: a tall rounded tank with a vertical
+ * Water-heater tank, Nidoo `.heater__tank` ported to Compose: a tall rounded tank with a vertical
  * cold → warm gradient and a heating element in the bottom 28%. Muted and dim while idle, saturated and
  * glowing while heating. Decorative — the card's own description carries the state.
  */
@@ -34,7 +34,7 @@ internal fun TankGlyph(heating: Boolean, modifier: Modifier = Modifier) {
         val radius = CornerRadius(6.dp.toPx())
         val stroke = 1.5.dp.toPx()
         val full = Size(size.width, size.height)
-        // Nidoo-os palette: cold blue at the bottom, warm orange at the top.
+        // Nidoo palette: cold blue at the bottom, warm orange at the top.
         val cold = Color(0xFF3B82F6)
         val mid = Color(0xFF8B7FD6)
         val warm = Color(0xFFFF7A3D)

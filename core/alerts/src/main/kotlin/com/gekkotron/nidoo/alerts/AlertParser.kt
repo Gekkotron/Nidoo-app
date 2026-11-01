@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.Instant
 
-/** Turns the two shapes NidooPush sends (spec §2.4 FCM data, §3.5 history JSON) into [Alert]; null means malformed. */
+/** Turns the two shapes the hub's push service sends (spec §2.4 FCM data, §3.5 history JSON) into [Alert]; null means malformed. */
 object AlertParser {
     /** [data] is the FCM data map: every value a string. Needs `v == "1"` and an `id`; a title unless it is a cancel. */
     fun fromData(data: Map<String, String>, receivedAt: Instant = Instant.now()): Alert? {

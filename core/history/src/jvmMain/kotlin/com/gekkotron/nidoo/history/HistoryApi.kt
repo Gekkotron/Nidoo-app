@@ -29,7 +29,7 @@ internal object HistoryApi {
             val i = item as? JsonObject ?: error("bad item")
             val at = i["changed_at"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.longOrNull
             // The hub emits `{changed_at: <ts>, recorded: true}` or `{changed_at: null, recorded: false}`;
-            // the OlderThan branch NidooHistory used (recorded without a timestamp) is gone with the hub.
+            // the OlderThan branch the hub's history API used (recorded without a timestamp) is gone with the hub.
             ref to if (at != null) LastChange.At(Instant.ofEpochSecond(at)) else LastChange.NotRecorded
         }
     }

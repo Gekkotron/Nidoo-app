@@ -8,7 +8,7 @@ A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack 
 
 Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Athena-HttpMqttGateway](https://github.com/Gekkotron/Athena-HttpMqttGateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
-> **Status:** foundation and demo Home screen. The core and the Home screen run against a built-in demo house; real broker transports come next. See the [design spec](docs/superpowers/specs/2026-09-24-nidoo-design.md) and [mockups](docs/design/mockups/).
+> **Status:** foundation and demo Home screen. The core and the Home screen run against a built-in demo house; real broker transports come next. See the design spec (in [docs/superpowers/specs/](docs/superpowers/specs/)) and [mockups](docs/design/mockups/).
 
 ## Modules
 
@@ -59,7 +59,7 @@ The sources live in `core/designsystem/src/screenshotTest/` and the reference PN
 - Home, Energy (live power flow) and Security screens.
 - Night Glass (dark) and Ivoire (light) themes.
 - Push notifications, with the device token registered over MQTT.
-- History: sensor and energy charts (24 h, 7 d, 30 d, kWh per day) read from the NidooHistory service. It is found automatically at `http://<broker host>:8090` (NidooHistory runs next to Mosquitto); Settings → History service (or `history.url` in the setup QR, `tools/setup-qr.py --history-url`) only overrides that. Away from home, add `<broker host>:8090` to the gateway key's rules once.
+- History: sensor and energy charts (24 h, 7 d, 30 d, kWh per day) read from the hub's history API. It is found automatically at `http://<broker host>:8090` (the history API runs next to Mosquitto); Settings → History service (or `history.url` in the setup QR, `tools/setup-qr.py --history-url`) only overrides that. Away from home, add `<broker host>:8090` to the gateway key's rules once.
 
 ## License
 

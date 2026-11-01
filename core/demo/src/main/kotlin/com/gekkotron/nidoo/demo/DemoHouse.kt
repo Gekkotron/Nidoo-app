@@ -422,7 +422,7 @@ class DemoHouse(private val random: Random = Random(7)) {
     }
 
     /**
-     * The WaterHeaterController as Nidoo-os discovers it (water heater view spec, Appendix A): one firmware JSON
+     * The WaterHeaterController as Nidoo discovers it (water heater view spec, Appendix A): one firmware JSON
      * topic, a `water_heater` with no modes whose tank temperature, heat/off mode and power/inlet attributes are
      * all templated from it, and three triac power numbers.
      */

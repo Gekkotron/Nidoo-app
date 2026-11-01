@@ -173,7 +173,7 @@ class SecurityViewModelTest {
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<SecurityEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
-        history.answer = HistoryResult.NotRecorded // e.g. a NidooHistory without the endpoint
+        history.answer = HistoryResult.NotRecorded // e.g. a history API without the endpoint
         testScheduler.advanceTimeBy(10.minutes.inWholeMilliseconds + 1)
         assertEquals(2, history.asked.size)
         assertEquals(Since.At(t0), vm.state.value.sensors.first { it.id == "front" }.since)

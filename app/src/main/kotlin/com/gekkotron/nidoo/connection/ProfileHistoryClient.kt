@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/** The demo's fake history, or NidooHistory at the profile's URL (the broker host's by default) (history spec §4.2, §4.5). */
+/** The demo's fake history, or the hub's history API at the profile's URL (the broker host's by default) (history spec §4.2, §4.5). */
 class ProfileHistoryClient(
     private val states: Flow<ProfileState>,
     get: suspend (String) -> HttpGetResult,

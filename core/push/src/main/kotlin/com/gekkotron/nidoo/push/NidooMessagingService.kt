@@ -6,7 +6,7 @@ import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
-/** Receives NidooPush's data messages (push alerts spec §5.2). FCM runs this off the main thread, so it may block. */
+/** Receives the hub's push service data messages (push alerts spec §5.2). FCM runs this off the main thread, so it may block. */
 class NidooMessagingService : FirebaseMessagingService() {
     private val component: PushComponent get() = (applicationContext as PushComponentProvider).pushComponent()
 
