@@ -3,6 +3,7 @@ package com.gekkotron.oikos.connection
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.DEFAULT_PREFIX
 import com.gekkotron.oikos.data.EntityCache
+import com.gekkotron.oikos.dashboards.DashboardsSink
 import com.gekkotron.oikos.flows.FlowsSink
 import com.gekkotron.oikos.model.Diagnostic
 import com.gekkotron.oikos.model.DiagnosticSink
@@ -35,8 +36,10 @@ class EntitySourceSession(
     private val cache: EntityCache? = null,
     /** Receives the hub's automations from this (main) session's source; widgets and the setup check keep none. */
     flowsSink: FlowsSink? = null,
+    /** Receives the hub's dashboards from this (main) session's source. */
+    dashboardsSink: DashboardsSink? = null,
     private val build: (MqttTransport, CoroutineScope, String, DiagnosticSink) -> EntitySource =
-        { transport, scope, prefix, diagnostics -> defaultBuild(transport, scope, prefix, diagnostics, flowsSink) },
+        { transport, scope, prefix, diagnostics -> defaultBuild(transport, scope, prefix, diagnostics, flowsSink, dashboardsSink) },
 ) {
     private var profile: ConnectionProfile? = null
     private var scope: CoroutineScope? = null
@@ -133,6 +136,8 @@ class EntitySourceSession(
             prefix: String,
             diagnostics: DiagnosticSink,
             flowsSink: FlowsSink? = null,
-        ): EntitySource = MqttDiscoverySource(transport, scope, prefix = prefix, diagnostics = diagnostics, flowsSink = flowsSink)
+            dashboardsSink: DashboardsSink? = null,
+        ): EntitySource =
+            MqttDiscoverySource(transport, scope, prefix = prefix, diagnostics = diagnostics, flowsSink = flowsSink, dashboardsSink = dashboardsSink)
     }
 }

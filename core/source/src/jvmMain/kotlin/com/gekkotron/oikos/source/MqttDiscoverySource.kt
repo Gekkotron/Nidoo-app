@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.source
 
+import com.gekkotron.oikos.dashboards.DashboardsSink
 import com.gekkotron.oikos.flows.FlowsSink
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.AreasDocument
@@ -69,6 +70,7 @@ class MqttDiscoverySource(
     commandTimeout: Duration = 5.seconds,
     now: () -> Instant = Instant::now,
     private val flowsSink: FlowsSink? = null,
+    private val dashboardsSink: DashboardsSink? = null,
 ) : EntitySource {
     private val store = StateStore(now, diagnostics)
     private val tracker = CommandTracker(store, scope, commandTimeout)
@@ -90,6 +92,7 @@ class MqttDiscoverySource(
     private val payloads = mutableMapOf<String, String>()
     private val liveTopics = mutableSetOf<String>()
     private val restoredOnly = mutableSetOf<String>()
+    private val ignoredReported = mutableSetOf<String>()
     private val _journalVersion = MutableStateFlow(0L)
     @Volatile private var settled = false
     private val _hasSettled = MutableStateFlow(false)
@@ -128,6 +131,12 @@ class MqttDiscoverySource(
     private class Snapshot(val entities: Map<String, Entity>, val devices: Map<String, Device>, val areas: List<Area>)
 
     init {
+        if (dashboardsSink != null) {
+            dashboardsSink.clear()
+            scope.launch {
+                link.map { it is LinkState.Connected }.distinctUntilChanged().filter { it }.collect { dashboardsSink.markLinkUp() }
+            }
+        }
         if (flowsSink != null) {
             flowsSink.clear()
             scope.launch {
@@ -324,7 +333,14 @@ class MqttDiscoverySource(
         try {
             val payload = message.payloadString()
             val flowId = flowIdOf(topic)
-            if (flowId != null && restored) return // flows are never cached; the broker's retained replay is the truth
+            val dashboardId = dashboardIdOf(topic)
+            val ignoredDocument = flowId == null && dashboardId == null && isIgnoredUiDocument(topic)
+            // flows and dashboards are never cached; the broker's retained replay is the truth
+            if ((flowId != null || dashboardId != null) && restored) return
+            if (ignoredDocument) {
+                if (!restored && ignoredReported.add(topic)) report("$topic: not an override, ignored")
+                return
+            }
             if (restored) {
                 if (settled || topic in liveTopics) return
                 restoredOnly += topic
@@ -337,6 +353,7 @@ class MqttDiscoverySource(
             when {
                 flowId != null -> flowsSink?.onRetained(flowId, payload.ifEmpty { null })
                 topic == AREAS_TOPIC -> onAreas(payload)
+                dashboardId != null -> dashboardsSink?.onRetained(dashboardId, payload.ifEmpty { null })
                 topic.startsWith(UI_PREFIX) -> onOverride(topic.removePrefix(UI_PREFIX), payload)
                 topic.startsWith(VOICE_PREFIX) -> onShortcut(topic.removePrefix(VOICE_PREFIX), payload)
                 topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) ->
@@ -504,6 +521,17 @@ class MqttDiscoverySource(
     private fun flowIdOf(topic: String): String? =
         topic.takeIf { it.startsWith(FLOW_PREFIX) }?.removePrefix(FLOW_PREFIX)?.takeIf { it.isNotEmpty() && '/' !in it }
 
+    /** The dashboard id of an `oikos/ui/dashboards/<id>` topic (exactly one non-empty segment), else null. */
+    private fun dashboardIdOf(topic: String): String? =
+        topic.takeIf { it.startsWith(DASHBOARD_PREFIX) }?.removePrefix(DASHBOARD_PREFIX)?.takeIf { it.isNotEmpty() && '/' !in it }
+
+    /** `oikos/ui/` documents that are not entity overrides (`_home`, `_types`, `ambiances/x`, nested dashboards...), except [AREAS_TOPIC]. */
+    private fun isIgnoredUiDocument(topic: String): Boolean {
+        if (!topic.startsWith(UI_PREFIX) || topic == AREAS_TOPIC) return false
+        val rest = topic.removePrefix(UI_PREFIX)
+        return rest.startsWith("_") || '/' in rest
+    }
+
     private fun hubGroupIdOf(topic: String): String =
         topic.removePrefix(HUB_GROUP_PREFIX).removeSuffix(HUB_GROUP_DEFINITION_SUFFIX)
 
@@ -515,6 +543,7 @@ class MqttDiscoverySource(
         const val FLOW_PREFIX = "$HUB_PREFIX/automation/"
         const val HUB_GROUP_PREFIX = "oikos/group/"
         const val HUB_GROUP_DEFINITION_SUFFIX = "/definition"
+        const val DASHBOARD_PREFIX = UI_PREFIX + "dashboards/"
         const val AREAS_ID = "_areas"
         const val AREAS_TOPIC = UI_PREFIX + AREAS_ID
         val SUBSCRIPTION_DEBOUNCE: Duration = 500.milliseconds
