@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +16,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.widget.WidgetComponentProvider
 import com.gekkotron.oikos.feature.widget.model.WidgetConfig
+import com.gekkotron.oikos.feature.widget.ui.OikosWidget
 import com.gekkotron.oikos.feature.widget.ui.tilesThatFit
 import kotlinx.coroutines.launch
 
@@ -52,6 +54,7 @@ class WidgetConfigActivity : ComponentActivity() {
                     onDone = {
                         lifecycleScope.launch {
                             if (vm.save()) {
+                                redraw(appWidgetId)
                                 setResult(RESULT_OK, result(appWidgetId))
                                 finish()
                             }
@@ -63,6 +66,19 @@ class WidgetConfigActivity : ComponentActivity() {
                     },
                 )
             }
+        }
+    }
+
+    /**
+     * Draws the new choice now. The widget's Glance session may have ended while the picker was open, and the refresh
+     * just queued only redraws once it has reached the house (and waits for a network), so without this the widget kept
+     * "choose devices" or the old tiles.
+     */
+    private suspend fun redraw(appWidgetId: Int) {
+        try {
+            OikosWidget().update(this, GlanceAppWidgetManager(this).getGlanceIdBy(appWidgetId))
+        } catch (e: IllegalArgumentException) {
+            // Not an Oikos widget id (yet): the next refresh draws it.
         }
     }
 

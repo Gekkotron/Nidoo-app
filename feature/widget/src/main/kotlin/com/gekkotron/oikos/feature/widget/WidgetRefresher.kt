@@ -35,14 +35,19 @@ class WidgetRefresher(
         updater.updateAll()
     }
 
-    /** [code] goes into the command only; it is never written to the snapshot. */
-    suspend fun send(id: String, command: WidgetCommand, code: String?) {
+    /** Shows the tile as pending ("…") and redraws; called on the tap itself and again when the command work starts. */
+    suspend fun markPending(id: String) {
         val at = now()
         snapshots.update { snap ->
             val tile = snap.tiles[id] ?: return@update snap
             snap.copy(tiles = snap.tiles + (id to tile.copy(status = TileStatus.PENDING, pendingSince = at)))
         }
         updater.updateAll()
+    }
+
+    /** [code] goes into the command only; it is never written to the snapshot. */
+    suspend fun send(id: String, command: WidgetCommand, code: String?) {
+        markPending(id)
         val result = entities.send(id, command.toCommand(code))
         snapshots.update { snap ->
             when (result) {

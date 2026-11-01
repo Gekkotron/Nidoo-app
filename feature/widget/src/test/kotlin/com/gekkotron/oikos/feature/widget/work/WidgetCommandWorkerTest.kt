@@ -78,6 +78,21 @@ class WidgetCommandWorkerTest {
     }
 
     @Test
+    fun a_command_held_back_too_long_is_dropped_and_marked_failed() = runBlocking {
+        val input = WorkManagerWidgetScheduler.commandInput("a", WidgetCommand.Disarm, null, enqueuedAt = 1L)
+        assertEquals(ListenableWorker.Result.success(), worker(input).doWork())
+        assertTrue(sent.isEmpty())
+        assertEquals(TileStatus.FAILED, snapshots.flow.value.tiles["a"]?.status)
+    }
+
+    @Test
+    fun a_fresh_command_is_sent() = runBlocking {
+        val input = WorkManagerWidgetScheduler.commandInput("a", WidgetCommand.Disarm, null, enqueuedAt = System.currentTimeMillis())
+        worker(input).doWork()
+        assertEquals(listOf<Command>(Command.Disarm(null)), sent)
+    }
+
+    @Test
     fun a_command_without_a_code_has_no_token() {
         assertNull(WorkManagerWidgetScheduler.commandInput("a", WidgetCommand.Toggle, null).getString(WidgetCommandWorker.KEY_CODE_TOKEN))
     }

@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -20,6 +21,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -41,6 +43,7 @@ import com.gekkotron.oikos.feature.widget.model.TileSnapshot
 import com.gekkotron.oikos.feature.widget.model.TileStatus
 import com.gekkotron.oikos.feature.widget.model.TileValue
 import com.gekkotron.oikos.feature.widget.model.WidgetCommand
+import com.gekkotron.oikos.feature.widget.model.WidgetConfig
 import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.AlarmState
 import com.gekkotron.oikos.model.CoverState
@@ -75,27 +78,91 @@ interface WidgetActions {
     fun openVoice(): Action = openApp()
 }
 
-/** The single large tile when the widget is one row high (widgets spec §2.2). */
-private val SINGLE_TILE_MAX_HEIGHT = 100.dp
-
-/** Wide enough for two columns, or for a cover tile's Open / Stop / Close buttons. */
-private val WIDE = 180.dp
+/** Below this height the widget is one row of tiles with no footer (widgets spec §2.2). */
+private val SINGLE_ROW_MAX_HEIGHT = 100.dp
 
 /** Space around the content, shared by the layout and by [tilesThatFit]. */
 private val PAD = 10.dp
+private val SINGLE_ROW_PAD = 6.dp
 private val FOOTER = 28.dp
-private val TILE_HEIGHT = 58.dp
 private val GAP = 6.dp
 
-/** A grid row: the tile and the gap below it. */
-private val ROW = TILE_HEIGHT + GAP
+/** The smallest tile that still reads: below this the grid drops a column (or a row) rather than squeeze its text. */
+private val MIN_TILE_WIDTH = 104.dp
+private val MIN_TILE_HEIGHT = 52.dp
 
-/** How many tiles the grid shows at a size; the config screen uses the same rule. */
-fun tilesThatFit(width: Dp, height: Dp): Int {
-    if (height < SINGLE_TILE_MAX_HEIGHT) return 1
-    val columns = if (width >= WIDE) 2 else 1
-    val rows = ((height - FOOTER - PAD * 2) / ROW).toInt().coerceAtLeast(1)
-    return columns * rows
+/** Tiles grow to fill a tall widget, up to this. */
+private val MAX_TILE_HEIGHT = 84.dp
+private const val MAX_COLUMNS = 3
+
+/** Enough room for the icon, the value and a cover tile's Open / Stop / Close buttons side by side. */
+private val COVER_BUTTONS_MIN_WIDTH = 280.dp
+
+/** How the tiles are laid out at a given widget size: [count] tiles in [columns] × [rows], each [tileWidth] × [tileHeight]. */
+internal data class TileGrid(val columns: Int, val rows: Int, val count: Int, val tileWidth: Dp, val tileHeight: Dp, val singleRow: Boolean)
+
+private fun columnsFor(innerWidth: Dp): Int = ((innerWidth + GAP) / (MIN_TILE_WIDTH + GAP)).toInt().coerceIn(1, MAX_COLUMNS)
+
+private fun rowsFor(innerHeight: Dp): Int = ((innerHeight + GAP) / (MIN_TILE_HEIGHT + GAP)).toInt().coerceIn(1, WidgetConfig.MAX_ENTITIES)
+
+/**
+ * Lays out [tiles] tiles in a widget of [width] × [height]: as many columns as fit [MIN_TILE_WIDTH], as many rows as fit
+ * [MIN_TILE_HEIGHT], and tiles stretched to share the space so a bigger widget gets bigger tiles rather than empty room.
+ */
+internal fun tileGrid(width: Dp, height: Dp, tiles: Int): TileGrid {
+    val singleRow = height < SINGLE_ROW_MAX_HEIGHT
+    val innerWidth = width - (if (singleRow) SINGLE_ROW_PAD else PAD) * 2
+    val innerHeight = if (singleRow) height - SINGLE_ROW_PAD * 2 else height - PAD * 2 - FOOTER
+    val maxColumns = columnsFor(innerWidth)
+    val maxRows = if (singleRow) 1 else rowsFor(innerHeight)
+    val count = tiles.coerceIn(1, maxColumns * maxRows)
+    // Fewer tiles than columns: let them share the width instead of leaving a gap on the right.
+    val columns = minOf(maxColumns, count)
+    val rows = (count + columns - 1) / columns
+    val tileWidth = (innerWidth - GAP * (columns - 1)) / columns
+    val tileHeight = if (singleRow) innerHeight else ((innerHeight - GAP * (rows - 1)) / rows).coerceAtMost(MAX_TILE_HEIGHT)
+    return TileGrid(columns, rows, count, tileWidth, tileHeight, singleRow)
+}
+
+/** How many tiles the widget shows at a size; the config screen uses the same rule. */
+fun tilesThatFit(width: Dp, height: Dp): Int = tileGrid(width, height, WidgetConfig.MAX_ENTITIES).count
+
+/** Sizes inside one tile, picked from the tile's own size so text never gets squeezed out by the icon or the buttons. */
+private data class TileStyle(
+    val chip: Dp,
+    val icon: Dp,
+    val padding: Dp,
+    val iconGap: Dp,
+    /** Value above name (one tile on its own, or a roomy tile); otherwise name above value. */
+    val valueFirst: Boolean,
+    val valueSize: TextUnit,
+    val nameSize: TextUnit,
+    val coverButtons: Boolean,
+)
+
+private fun tileStyle(width: Dp, height: Dp, alone: Boolean): TileStyle {
+    val roomy = width >= 150.dp && height >= 64.dp
+    val narrow = width < 130.dp
+    val chip = when {
+        roomy -> 44.dp
+        narrow -> 28.dp
+        else -> 34.dp
+    }.coerceAtMost(height - 12.dp).coerceAtLeast(20.dp)
+    return TileStyle(
+        chip = chip,
+        icon = chip * 0.55f,
+        padding = if (roomy) 14.dp else if (narrow) 8.dp else 10.dp,
+        iconGap = if (roomy) 12.dp else if (narrow) 8.dp else 10.dp,
+        valueFirst = roomy || alone,
+        valueSize = when {
+            roomy -> 20.sp
+            alone && !narrow -> 17.sp
+            narrow -> 14.sp
+            else -> 15.sp
+        },
+        nameSize = if (roomy) 12.sp else 11.sp,
+        coverButtons = width >= COVER_BUTTONS_MIN_WIDTH,
+    )
 }
 
 /**
@@ -135,14 +202,16 @@ internal fun TileSnapshot.isOn(now: Long): Boolean {
 fun WidgetContent(state: WidgetUiState, actions: WidgetActions) {
     val context = LocalContext.current
     val size = LocalSize.current
-    val single = size.height < SINGLE_TILE_MAX_HEIGHT
-    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(if (single) 6.dp else PAD)) {
+    val grid = tileGrid(size.width, size.height, state.tiles.size)
+    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(if (grid.singleRow) SINGLE_ROW_PAD else PAD)) {
         when {
             state.link == LinkStatus.NOT_CONFIGURED -> Message(R.drawable.ic_widget_home, context.getString(R.string.widget_set_up), actions.openApp())
             !state.configured -> Message(R.drawable.ic_widget_pick, context.getString(R.string.widget_empty), actions.reconfigure())
-            single -> Tile(state.tiles.firstOrNull(), state, actions, large = true, modifier = GlanceModifier.fillMaxSize())
+            grid.singleRow -> Grid(state, actions, grid)
             else -> {
-                Grid(state, actions, columns = if (size.width >= WIDE) 2 else 1, count = tilesThatFit(size.width, size.height))
+                Grid(state, actions, grid)
+                // The footer stays at the bottom however tall the widget is.
+                Spacer(GlanceModifier.defaultWeight())
                 Footer(state, actions)
             }
         }
@@ -150,16 +219,23 @@ fun WidgetContent(state: WidgetUiState, actions: WidgetActions) {
 }
 
 @Composable
-private fun Grid(state: WidgetUiState, actions: WidgetActions, columns: Int, count: Int) {
+private fun Grid(state: WidgetUiState, actions: WidgetActions, grid: TileGrid) {
+    val style = tileStyle(grid.tileWidth, grid.tileHeight, alone = grid.count == 1)
+    val rows = state.tiles.take(grid.count).chunked(grid.columns)
+    // The gap is padding inside each row, not a Spacer between rows: Glance caps a Column at 10 children.
     Column(GlanceModifier.fillMaxWidth()) {
-        state.tiles.take(count).chunked(columns).forEach { row ->
-            Row(GlanceModifier.fillMaxWidth().height(ROW), verticalAlignment = Alignment.Top) {
+        rows.forEachIndexed { r, row ->
+            val last = r == rows.lastIndex
+            Row(
+                GlanceModifier.fillMaxWidth().height(if (last) grid.tileHeight else grid.tileHeight + GAP).padding(bottom = if (last) 0.dp else GAP),
+                verticalAlignment = Alignment.Top,
+            ) {
                 row.forEachIndexed { i, tile ->
                     if (i > 0) Spacer(GlanceModifier.width(GAP))
-                    Tile(tile, state, actions, large = false, modifier = GlanceModifier.defaultWeight().height(TILE_HEIGHT))
+                    Tile(tile, state, actions, style, modifier = GlanceModifier.defaultWeight().fillMaxHeight())
                 }
                 // Keep a short last row the width of a full tile, not stretched across the grid.
-                repeat(columns - row.size) {
+                repeat(grid.columns - row.size) {
                     Spacer(GlanceModifier.width(GAP))
                     Spacer(GlanceModifier.defaultWeight())
                 }
@@ -169,7 +245,7 @@ private fun Grid(state: WidgetUiState, actions: WidgetActions, columns: Int, cou
 }
 
 @Composable
-private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActions, large: Boolean, modifier: GlanceModifier) {
+private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActions, style: TileStyle, modifier: GlanceModifier) {
     val context = LocalContext.current
     val status = tile?.effectiveStatus(state.now)
     val dim = tile == null || tile.isStale(state.now) || !tile.available
@@ -191,22 +267,23 @@ private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActio
     val surface = if (on) R.drawable.widget_tile_on else R.drawable.widget_tile
     val chip = if (on) R.drawable.widget_chip_on else R.drawable.widget_chip
     val name = tile?.name ?: "—"
-    val wideCover = large && tile != null && tile.kind == Kind.COVER && status != TileStatus.REMOVED && LocalSize.current.width >= WIDE
+    val coverButtons = style.coverButtons && tile != null && tile.kind == Kind.COVER && status != TileStatus.REMOVED
 
     Row(
-        modifier.background(ImageProvider(surface)).padding(horizontal = if (large) 14.dp else 10.dp).clickable(tap),
+        modifier.background(ImageProvider(surface)).padding(horizontal = style.padding).clickable(tap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconChip(iconRes(tile?.icon), chip, iconColor, chipSize = if (large) 44.dp else 34.dp, iconSize = if (large) 24.dp else 18.dp)
-        Spacer(GlanceModifier.width(if (large) 12.dp else 10.dp))
-        Column(GlanceModifier.defaultWeight()) {
-            if (large) {
-                // One tile on its own: the value leads.
-                Text(text, maxLines = 1, style = TextStyle(color = valueColor, fontWeight = FontWeight.Bold, fontSize = 20.sp))
-                Text(name, maxLines = 1, style = TextStyle(color = nameColor, fontSize = 12.sp))
+        IconChip(iconRes(tile?.icon), chip, iconColor, chipSize = style.chip, iconSize = style.icon)
+        Spacer(GlanceModifier.width(style.iconGap))
+        Column(GlanceModifier.defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
+            val value = TextStyle(color = valueColor, fontWeight = FontWeight.Bold, fontSize = style.valueSize)
+            val label = TextStyle(color = nameColor, fontSize = style.nameSize)
+            if (style.valueFirst) {
+                Text(text, maxLines = 1, style = value)
+                Text(name, maxLines = 1, style = label)
             } else {
-                Text(name, maxLines = 1, style = TextStyle(color = nameColor, fontSize = 11.sp))
-                Text(text, maxLines = 1, style = TextStyle(color = valueColor, fontWeight = FontWeight.Bold, fontSize = 15.sp))
+                Text(name, maxLines = 1, style = label)
+                Text(text, maxLines = 1, style = value)
             }
         }
         if (status == TileStatus.FAILED) {
@@ -215,7 +292,7 @@ private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActio
                 Text("!", style = TextStyle(color = Palette.onError, fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center))
             }
         }
-        if (wideCover && tile != null) {
+        if (coverButtons && tile != null) {
             Spacer(GlanceModifier.width(8.dp))
             CoverButtons(tile, actions)
         }

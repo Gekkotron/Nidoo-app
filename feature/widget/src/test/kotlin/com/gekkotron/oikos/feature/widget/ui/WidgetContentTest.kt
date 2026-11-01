@@ -18,6 +18,8 @@ import com.gekkotron.oikos.feature.widget.model.TileStatus
 import com.gekkotron.oikos.feature.widget.model.TileValue
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Kind
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -65,10 +67,41 @@ class WidgetContentTest {
     @Test
     fun cover_buttons_show_on_a_wide_single_tile() = runGlanceAppWidgetUnitTest {
         setContext(context)
-        setAppWidgetSize(DpSize(250.dp, 60.dp))
+        setAppWidgetSize(DpSize(320.dp, 60.dp))
         provideComposable { WidgetContent(state(tile("b", "Blind", Kind.COVER, TileValue.Cover(CoverState.OPEN, 60))), noop) }
         onNode(hasText("Stop")).assertExists()
         onNode(hasText("Close")).assertExists()
+    }
+
+    @Test
+    fun cover_buttons_hide_when_they_would_squeeze_the_text() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(250.dp, 60.dp))
+        provideComposable { WidgetContent(state(tile("b", "Blind", Kind.COVER, TileValue.Cover(CoverState.OPEN, 60))), noop) }
+        onNode(hasText("Blind")).assertExists()
+        onNode(hasText("Stop")).assertDoesNotExist()
+    }
+
+    @Test
+    fun a_wide_one_row_widget_shows_several_tiles() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(320.dp, 60.dp))
+        provideComposable {
+            WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true)), tile("b", "Lamp", Kind.LIGHT, TileValue.Light(false, null))), noop)
+        }
+        onNode(hasText("Kettle")).assertExists()
+        onNode(hasText("Lamp")).assertExists()
+        onNode(hasText("Updated")).assertDoesNotExist()
+    }
+
+    @Test
+    fun the_biggest_size_shows_all_eight_tiles() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(400.dp, 400.dp))
+        val names = (1..8).map { "Device $it" }
+        provideComposable { WidgetContent(state(*names.map { tile(it, it, Kind.SWITCH, TileValue.OnOff(false)) }.toTypedArray()), noop) }
+        names.forEach { onNode(hasText(it)).assertExists() }
+        onNode(hasText("Updated")).assertExists()
     }
 
     @Test
@@ -141,6 +174,49 @@ class WidgetContentTest {
         setAppWidgetSize(DpSize(250.dp, 250.dp))
         provideComposable { WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true)), link = LinkStatus.AUTH_FAILED), noop) }
         onNode(hasText("Sign-in failed")).assertExists()
+    }
+}
+
+class TileGridTest {
+    @Test
+    fun a_narrow_widget_keeps_one_column_instead_of_squeezing_two() {
+        assertEquals(1, tileGrid(180.dp, 180.dp, 4).columns)
+    }
+
+    @Test
+    fun a_wider_widget_gets_more_columns() {
+        assertEquals(2, tileGrid(250.dp, 250.dp, 8).columns)
+        assertEquals(3, tileGrid(400.dp, 250.dp, 8).columns)
+    }
+
+    @Test
+    fun fewer_tiles_than_columns_share_the_width() {
+        val grid = tileGrid(400.dp, 250.dp, 2)
+        assertEquals(2, grid.columns)
+        assertEquals(1, grid.rows)
+    }
+
+    @Test
+    fun tiles_grow_with_the_widget_but_not_without_limit() {
+        val small = tileGrid(250.dp, 180.dp, 4)
+        val tall = tileGrid(250.dp, 400.dp, 4)
+        assertTrue(tall.tileHeight > small.tileHeight)
+        assertTrue(tall.tileHeight <= 84.dp)
+    }
+
+    @Test
+    fun tiles_that_fit_grow_with_the_size() {
+        assertEquals(1, tilesThatFit(110.dp, 48.dp))
+        assertEquals(2, tilesThatFit(250.dp, 60.dp))
+        assertTrue(tilesThatFit(250.dp, 250.dp) >= 4)
+        assertEquals(8, tilesThatFit(400.dp, 400.dp))
+    }
+
+    @Test
+    fun one_row_high_widgets_have_a_single_row() {
+        val grid = tileGrid(320.dp, 60.dp, 8)
+        assertTrue(grid.singleRow)
+        assertEquals(1, grid.rows)
     }
 }
 

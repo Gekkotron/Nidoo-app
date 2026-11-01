@@ -6,8 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.glance.GlanceId
 import androidx.glance.action.Action
@@ -29,8 +27,8 @@ import com.gekkotron.oikos.feature.widget.code.WidgetCodeActivity
 import com.gekkotron.oikos.feature.widget.config.WidgetConfigActivity
 import com.gekkotron.oikos.feature.widget.model.WidgetCommand
 import com.gekkotron.oikos.feature.widget.model.WidgetConfig
-import com.gekkotron.oikos.feature.widget.model.WidgetSnapshot
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 
 /** The links the widget opens in the app; `:app` parses them (widgets spec §2.3). */
 object AppLinks {
@@ -46,16 +44,20 @@ private val Context.widgetComponent: WidgetComponent get() = (applicationContext
 
 /** "Oikos devices": draws from the config and snapshot stores only and never connects (widgets spec §3.2). */
 class OikosWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(
-        setOf(DpSize(110.dp, 48.dp), DpSize(180.dp, 110.dp), DpSize(250.dp, 110.dp), DpSize(180.dp, 250.dp), DpSize(250.dp, 250.dp)),
-    )
+    /**
+     * Exact, not Responsive: the grid sizes its tiles from the widget's real size. With a few fixed buckets the layout was
+     * computed for a bucket and then stretched to the real size, which broke the tiles on resize.
+     */
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val component = context.widgetComponent
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val data = combine(component.configs.configs, component.snapshots.snapshot, component.voiceEnabled) { configs, snapshot, voice -> Triple(configs[appWidgetId], snapshot, voice) }
+        // Read once before composing, so the first frame is the real one and not "choose devices" while the stores load.
+        val initial = data.first()
         provideContent {
-            val current by data.collectAsState(initial = Triple(null, WidgetSnapshot(), false))
+            val current by data.collectAsState(initial = initial)
             WidgetContent(uiState(current.first, current.second, current.third, System.currentTimeMillis()), Actions(context, appWidgetId))
         }
     }
@@ -104,12 +106,17 @@ class OikosWidget : GlanceAppWidget() {
     }
 }
 
-/** A tap that sends a command: queued as expedited work so it survives the broadcast's short life. */
+/**
+ * A tap that sends a command: queued as expedited work so it survives the broadcast's short life, and shown as pending
+ * ("…") straight away so the tap is visibly taken even before the worker starts.
+ */
 class SendCallback : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val id = parameters[ID] ?: return
         val command = parameters[COMMAND]?.let(WidgetCommand::decode) ?: return
-        context.widgetComponent.scheduler.send(id, command, code = null)
+        val component = context.widgetComponent
+        component.scheduler.send(id, command, code = null)
+        component.refresher.markPending(id)
     }
 
     companion object {

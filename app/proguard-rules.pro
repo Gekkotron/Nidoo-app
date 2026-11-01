@@ -31,3 +31,6 @@
 # Firebase Crashlytics keeps line numbers for deobfuscated stack traces.
 -keepattributes SourceFile, LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# Glance builds widget tap callbacks (ActionCallback) by reflection from their class name.
+-keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }
