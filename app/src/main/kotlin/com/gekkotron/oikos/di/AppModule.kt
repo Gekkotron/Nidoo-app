@@ -13,6 +13,7 @@ import com.gekkotron.oikos.connection.toSpec
 import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.dashboards.DashboardsRepository
 import com.gekkotron.oikos.flows.FlowsRepository
 import com.gekkotron.oikos.feature.home.presentation.DefaultDispatcher
 import com.gekkotron.oikos.feature.onboarding.ConnectionTester
@@ -93,9 +94,10 @@ object AppModule {
         transport: MqttTransport,
         cache: EntityCache,
         flows: FlowsRepository,
+        dashboards: DashboardsRepository,
         @ApplicationScope scope: CoroutineScope,
     ): EntitySourceSession =
-        EntitySourceSession(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") }, cache = cache, flowsSink = flows)
+        EntitySourceSession(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") }, cache = cache, flowsSink = flows, dashboardsSink = dashboards)
 
     /** Unscoped: each new Home gets the source for the current profile (spec §2). Home only exists while Ready. */
     @Provides

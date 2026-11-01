@@ -68,4 +68,23 @@ class HttpFlowsClientTest {
             runBlocking { client(post = { _, _ -> throw CancellationException("stop") }).setEnabled("night", true) }
         }
     }
+
+    @Test
+    fun `run posts to the run route`(): Unit = runBlocking {
+        answer = HttpPostResult.Response(202, emptyMap())
+        assertTrue(client("http://hub:8090").run("a b").isSuccess)
+        assertEquals("http://hub:8090/api/v1/flows/a%20b/run" to "{}", posts.single())
+    }
+
+    @Test
+    fun `run maps 202 to success and 422 to FlowsHttpError`(): Unit = runBlocking {
+        answer = HttpPostResult.Response(202, emptyMap())
+        assertTrue(client().run("a").isSuccess)
+        answer = HttpPostResult.Response(422, emptyMap())
+        assertEquals(422, (client().run("a").exceptionOrNull() as FlowsHttpError).status)
+        answer = HttpPostResult.NotAllowed
+        assertTrue(client().run("a").isFailure)
+        answer = HttpPostResult.Unavailable("x")
+        assertTrue(client().run("a").isFailure)
+    }
 }

@@ -70,7 +70,12 @@ import com.gekkotron.oikos.designsystem.components.RoomChips
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import com.gekkotron.oikos.feature.home.R
+import com.gekkotron.oikos.dashboards.HOUSE_DASHBOARD_ID
 import com.gekkotron.oikos.feature.home.presentation.CardUi
+import com.gekkotron.oikos.feature.home.presentation.DashboardEvent
+import com.gekkotron.oikos.feature.home.presentation.DashboardScreenState
+import com.gekkotron.oikos.feature.home.presentation.DashboardView
+import com.gekkotron.oikos.feature.home.presentation.DashboardViewModel
 import com.gekkotron.oikos.feature.home.presentation.HomeEvent
 import com.gekkotron.oikos.feature.home.presentation.HomeUiState
 import com.gekkotron.oikos.feature.home.presentation.HomeViewModel
@@ -89,19 +94,33 @@ fun HomeRoute(
     onRouteChange: (Route) -> Unit = {},
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     onOpenHistory: (String) -> Unit = {},
+    onOpenEnergy: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
+    dashboardViewModel: DashboardViewModel = hiltViewModel(),
 ) {
+    // Always collected, whichever view is shown: the commands look cards up in this state first.
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val dashboard by dashboardViewModel.state.collectAsStateWithLifecycle()
+    fun cardOf(id: String): CardUi? = state.card(id) ?: dashboard.card(id)
     val voiceEnabled by viewModel.voiceEnabled.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var ask by rememberSaveable { mutableStateOf<HomeEvent.AskBeforeAction?>(null) }
     HomeEventsEffect(
         viewModel.events, snackbar,
-        onRetry = viewModel::send,
-        onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids) },
+        onRetry = { id, c -> viewModel.send(id, c, cardOf(id)) },
+        onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids, cardOf(g)) },
         onAsk = { ask = it },
     )
-    val askRow = ask?.let { event -> state.card(event.id) }
+    val flowRefused = stringResource(R.string.widget_flow_refused)
+    val flowFailed = stringResource(R.string.widget_flow_failed)
+    LaunchedEffect(dashboardViewModel, snackbar) {
+        dashboardViewModel.events.collect { event ->
+            when (event) {
+                is DashboardEvent.FlowRunFailed -> snackbar.showSnackbar(if (event.refused) flowRefused else flowFailed)
+            }
+        }
+    }
+    val askRow = ask?.let { event -> cardOf(event.id) }
     // The entity may have left Home while the dialog was queued (removed, hidden, kind changed): close silently.
     if (ask != null && askRow == null) LaunchedEffect(ask) { ask = null }
     val currentAsk = ask
@@ -115,7 +134,7 @@ fun HomeRoute(
                     val id = currentAsk.id
                     val cmd = currentAsk.command
                     ask = null
-                    viewModel.send(id, cmd)
+                    viewModel.send(id, cmd, askRow)
                 }) {
                     Text(stringResource(if (open) R.string.card_action_open else R.string.card_action_ring))
                 }
@@ -124,7 +143,7 @@ fun HomeRoute(
         )
     }
     HomeScreen(
-        state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
+        state, viewModel::select, viewModel::tap, { id, c -> viewModel.send(id, c, cardOf(id)) }, snackbar,
         onCustomize = viewModel::customize,
         onOpenSettings = onOpenSettings,
         route = route,
@@ -132,9 +151,13 @@ fun HomeRoute(
         windowInsets = windowInsets,
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
-        onSendGroup = { id, c -> viewModel.sendGroup(id, c) },
-        onCustomizeGroup = viewModel::customizeGroup,
+        onSendGroup = { id, c -> viewModel.sendGroup(id, c, group = cardOf(id)) },
+        onCustomizeGroup = { id, name, favorite, removed -> viewModel.customizeGroup(id, name, favorite, removed, cardOf(id)) },
         voiceEnabled = voiceEnabled,
+        dashboard = dashboard,
+        onSelectDashboard = dashboardViewModel::select,
+        onRunFlow = dashboardViewModel::runFlow,
+        onOpenEnergy = onOpenEnergy,
     )
 }
 
@@ -156,6 +179,10 @@ fun HomeScreen(
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
     onCustomizeGroup: (String, String, Boolean, List<String>) -> Unit = { _, _, _, _ -> },
     voiceEnabled: Boolean = false,
+    dashboard: DashboardScreenState = DashboardScreenState(),
+    onSelectDashboard: (String) -> Unit = {},
+    onRunFlow: (String) -> Unit = {},
+    onOpenEnergy: () -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -164,6 +191,25 @@ fun HomeScreen(
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
+    var picker by rememberSaveable { mutableStateOf(false) }
+    // Searching always looks through House, even from a dashboard.
+    val onDashboard = dashboard.switcherVisible && dashboard.view !is DashboardView.House && !searching
+    val shownDashboard = (dashboard.view as? DashboardView.Shown)?.ui
+    val showDashboardHeader = !onDashboard || shownDashboard?.showHeader == true
+    val cardClick: (CardUi) -> Unit = { card ->
+        when (card.tap) {
+            TapAction.OPEN_SHEET -> sheetId = card.id
+            TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
+            else -> onTap(card)
+        }
+    }
+    val cardLongClick: (CardUi) -> Unit = { card ->
+        if (card.isGroup || !card.hasSheet) customizeId = card.id else sheetId = card.id
+    }
+    val cardForce: (CardUi) -> Unit = { card ->
+        val next = if (card.forceToggle == true) "eco" else "performance"
+        onSend(card.id, Command.SetHvacMode(next))
+    }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -187,45 +233,63 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
-                item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
-                    if (searching) SearchField(state.query, onSearch, onClose = closeSearch) else HomeChips(state, onSelect)
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
+                if (searching || showDashboardHeader) {
+                    item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
+                        if (searching) {
+                            SearchField(state.query, onSearch, onClose = closeSearch)
+                        } else {
+                            // On a dashboard a room chip goes back to House, filtered.
+                            HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
+                        }
+                    }
+                }
+                if (onDashboard) {
+                    when (val view = dashboard.view) {
+                        is DashboardView.Loading -> item(key = "dashboard-loading", span = { GridItemSpan(maxLineSpan) }) {
+                            Text(stringResource(R.string.dashboard_loading), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                        }
+                        is DashboardView.Shown -> if (view.ui.tiles.isEmpty()) {
+                            item(key = "dashboard-empty", span = { GridItemSpan(maxLineSpan) }) {
+                                Text(stringResource(R.string.dashboard_empty), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                            }
+                        } else {
+                            dashboardTiles(
+                                view.ui.tiles, dashboard.runningFlows,
+                                onEntityClick = cardClick, onEntityLongClick = cardLongClick,
+                                onSendGroup = onSendGroup, onForce = cardForce,
+                                onRunFlow = onRunFlow, onOpenEnergy = onOpenEnergy, onOpenHistory = onOpenHistory,
+                            )
+                        }
+                        DashboardView.House -> Unit
+                    }
                 }
                 if (searching && state.query.isNotBlank() && state.cards.isEmpty()) {
                     item(key = "no-match", span = { GridItemSpan(maxLineSpan) }) {
                         Text(stringResource(R.string.search_no_match, state.query.trim()), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
                     }
                 }
-                if (state.loading) {
+                if (state.loading && !onDashboard) {
                     item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
                         Text(stringResource(R.string.home_discovering), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
                     }
                 }
-                items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
-                    val onClick = {
-                        when (card.tap) {
-                            TapAction.OPEN_SHEET -> sheetId = card.id
-                            TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
-                            else -> onTap(card)
-                        }
-                    }
+                if (!onDashboard) items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
+                    val onClick = { cardClick(card) }
                     if (card.isGroup) {
                         // Group: tap opens the sheet, long-press customizes; the inline buttons drive the group directly.
                         GroupCard(
                             card,
                             onClick = onClick,
-                            onLongClick = { customizeId = card.id },
+                            onLongClick = { cardLongClick(card) },
                             onSendGroup = onSendGroup,
                         )
                     } else {
                         EntityCard(
                             card = card,
                             onClick = onClick,
-                            onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id },
-                            onForce = {
-                                val next = if (card.forceToggle == true) "eco" else "performance"
-                                onSend(card.id, Command.SetHvacMode(next))
-                            },
+                            onLongClick = { cardLongClick(card) },
+                            onForce = { cardForce(card) },
                         )
                     }
                 }
@@ -240,7 +304,7 @@ fun HomeScreen(
             )
         }
     }
-    val sheetCard = sheetId?.let(state::card)
+    val sheetCard = sheetId?.let { state.card(it) ?: dashboard.card(it) }
     if (sheetCard != null) {
         // Keyed: a dismissed sheet's state stays hidden, so the group sheet a member returns to needs a fresh one.
         key(sheetCard.id) {
@@ -255,7 +319,7 @@ fun HomeScreen(
             )
         }
     }
-    val customizeCard = customizeId?.let(state::card)
+    val customizeCard = customizeId?.let { state.card(it) ?: dashboard.card(it) }
     if (customizeCard != null) {
         if (customizeCard.isGroup) {
             GroupCustomizeSheet(
@@ -272,6 +336,13 @@ fun HomeScreen(
             )
         }
     }
+    if (picker) {
+        DashboardPickerSheet(
+            dashboard.entries, dashboard.selectedId,
+            onPick = { picker = false; onSelectDashboard(it) },
+            onDismiss = { picker = false },
+        )
+    }
     if (linkSheet) {
         LinkSheet(
             state.link,
@@ -286,13 +357,23 @@ fun HomeScreen(
 private const val VOICE_ACTIVITY = "com.gekkotron.oikos.feature.voice.VoiceActivity"
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
     val searchLabel = stringResource(R.string.search_open)
     Column(Modifier.padding(top = 8.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
+        if (dashboard.switcherVisible) {
+            val house = stringResource(R.string.dashboard_house)
+            val view = dashboard.view
+            val title = when {
+                view is DashboardView.Shown -> view.ui.name
+                view is DashboardView.Loading -> view.name ?: dashboard.entries.firstOrNull { it.id == dashboard.selectedId }?.name ?: "…"
+                else -> house
+            }
+            DashboardSwitcher(title, onSwitcherClick)
+        }
+        if (showGreeting) Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = OikosTheme.type.display, modifier = Modifier.weight(1f))
             state.hero?.let { hero ->
                 Text(
