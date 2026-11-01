@@ -90,7 +90,7 @@ object DashboardUiBuilder {
                 val metric = EnergyMetric.of(c.metric)
                 if (metric == null) TileContent.Unavailable(c.title) else TileContent.EnergyStat(metric, c.title, energyValue(metric, x.energy))
             }
-            WidgetKind.HISTORY_CHART -> history(w, h, x, now)
+            WidgetKind.HISTORY_CHART -> history(w, h, x, locale, labels, now)
             WidgetKind.LOCK -> TileContent.Placeholder(w.kind, c.title ?: c.entityId?.let { h.entities[it]?.name })
             WidgetKind.CAMERA -> TileContent.Placeholder(w.kind, c.title ?: c.cameras.joinToString(", ").takeIf { it.isNotEmpty() })
             WidgetKind.UNKNOWN -> TileContent.Unavailable(c.title)
@@ -113,7 +113,7 @@ object DashboardUiBuilder {
         EnergyMetric.SELF_CONSUMPTION_PCT -> e.live?.selfConsumption?.let(EnergyValue::Percent)
     }
 
-    private fun history(w: Widget, h: HouseData, x: TileExtras, nowMillis: Long): TileContent {
+    private fun history(w: Widget, h: HouseData, x: TileExtras, locale: Locale, labels: LabelText, nowMillis: Long): TileContent {
         val c = w.config
         val entity = c.entityId?.let { h.entities[it] }
         val range = c.range
@@ -127,6 +127,7 @@ object DashboardUiBuilder {
             else -> null
         }
         val points = x.series[entity.uniqueId to range]?.let { pts -> if (since == null) pts else pts.filter { it.t >= since } }
-        return TileContent.History(entity.uniqueId, c.title ?: entity.name, range, entity.unit, points)
+        val name = c.title ?: HomeUiBuilder.cardFor(h.entities, h.states, h.areas, entity.uniqueId, locale, labels, h.historyEnabled)?.name ?: entity.name
+        return TileContent.History(entity.uniqueId, name, range, entity.unit, points)
     }
 }

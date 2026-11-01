@@ -113,6 +113,11 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
         store.updateData { it.copy(dashboardId = id, dashboardName = name) }
     }
 
+    /** Writes the choice only while the stored id is still [expectedId], so a tap that raced a rename or reset is never overwritten. */
+    suspend fun replaceSelectedDashboard(expectedId: String, id: String, name: String?) {
+        store.updateData { if (it.dashboardId == expectedId) it.copy(dashboardId = id, dashboardName = name) else it }
+    }
+
     companion object {
         const val FILE = "datastore/app-preferences.json"
 

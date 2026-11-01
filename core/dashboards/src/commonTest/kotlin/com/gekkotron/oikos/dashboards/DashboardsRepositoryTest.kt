@@ -73,9 +73,19 @@ class DashboardsRepositoryTest {
     }
 
     @Test
-    fun `any retained message settles`() = runTest {
+    fun `retained messages settle after a quiet window`() = runTest {
         val r = repo()
         r.onRetained("a", payload("a"))
+        runCurrent()
+        assertFalse(r.dashboards.value.isSettled)
+        advanceTimeBy(1_000)
+        r.onRetained("b", payload("b"))
+        runCurrent()
+        advanceTimeBy(1_999)
+        assertFalse(r.dashboards.value.isSettled)
+        advanceTimeBy(2)
+        assertTrue(r.dashboards.value.isSettled)
+        r.onRetained("c", payload("c"))
         assertTrue(r.dashboards.value.isSettled)
     }
 

@@ -100,10 +100,14 @@ class DashboardViewModelTest {
 
     private class Rig(val vm: DashboardViewModel, val repo: DashboardsRepository, val flows: FlowsRepository, val prefs: AppPreferences)
 
-    private fun TestScope.rig(): Rig {
+    private suspend fun TestScope.rig(saved: DashboardChoice? = null): Rig {
         val repo = DashboardsRepository(backgroundScope)
         val flows = FlowsRepository(client, backgroundScope)
         val prefs = AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, prefsScope)
+        if (saved != null) {
+            prefs.setSelectedDashboard(saved.id, saved.name)
+            withContext(Dispatchers.Default.limitedParallelism(1)) { withTimeout(10_000) { prefs.selectedDashboard.first { it == saved } } }
+        }
         val vm = DashboardViewModel(source, repo, flows, prefs, history, LabelText { null }, dispatcher, clock = { 1_800_000_000_000L })
         backgroundScope.launch { vm.state.collect {} }
         return Rig(vm, repo, flows, prefs).also { rigs += it }
@@ -161,7 +165,7 @@ class DashboardViewModelTest {
         r.vm.state.first { it.view is DashboardView.Shown }
         client.gate = CompletableDeferred()
         r.vm.runFlow("f")
-        assertEquals(setOf("f"), r.vm.state.value.runningFlows)
+        r.vm.state.first { "f" in it.runningFlows }
         r.vm.runFlow("f") // no-op while running
         client.gate!!.complete(Result.success(Unit))
         r.vm.state.first { it.runningFlows.isEmpty() }
@@ -203,5 +207,40 @@ class DashboardViewModelTest {
         assertTrue(history.calls > 0, "an energy tile asks the history service")
         val tile = ((r.vm.state.value.view as DashboardView.Shown).ui.tiles.single().content)
         assertIs<TileContent.EnergyStat>(tile)
+    }
+
+    private suspend fun <T> real(block: suspend () -> T): T =
+        withContext(Dispatchers.Default.limitedParallelism(1)) { withTimeout(10_000) { block() } }
+
+    @Test
+    fun `a saved dashboard survives another one replaying first`() = runTest {
+        val r = rig(saved = DashboardChoice("b", "B"))
+        r.repo.put("a", "A")
+        r.repo.put("b", "B")
+        val shown = real { r.vm.state.first { it.view is DashboardView.Shown } }
+        assertEquals("b", shown.selectedId)
+        assertEquals(DashboardChoice("b", "B"), r.prefs.selectedDashboard.value)
+    }
+
+    @Test
+    fun `the first state follows the saved choice instead of flashing House`() = runTest {
+        val r = rig(saved = DashboardChoice("b", "B"))
+        assertEquals(DashboardView.Loading("B"), r.vm.state.value.view)
+        assertTrue(r.vm.state.value.switcherVisible)
+    }
+
+    @Test
+    fun `an unrelated snapshot change does not re-request history`() = runTest {
+        source.entities.value = mapOf("pv" to testEntity("pv", Kind.SENSOR, unit = "W", ui = UiOverride(energyRole = EnergyRole.SOLAR)))
+        val r = rig()
+        r.repo.put("energy", "Energy", """[{"id":"w","kind":"energy_stat","span":"1x1","config":{"metric":"today_kwh"}}]""")
+        r.vm.select("energy")
+        real { history.firstCall.await() }
+        r.vm.state.first { it.view is DashboardView.Shown }
+        val before = history.calls
+        r.repo.put("other", "Other")
+        real { r.vm.state.first { it.entries.size == 3 } }
+        kotlinx.coroutines.yield()
+        assertEquals(before, history.calls)
     }
 }

@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.data
 
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -136,6 +137,21 @@ class AppPreferencesTest {
     fun `an old file without the field selects House`() = runTest {
         val f = file().apply { writeText("""{"theme":"IVOIRE"}""") }
         assertEquals(DashboardChoice("house", null), prefs(f).selectedDashboard.filterNotNull().first())
+    }
+
+    @Test
+    fun `replaceSelectedDashboard only writes while the stored id is the expected one`() = kotlinx.coroutines.runBlocking {
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + kotlinx.coroutines.SupervisorJob())
+        try {
+            val p = AppPreferences.create(file("replace.json"), scope)
+            p.setSelectedDashboard("b", "B")
+            p.replaceSelectedDashboard("a", "house", null) // stale: the user has moved on to b
+            assertEquals(DashboardChoice("b", "B"), p.selectedDashboard.first { it == DashboardChoice("b", "B") })
+            p.replaceSelectedDashboard("b", "b", "Bee")
+            assertEquals(DashboardChoice("b", "Bee"), p.selectedDashboard.first { it == DashboardChoice("b", "Bee") })
+        } finally {
+            scope.cancel()
+        }
     }
 
     @Test

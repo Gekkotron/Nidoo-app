@@ -16,7 +16,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * [dashboards] is sorted by order, then name (case-insensitive), then id. [isSettled] flips once
- * the retained burst is over, so the UI can tell "no dashboards" from "not loaded yet".
+ * the retained burst is over (a quiet window of [settleAfter] after the last retained message or link-up), so the UI can tell "no dashboards" from "not loaded yet".
  */
 data class DashboardsSnapshot(
     val isSettled: Boolean,
@@ -103,11 +103,10 @@ class DashboardsRepository(
         update { s ->
             s.copy(
                 server = if (dashboard == null) s.server - id else s.server + (id to dashboard),
-                settled = true, // any retained message ends the burst
                 unconfirmed = s.unconfirmed - id,
             )
         }
-        cancelTimer()
+        startSettleTimer()
     }
 
     override fun markLinkUp() {
@@ -120,6 +119,11 @@ class DashboardsRepository(
         confirmTimer.getAndUpdate { confirm }?.cancel()
         confirm.start()
 
+        startSettleTimer()
+    }
+
+    /** (Re)starts the quiet window; [State.settled] flips when it elapses with no further message. Settled stays until [clear]. */
+    private fun startSettleTimer() {
         if (state.value.settled) return
         val job = scope.launch(start = CoroutineStart.LAZY) {
             delay(settleAfter)
