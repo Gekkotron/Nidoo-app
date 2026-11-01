@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- Worktree: `/Users/julienhuguel/Documents/SourcesPerso/Oikos-dashboards`, branch `feature/dashboards`. Never touch the main checkout `../Oikos`.
+- Worktree: a separate worktree (`../Oikos-dashboards`), branch `feature/dashboards`. Never touch the main checkout `../Oikos`.
 - Commits: `git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com commit …`. End every message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never write the owner's real name anywhere.
 - New core logic goes in `commonMain` (as `:core:flows` does). JVM-only transport goes in `jvmMain`. KMP modules test with `:<module>:jvmTest`, Android modules with `:<module>:test`.
 - Every colour, type style and dimension comes from `OikosTheme` / `OikosDimens`. Everything must work in Night Glass and Ivoire.
