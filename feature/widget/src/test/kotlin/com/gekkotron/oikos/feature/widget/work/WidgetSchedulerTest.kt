@@ -55,4 +55,11 @@ class WidgetSchedulerTest {
         scheduler.send("a", WidgetCommand.Disarm, "1234")
         assertEquals(1, wm.getWorkInfosByTag(WorkManagerWidgetScheduler.TAG_COMMAND).get().size)
     }
+
+    @Test
+    fun send_waits_for_a_network() {
+        scheduler.send("a", WidgetCommand.TurnOn, null)
+        val work = wm.getWorkInfosByTag(WorkManagerWidgetScheduler.TAG_COMMAND).get().single()
+        assertEquals(androidx.work.NetworkType.CONNECTED, work.constraints.requiredNetworkType)
+    }
 }

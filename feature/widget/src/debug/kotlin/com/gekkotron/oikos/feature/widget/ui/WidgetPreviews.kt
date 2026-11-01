@@ -52,7 +52,11 @@ private fun state(count: Int, link: LinkStatus = LinkStatus.FRESH) =
 @Composable
 fun Preview2x1() = WidgetContent(state(1), actions)
 
-@Preview(widthDp = 250, heightDp = 60)
+@Preview(widthDp = 320, heightDp = 60)
+@Composable
+fun Preview4x1Row() = WidgetContent(state(3), actions)
+
+@Preview(widthDp = 320, heightDp = 60)
 @Composable
 fun Preview4x1Cover() = WidgetContent(state(3).copy(tiles = listOf(sample[2])), actions)
 
@@ -67,6 +71,10 @@ fun Preview4x2() = WidgetContent(state(4, LinkStatus.OFFLINE), actions)
 @Preview(widthDp = 250, heightDp = 300)
 @Composable
 fun Preview4x4() = WidgetContent(state(8), actions)
+
+@Preview(widthDp = 400, heightDp = 400)
+@Composable
+fun PreviewLarge() = WidgetContent(state(4), actions)
 
 @Preview(widthDp = 180, heightDp = 110)
 @Composable
