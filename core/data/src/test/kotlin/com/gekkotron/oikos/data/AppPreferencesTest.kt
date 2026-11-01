@@ -119,4 +119,32 @@ class AppPreferencesTest {
         p.setPresence(PresenceConfig(enabled = true, alias = "a", homeLat = 0.0, homeLng = 0.0, radiusM = 5000))
         assertEquals(500, p.presence.first { it != null && it.radiusM == 500 }!!.radiusM)
     }
+
+    @Test
+    fun `missing file selects House`() = runTest {
+        assertEquals(DashboardChoice("house", null), prefs().selectedDashboard.filterNotNull().first())
+    }
+
+    @Test
+    fun `dashboard choice round-trips`() = runTest {
+        val p = prefs()
+        p.setSelectedDashboard("evening", "Soirée")
+        assertEquals(DashboardChoice("evening", "Soirée"), p.selectedDashboard.first { it == DashboardChoice("evening", "Soirée") })
+    }
+
+    @Test
+    fun `an old file without the field selects House`() = runTest {
+        val f = file().apply { writeText("""{"theme":"IVOIRE"}""") }
+        assertEquals(DashboardChoice("house", null), prefs(f).selectedDashboard.filterNotNull().first())
+    }
+
+    @Test
+    fun `clearing the profile keeps the dashboard choice`() = runTest {
+        val p = prefs()
+        p.setSelectedDashboard("evening", "Soirée")
+        val profiles = ProfileRepository.create(file("profile.json"), FakeSecretStore(), backgroundScope)
+        profiles.save(ConnectionProfile.Demo)
+        profiles.clear()
+        assertEquals(DashboardChoice("evening", "Soirée"), p.selectedDashboard.first { it == DashboardChoice("evening", "Soirée") })
+    }
 }

@@ -36,6 +36,9 @@ data class PresenceConfig(
     }
 }
 
+/** The dashboard the user picked on this phone. [id] "house" is House; [name] is cached so a cold start can show its title before the hub replays it. */
+data class DashboardChoice(val id: String, val name: String?)
+
 @Serializable
 internal data class StoredPresence(
     val enabled: Boolean = false,
@@ -51,6 +54,9 @@ internal data class StoredPreferences(
     val theme: String = ThemePreference.SYSTEM.name,
     val voiceEnabled: Boolean = false,
     val presence: StoredPresence = StoredPresence(),
+    // "house" must match HOUSE_DASHBOARD_ID in :core:dashboards (the hub refuses "house" as a dashboard id). Literal here so :core:data stays independent.
+    val dashboardId: String = "house",
+    val dashboardName: String? = null,
 )
 
 /** Per-phone preferences, kept apart from the profile so "Set up again" leaves them alone. */
@@ -96,6 +102,15 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
                 ),
             )
         }
+    }
+
+    /** null until the file has been read. */
+    val selectedDashboard: StateFlow<DashboardChoice?> = store.data
+        .map { DashboardChoice(it.dashboardId, it.dashboardName) }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    suspend fun setSelectedDashboard(id: String, name: String?) {
+        store.updateData { it.copy(dashboardId = id, dashboardName = name) }
     }
 
     companion object {
