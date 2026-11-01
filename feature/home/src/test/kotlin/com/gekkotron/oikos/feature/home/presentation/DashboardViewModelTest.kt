@@ -26,7 +26,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,7 +89,7 @@ class DashboardViewModelTest {
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
 
-        private val prefsScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val prefsScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val rigs = mutableListOf<Rig>()
 
     @After
@@ -112,23 +111,11 @@ class DashboardViewModelTest {
         return Rig(vm, repo, flows, prefs).also { rigs += it }
     }
 
-    /**
-     * DataStore answers from its own IO thread and, now and then (more under load), a state flow
-     * never reports the first write. A fresh store gets another try instead of the test timing out.
-     */
+    /** A fresh preferences file, holding [saved] when given. The setter returns once the choice is stored and shown. */
     private suspend fun seededPrefs(saved: DashboardChoice?): AppPreferences {
-        repeat(4) {
-            val prefs = AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, prefsScope)
-            if (saved == null) return prefs
-            val ok = withContext(Dispatchers.Default.limitedParallelism(1)) {
-                withTimeoutOrNull(3_000) {
-                    prefs.setSelectedDashboard(saved.id, saved.name)
-                    prefs.selectedDashboard.first { it == saved }
-                } != null
-            }
-            if (ok) return prefs
-        }
-        error("DataStore never reported the seeded choice")
+        val prefs = AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, prefsScope)
+        if (saved != null) prefs.setSelectedDashboard(saved.id, saved.name)
+        return prefs
     }
 
     private fun DashboardsRepository.put(id: String, name: String, widgets: String = "[]") =
