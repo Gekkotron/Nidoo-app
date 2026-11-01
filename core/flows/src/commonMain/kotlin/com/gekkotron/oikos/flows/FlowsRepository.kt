@@ -199,6 +199,20 @@ class FlowsRepository(
         }.await()
     }
 
+    /**
+     * Runs flow [id] on the hub. Changes no state. Like [setEnabled], the request lives in the
+     * repository's scope, so a cancelled caller only stops waiting.
+     */
+    suspend fun run(id: String): Result<Unit> = scope.async {
+        try {
+            client.run(id)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }.await()
+
     private fun finish(id: String, enabled: Boolean, succeeded: Boolean) = update { s ->
         val inFlight = s.inFlight - id
         val echoes = s.echoes - id

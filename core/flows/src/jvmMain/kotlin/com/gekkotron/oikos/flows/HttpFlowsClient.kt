@@ -12,15 +12,19 @@ class FlowsHttpError(val status: Int) : Exception("the hub answered HTTP $status
 @Serializable
 private class EnabledBody(val enabled: Boolean)
 
-/** Over the hub's `POST /api/v1/flows/<id>/enabled` route. */
+/** Over the hub's `POST /api/v1/flows/<id>/enabled` and `/run` routes. */
 class HttpFlowsClient(
     private val baseUrl: suspend () -> String?,
     private val post: suspend (url: String, json: String) -> HttpPostResult,
 ) : FlowsClient {
-    override suspend fun setEnabled(id: String, enabled: Boolean): Result<Unit> {
+    override suspend fun setEnabled(id: String, enabled: Boolean): Result<Unit> =
+        postTo(id, "enabled", flowsJson.encodeToString(EnabledBody(enabled)))
+
+    override suspend fun run(id: String): Result<Unit> = postTo(id, "run", "{}")
+
+    private suspend fun postTo(id: String, action: String, body: String): Result<Unit> {
         val base = baseUrl() ?: return Result.failure(IllegalStateException("no hub url"))
-        val url = "${base.trimEnd('/')}/api/v1/flows/${encode(id)}/enabled"
-        val body = flowsJson.encodeToString(EnabledBody(enabled))
+        val url = "${base.trimEnd('/')}/api/v1/flows/${encode(id)}/$action"
         return try {
             when (val r = post(url, body)) {
                 is HttpPostResult.Response ->
