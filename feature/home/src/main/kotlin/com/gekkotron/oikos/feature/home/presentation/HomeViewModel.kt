@@ -79,6 +79,9 @@ class HomeViewModel @Inject constructor(
     /** Keyed by group and command: failures of two different sends never share a snackbar or a Retry. */
     private val failedInGroup = mutableMapOf<Pair<String, Command>, MutableList<String>>()
 
+    /** Last group card a dashboard handed to [sendGroup], so a Retry (which carries no card) still finds it. */
+    private val lastGroupCards = mutableMapOf<String, CardUi>()
+
     private data class GroupSend(val groupId: String, val kind: Kind, val command: Command, val names: Map<String, String>)
 
     init {
@@ -110,12 +113,12 @@ class HomeViewModel @Inject constructor(
     }
 
     /** Room groups spec §6: rename, pin to Favorites, then take [removed] members out. A failed write is a [HomeEvent.SaveFailed]. */
-    fun customizeGroup(groupId: String, name: String, favorite: Boolean, removed: List<String>) {
+    fun customizeGroup(groupId: String, name: String, favorite: Boolean, removed: List<String>, group: CardUi? = null) {
         viewModelScope.launch {
-            val group = state.value.card(groupId)?.takeIf { it.isGroup } ?: return@launch
-            val kindKey = RoomGroups.kindKey(group.kind)
-            val renamed = name.trim() == group.name.trim() || editor.setGroupName(group.areaId, kindKey, name)
-            val favorited = favorite == group.ui.favorite || editor.setGroupFavorite(group.areaId, kindKey, favorite)
+            val target = (state.value.card(groupId) ?: group ?: lastGroupCards[groupId])?.takeIf { it.isGroup } ?: return@launch
+            val kindKey = RoomGroups.kindKey(target.kind)
+            val renamed = name.trim() == target.name.trim() || editor.setGroupName(target.areaId, kindKey, name)
+            val favorited = favorite == target.ui.favorite || editor.setGroupFavorite(target.areaId, kindKey, favorite)
             if (!renamed || !favorited || !editor.ungroup(removed)) _events.send(HomeEvent.SaveFailed)
         }
     }
@@ -132,12 +135,12 @@ class HomeViewModel @Inject constructor(
     fun tap(card: CardUi) {
         when (card.tap) {
             TapAction.TOGGLE -> when {
-                card.isGroup -> sendGroup(card.id, GroupCommands.toggle(card))
+                card.isGroup -> sendGroup(card.id, GroupCommands.toggle(card), group = card)
                 card.kind == Kind.SWITCH -> dispatchSwitchTap(card)
                 // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
-                else -> send(card.id, if (card.on) Command.TurnOff else turnOnFor(card))
+                else -> send(card.id, if (card.on) Command.TurnOff else turnOnFor(card), card)
             }
-            TapAction.PRESS -> send(card.id, Command.Press)
+            TapAction.PRESS -> send(card.id, Command.Press, card)
             TapAction.OPEN_SHEET, TapAction.OPEN_HISTORY, TapAction.NONE -> Unit
         }
     }
@@ -146,7 +149,7 @@ class HomeViewModel @Inject constructor(
     private fun dispatchSwitchTap(card: CardUi) {
         val type = SwitchType.of(card.protocolKind, card.ui)
         when (val tap = cardTap(type, card.on, card.ui.securityAsk)) {
-            is CardTap.Send -> send(card.id, tap.command)
+            is CardTap.Send -> send(card.id, tap.command, card)
             is CardTap.Confirm -> viewModelScope.launch {
                 _events.send(HomeEvent.AskBeforeAction(card.id, tap.labelResId, tap.command))
             }
@@ -164,26 +167,27 @@ class HomeViewModel @Inject constructor(
         return Command.TurnOn(brightness = brightness, color = color)
     }
 
-    fun send(id: String, command: Command) {
+    fun send(id: String, command: Command, card: CardUi? = null) {
         viewModelScope.launch {
             groupSends.remove(id)
             // A cached value may be outdated: never act on it (entity cache spec §3.6).
-            if (state.value.card(id)?.stale == true) return@launch _events.send(HomeEvent.WaitingForConnection)
+            if ((state.value.card(id) ?: card)?.stale == true) return@launch _events.send(HomeEvent.WaitingForConnection)
             val result = source.send(id, command)
             if (result is CommandResult.Rejected) _events.send(HomeEvent.Rejected(id, result.reason))
         }
     }
 
     /** Room groups spec §5: one command to every capable, available member, in parallel. [only] narrows it (Retry). */
-    fun sendGroup(groupId: String, command: Command, only: List<String>? = null) {
+    fun sendGroup(groupId: String, command: Command, only: List<String>? = null, group: CardUi? = null) {
         viewModelScope.launch {
-            val group = state.value.card(groupId)?.takeIf { it.isGroup } ?: return@launch
-            if (group.members.any { it.stale }) return@launch _events.send(HomeEvent.WaitingForConnection)
-            val ids = GroupCommands.targets(group, command).filter { only == null || it in only }
+            if (group != null && group.isGroup) lastGroupCards[groupId] = group
+            val target = (state.value.card(groupId) ?: group ?: lastGroupCards[groupId])?.takeIf { it.isGroup } ?: return@launch
+            if (target.members.any { it.stale }) return@launch _events.send(HomeEvent.WaitingForConnection)
+            val ids = GroupCommands.targets(target, command).filter { only == null || it in only }
             // Hub cover groups spec §2.4: a hub group fails under its own id, so the snackbar reads the
             // group's name instead of a bare "group_xyz".
-            val names = if (group.isHubGroup) mapOf(group.id to group.name) else group.members.associate { it.id to it.name }
-            ids.forEach { groupSends[it] = GroupSend(groupId, group.kind, command, names) }
+            val names = if (target.isHubGroup) mapOf(target.id to target.name) else target.members.associate { it.id to it.name }
+            ids.forEach { groupSends[it] = GroupSend(groupId, target.kind, command, names) }
             val results = ids.map { id -> async { source.send(id, command) } }.awaitAll()
             results.firstOrNull { it is CommandResult.Rejected }?.let {
                 _events.send(HomeEvent.Rejected(groupId, (it as CommandResult.Rejected).reason))
