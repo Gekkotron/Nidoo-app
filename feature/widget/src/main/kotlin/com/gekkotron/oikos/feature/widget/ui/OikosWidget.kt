@@ -27,6 +27,7 @@ import com.gekkotron.oikos.feature.widget.code.WidgetCodeActivity
 import com.gekkotron.oikos.feature.widget.config.WidgetConfigActivity
 import com.gekkotron.oikos.feature.widget.model.WidgetCommand
 import com.gekkotron.oikos.feature.widget.model.WidgetConfig
+import com.gekkotron.oikos.feature.widget.model.WidgetSnapshot
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 
