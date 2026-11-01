@@ -1,7 +1,7 @@
 # Dashboards in the app — design
 
 **Date:** 2026-11-01
-**Status:** Design, pending plan
+**Status:** Design approved 2026-11-01, pending plan
 **Owner:** Gekkotron
 
 ## Intent & why
@@ -26,9 +26,23 @@ phone today. It is just ignored, or rather, misread (see "Routing fix").
   its name followed by `▾`.
 - **House is today's Home, unchanged:** room chips, hero, search,
   settings, every card and behaviour as now.
-- **A dashboard renders its widgets** in a 2-column grid, flowing in the
-  list order of `widgets`, the way the web UI lays out a phone (it
-  ignores `pos`, which only applies to the 6-column desktop grid).
+- **A dashboard renders its widgets in the web's order** in a 2-column
+  grid (user's requirement: "keep the order").
+  - "The web's order" is the order the web UI uses on a phone or
+    tablet: **reading order of the desktop cells**. Each widget's cell
+    on the 6-column grid is computed by the hub's `layout()`
+    (`oikos-core/src/dashboard/layout.rs`). Widgets are then sorted by
+    `(row, col)`, as `oikos-web/src/dashboards/grid.rs` does for
+    narrow grids.
+  - This is **not** the raw `widgets` list order. Dragging a widget on
+    the desktop changes its `pos`, not its place in the list.
+  - The app ports `layout()` to Kotlin (`commonMain`). Positioned
+    widgets keep their cell unless it runs past the grid or covers an
+    earlier widget; the others flow into the first free cells after the
+    previous one. The hub's `layout.rs` tests are ported as the
+    contract.
+  - Gaps from the desktop grid are not reproduced on the phone, as on
+    the web.
 - **Widgets behave like the matching Home cards:** tap toggles a light,
   long-press opens its controls sheet, and so on (see the widget table).
 - **Live:** a dashboard changed, renamed, reordered or deleted on the
@@ -43,8 +57,8 @@ phone today. It is just ignored, or rather, misread (see "Routing fix").
 
 - Creating, editing, reordering, renaming or deleting a dashboard, or
   any widget, from the app. The web UI stays the author's tool.
-- Reproducing the desktop free placement (`pos`) or 4- or 6-column
-  grids. The phone gets the web's phone layout.
+- Reproducing the desktop gaps, or 4- or 6-column grids. The phone gets
+  the web's phone layout: `pos` decides the order, not empty space.
 - **Lock and camera widgets** in this pass. They render as a
   placeholder card (see below) and get a second pass of their own: the
   app has no lock device type, and live camera frames are new ground.
@@ -85,7 +99,8 @@ phone today. It is just ignored, or rather, misread (see "Routing fix").
   }
   ```
   - `show_header` is omitted when false.
-  - `pos` is optional, and the app ignores it.
+  - `pos` is optional. The app uses it only to compute the order (see
+    Goals).
   - `kind` is one of `light`, `cover`, `climate`, `lock`, `sensor`,
     `room_group`, `flow_button`, `energy_stat`, `history_chart`,
     `camera`, `water_heater`.
