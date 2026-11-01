@@ -8,6 +8,7 @@ import com.gekkotron.oikos.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +21,9 @@ class MqttDiscoverySourceDashboardsTest {
         val retained = mutableListOf<Pair<String, String?>>()
         var linkUps = 0
         var clears = 0
+        var replayed = 0
         override fun onRetained(id: String, payload: String?) { retained += id to payload }
+        override fun markReplayed() { replayed++ }
         override fun markLinkUp() { linkUps++ }
         override fun clear() { clears++ }
     }
@@ -143,5 +146,22 @@ class MqttDiscoverySourceDashboardsTest {
         h.source.restore(mapOf("oikos/ui/dashboards/x" to """{"name":"X"}"""))
         runCurrent()
         assertTrue(sink.retained.isEmpty())
+    }
+
+    @Test
+    fun `the dashboards sink is told when the replay went quiet`() = runTest {
+        val sink = RecordingDashboards()
+        val transport = FakeMqttTransport()
+        transport.setLink(LinkState.Offline("boot"))
+        val h = start(sink, transport)
+        h.transport.setLink(LinkState.Connected(TransportMode.DIRECT))
+        runCurrent()
+        h.transport.deliver("oikos/ui/dashboards/evening", """{"name":"Evening"}""", retain = true)
+        runCurrent()
+        assertEquals(0, sink.replayed)
+        advanceTimeBy(MqttDiscoverySource.SETTLE_QUIET.inWholeMilliseconds + 1)
+        runCurrent()
+        assertEquals(1, sink.replayed)
+        assertTrue(h.source.hasSettled.value)
     }
 }

@@ -16,7 +16,8 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * [dashboards] is sorted by order, then name (case-insensitive), then id. [isSettled] flips once
- * the retained burst is over (a quiet window of [settleAfter] after the last retained message or link-up), so the UI can tell "no dashboards" from "not loaded yet".
+ * the source reports its retained replay as finished ([markReplayed]), or [fallbackSettleAfter] after link-up when it never does,
+ * so the UI can tell "no dashboards" from "not loaded yet".
  */
 data class DashboardsSnapshot(
     val isSettled: Boolean,
@@ -27,6 +28,12 @@ data class DashboardsSnapshot(
      * different versions must not collapse into one stored value.
      */
     val version: Long = 0L,
+    /**
+     * Dashboards the reconnect confirm window removed because the broker did not replay them. That
+     * is a timing guess, not a deletion: the id leaves this set if the dashboard is replayed later.
+     * An explicit empty retained payload (a real deletion) is never listed here.
+     */
+    val dropped: Set<String> = emptySet(),
 )
 
 /**
@@ -37,7 +44,8 @@ data class DashboardsSnapshot(
  */
 class DashboardsRepository(
     private val scope: CoroutineScope,
-    private val settleAfter: Duration = 2.seconds,
+    /** Settles this long after a link-up even if the source never calls [markReplayed] (a broker with no messages). */
+    private val fallbackSettleAfter: Duration = 10.seconds,
     private val log: (String) -> Unit = {},
     /** How long after a link-up a known dashboard has to be replayed by the broker before it is dropped. */
     private val confirmAfter: Duration = 5.seconds,
@@ -52,6 +60,7 @@ class DashboardsRepository(
          * dropped once the replay window ([confirmAfter]) is over.
          */
         val unconfirmed: Set<String> = emptySet(),
+        val dropped: Set<String> = emptySet(),
         /** Bumped by every transform so a late publish can't overwrite a newer snapshot. */
         val version: Long = 0L,
     ) {
@@ -59,9 +68,10 @@ class DashboardsRepository(
             server: Map<String, Dashboard> = this.server,
             settled: Boolean = this.settled,
             unconfirmed: Set<String> = this.unconfirmed,
-        ) = State(server, settled, unconfirmed, version)
+            dropped: Set<String> = this.dropped,
+        ) = State(server, settled, unconfirmed, dropped, version)
 
-        fun withVersion(v: Long) = State(server, settled, unconfirmed, v)
+        fun withVersion(v: Long) = State(server, settled, unconfirmed, dropped, v)
 
         fun toSnapshot() = DashboardsSnapshot(
             isSettled = settled,
@@ -69,18 +79,29 @@ class DashboardsRepository(
                 compareBy<Dashboard> { it.order }.thenBy { it.name.lowercase() }.thenBy { it.id },
             ),
             version = version,
+            dropped = dropped,
         )
     }
 
     private val state = MutableStateFlow(State())
-    private val settleTimer = MutableStateFlow<Job?>(null)
+    private val fallbackTimer = MutableStateFlow<Job?>(null)
     private val confirmTimer = MutableStateFlow<Job?>(null)
 
     private val _dashboards = MutableStateFlow(state.value.toSnapshot())
     val dashboards: StateFlow<DashboardsSnapshot> = _dashboards.asStateFlow()
 
+    /**
+     * Applies [transform]; the version only moves (and a snapshot is only published) when something
+     * a snapshot shows changed. Bookkeeping such as [State.unconfirmed] is stored silently.
+     */
     private fun update(transform: (State) -> State) {
-        publish(state.updateAndGet { s -> transform(s).withVersion(s.version + 1) })
+        publish(
+            state.updateAndGet { s ->
+                val n = transform(s)
+                val visible = n.server != s.server || n.settled != s.settled || n.dropped != s.dropped
+                n.withVersion(if (visible) s.version + 1 else s.version)
+            },
+        )
     }
 
     /** Publishes [s]'s snapshot unless a newer one is already out, so racing writers can't regress it. */
@@ -97,16 +118,27 @@ class DashboardsRepository(
                 DashboardJson.decode(id, payload)
             } catch (e: Exception) {
                 log("dropping malformed payload for '$id': ${e.message}")
+                // The broker did replay the id: keep the old value and don't let the confirm window drop it.
+                update { s -> s.copy(unconfirmed = s.unconfirmed - id) }
                 return
             }
         }
         update { s ->
-            s.copy(
-                server = if (dashboard == null) s.server - id else s.server + (id to dashboard),
-                unconfirmed = s.unconfirmed - id,
-            )
+            if (dashboard == null) {
+                s.copy(server = s.server - id, unconfirmed = s.unconfirmed - id, dropped = s.dropped - id)
+            } else {
+                s.copy(
+                    server = if (s.server[id] == dashboard) s.server else s.server + (id to dashboard),
+                    unconfirmed = s.unconfirmed - id,
+                    dropped = s.dropped - id,
+                )
+            }
         }
-        startSettleTimer()
+    }
+
+    override fun markReplayed() {
+        fallbackTimer.getAndUpdate { null }?.cancel()
+        update { it.copy(settled = true) }
     }
 
     override fun markLinkUp() {
@@ -114,32 +146,26 @@ class DashboardsRepository(
         update { s -> s.copy(unconfirmed = s.server.keys) }
         val confirm = scope.launch(start = CoroutineStart.LAZY) {
             delay(confirmAfter)
-            update { s -> s.copy(server = s.server - s.unconfirmed, unconfirmed = emptySet()) }
+            update { s ->
+                s.copy(server = s.server - s.unconfirmed, unconfirmed = emptySet(), dropped = s.dropped + s.unconfirmed)
+            }
         }
         confirmTimer.getAndUpdate { confirm }?.cancel()
         confirm.start()
 
-        startSettleTimer()
-    }
-
-    /** (Re)starts the quiet window; [State.settled] flips when it elapses with no further message. Settled stays until [clear]. */
-    private fun startSettleTimer() {
-        if (state.value.settled) return
-        val job = scope.launch(start = CoroutineStart.LAZY) {
-            delay(settleAfter)
-            update { it.copy(settled = true) }
+        if (!state.value.settled) {
+            val fallback = scope.launch(start = CoroutineStart.LAZY) {
+                delay(fallbackSettleAfter)
+                update { it.copy(settled = true) }
+            }
+            fallbackTimer.getAndUpdate { fallback }?.cancel()
+            fallback.start()
         }
-        settleTimer.getAndUpdate { job }?.cancel()
-        job.start()
     }
 
     override fun clear() {
-        cancelTimer()
+        fallbackTimer.getAndUpdate { null }?.cancel()
         confirmTimer.getAndUpdate { null }?.cancel()
-        update { s -> s.copy(server = emptyMap(), settled = false, unconfirmed = emptySet()) }
-    }
-
-    private fun cancelTimer() {
-        settleTimer.getAndUpdate { null }?.cancel()
+        update { s -> s.copy(server = emptyMap(), settled = false, unconfirmed = emptySet(), dropped = emptySet()) }
     }
 }

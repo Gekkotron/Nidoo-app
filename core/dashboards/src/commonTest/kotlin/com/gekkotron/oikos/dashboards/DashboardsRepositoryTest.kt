@@ -61,32 +61,98 @@ class DashboardsRepositoryTest {
     }
 
     @Test
-    fun `not settled until link up plus settle delay`() = runTest {
+    fun `not settled before the source reports its replay, even with dashboards received`() = runTest {
         val r = repo()
+        r.markLinkUp()
+        r.onRetained("a", payload("a"))
+        runCurrent()
+        advanceTimeBy(9_000)
         assertFalse(r.dashboards.value.isSettled)
+    }
+
+    @Test
+    fun `settled on markReplayed`() = runTest {
+        val r = repo()
+        r.markLinkUp()
+        r.onRetained("a", payload("a"))
+        r.markReplayed()
+        assertTrue(r.dashboards.value.isSettled)
+        r.onRetained("c", payload("c"))
+        assertTrue(r.dashboards.value.isSettled)
+    }
+
+    @Test
+    fun `fallback settles 10 s after link up without markReplayed`() = runTest {
+        val r = repo()
         r.markLinkUp()
         runCurrent()
-        advanceTimeBy(1_999)
+        advanceTimeBy(9_999)
         assertFalse(r.dashboards.value.isSettled)
         advanceTimeBy(2)
         assertTrue(r.dashboards.value.isSettled)
     }
 
     @Test
-    fun `retained messages settle after a quiet window`() = runTest {
+    fun `a dashboard dropped by the confirm window is listed in dropped and leaves it when replayed`() = runTest {
         val r = repo()
         r.onRetained("a", payload("a"))
-        runCurrent()
-        assertFalse(r.dashboards.value.isSettled)
-        advanceTimeBy(1_000)
         r.onRetained("b", payload("b"))
+        r.markLinkUp()
         runCurrent()
-        advanceTimeBy(1_999)
-        assertFalse(r.dashboards.value.isSettled)
-        advanceTimeBy(2)
-        assertTrue(r.dashboards.value.isSettled)
-        r.onRetained("c", payload("c"))
-        assertTrue(r.dashboards.value.isSettled)
+        r.onRetained("a", payload("a"))
+        advanceTimeBy(5_001)
+        assertEquals(listOf("a"), r.ids())
+        assertEquals(setOf("b"), r.dashboards.value.dropped)
+        r.onRetained("b", payload("b"))
+        assertEquals(emptySet(), r.dashboards.value.dropped)
+        assertEquals(listOf("a", "b"), r.ids())
+    }
+
+    @Test
+    fun `an explicit delete is not listed in dropped`() = runTest {
+        val r = repo()
+        r.onRetained("a", payload("a"))
+        r.markLinkUp()
+        runCurrent()
+        r.onRetained("a", "")
+        advanceTimeBy(5_001)
+        assertEquals(emptyList(), r.ids())
+        assertEquals(emptySet(), r.dashboards.value.dropped)
+    }
+
+    @Test
+    fun `a malformed replay of a known id keeps it past the confirm window`() = runTest {
+        val r = repo()
+        r.onRetained("a", payload("a", "First"))
+        r.markLinkUp()
+        runCurrent()
+        r.onRetained("a", "{")
+        advanceTimeBy(5_001)
+        assertEquals(listOf("a"), r.ids())
+        assertEquals("First", r.dashboards.value.dashboards.single().name)
+        assertEquals(emptySet(), r.dashboards.value.dropped)
+    }
+
+    @Test
+    fun `an identical replay publishes no new snapshot`() = runTest {
+        val r = repo()
+        r.onRetained("a", payload("a"))
+        val v = r.dashboards.value.version
+        r.onRetained("a", payload("a"))
+        assertEquals(v, r.dashboards.value.version)
+        r.onRetained("a", payload("a", "Changed"))
+        assertTrue(r.dashboards.value.version > v)
+    }
+
+    @Test
+    fun `an identical replay still confirms the id`() = runTest {
+        val r = repo()
+        r.onRetained("a", payload("a"))
+        r.markLinkUp()
+        runCurrent()
+        r.onRetained("a", payload("a"))
+        advanceTimeBy(5_001)
+        assertEquals(listOf("a"), r.ids())
     }
 
     @Test
@@ -105,8 +171,10 @@ class DashboardsRepositoryTest {
     fun `clear empties and unsettles`() = runTest {
         val r = repo()
         r.onRetained("a", payload("a"))
+        r.markReplayed()
         r.clear()
         assertEquals(emptyList(), r.ids())
         assertFalse(r.dashboards.value.isSettled)
+        assertEquals(emptySet(), r.dashboards.value.dropped)
     }
 }

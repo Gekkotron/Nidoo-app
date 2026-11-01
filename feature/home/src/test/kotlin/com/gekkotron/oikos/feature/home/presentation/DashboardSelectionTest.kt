@@ -41,4 +41,16 @@ class DashboardSelectionTest {
         assertEquals(Resolution(ResolvedView.House, true, true), DashboardSelection.resolve(DashboardChoice("x", "Old"), snap(true, a)))
         assertEquals(Resolution(ResolvedView.House, false, true), DashboardSelection.resolve(DashboardChoice("x", "Old"), snap(true)))
     }
+
+    @Test
+    fun `missing and dropped - House without reset`() {
+        val dropped = DashboardsSnapshot(true, listOf(a), dropped = setOf("x"))
+        assertEquals(Resolution(ResolvedView.House, true, false), DashboardSelection.resolve(DashboardChoice("x", "Old"), dropped))
+    }
+
+    @Test
+    fun `missing, settled, not dropped - House with reset`() {
+        val other = DashboardsSnapshot(true, listOf(a), dropped = setOf("y"))
+        assertEquals(Resolution(ResolvedView.House, true, true), DashboardSelection.resolve(DashboardChoice("x", "Old"), other))
+    }
 }

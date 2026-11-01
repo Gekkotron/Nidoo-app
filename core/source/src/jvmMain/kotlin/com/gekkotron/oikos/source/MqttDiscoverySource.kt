@@ -321,6 +321,7 @@ class MqttDiscoverySource(
         store.settle()
         _journalVersion.value++
         _hasSettled.value = true
+        dashboardsSink?.markReplayed()
     }
 
     /**

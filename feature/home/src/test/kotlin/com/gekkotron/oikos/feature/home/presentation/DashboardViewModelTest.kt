@@ -26,6 +26,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -100,17 +103,33 @@ class DashboardViewModelTest {
 
     private class Rig(val vm: DashboardViewModel, val repo: DashboardsRepository, val flows: FlowsRepository, val prefs: AppPreferences)
 
-    private suspend fun TestScope.rig(saved: DashboardChoice? = null): Rig {
+    private suspend fun TestScope.rig(saved: DashboardChoice? = null, refresh: Duration = 5.minutes): Rig {
         val repo = DashboardsRepository(backgroundScope)
         val flows = FlowsRepository(client, backgroundScope)
-        val prefs = AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, prefsScope)
-        if (saved != null) {
-            prefs.setSelectedDashboard(saved.id, saved.name)
-            withContext(Dispatchers.Default.limitedParallelism(1)) { withTimeout(10_000) { prefs.selectedDashboard.first { it == saved } } }
-        }
-        val vm = DashboardViewModel(source, repo, flows, prefs, history, LabelText { null }, dispatcher, clock = { 1_800_000_000_000L })
+        val prefs = seededPrefs(saved)
+        val vm = DashboardViewModel(source, repo, flows, prefs, history, LabelText { null }, dispatcher, refresh, clock = { 1_800_000_000_000L })
         backgroundScope.launch { vm.state.collect {} }
         return Rig(vm, repo, flows, prefs).also { rigs += it }
+    }
+
+    /**
+     * DataStore answers from its own IO thread and, now and then, the state flow never reports the
+     * first write (the value stays at the default). A fresh store gets another try instead of
+     * the whole class timing out.
+     */
+    private suspend fun seededPrefs(saved: DashboardChoice?): AppPreferences {
+        repeat(4) {
+            val prefs = AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, prefsScope)
+            if (saved == null) return prefs
+            val ok = withContext(Dispatchers.Default.limitedParallelism(1)) {
+                withTimeoutOrNull(3_000) {
+                    prefs.setSelectedDashboard(saved.id, saved.name)
+                    prefs.selectedDashboard.first { it == saved }
+                } != null
+            }
+            if (ok) return prefs
+        }
+        error("DataStore never reported the seeded choice")
     }
 
     private fun DashboardsRepository.put(id: String, name: String, widgets: String = "[]") =
@@ -141,6 +160,7 @@ class DashboardViewModelTest {
         r.repo.put("a", "Upstairs")
         r.vm.select("a")
         r.choice(DashboardChoice("a", "Upstairs"))
+        r.repo.markReplayed()
         r.repo.onRetained("a", null)
         r.choice(DashboardChoice("house", null))
         assertEquals(DashboardView.House, r.vm.state.first { it.view == DashboardView.House }.view)
@@ -232,7 +252,8 @@ class DashboardViewModelTest {
     @Test
     fun `an unrelated snapshot change does not re-request history`() = runTest {
         source.entities.value = mapOf("pv" to testEntity("pv", Kind.SENSOR, unit = "W", ui = UiOverride(energyRole = EnergyRole.SOLAR)))
-        val r = rig()
+        // Virtual time runs on while the test waits in real time, so a finite refresh would add fetches of its own.
+        val r = rig(refresh = Duration.INFINITE)
         r.repo.put("energy", "Energy", """[{"id":"w","kind":"energy_stat","span":"1x1","config":{"metric":"today_kwh"}}]""")
         r.vm.select("energy")
         real { history.firstCall.await() }
@@ -242,5 +263,39 @@ class DashboardViewModelTest {
         real { r.vm.state.first { it.entries.size == 3 } }
         kotlinx.coroutines.yield()
         assertEquals(before, history.calls)
+    }
+
+    @Test
+    fun `a saved dashboard replayed 3 s after link-up is still shown and kept`() = runTest {
+        val r = rig(saved = DashboardChoice("b", "B"))
+        r.repo.markLinkUp()
+        testScheduler.advanceTimeBy(3_000)
+        testScheduler.runCurrent()
+        assertEquals(DashboardView.Loading("B"), r.vm.state.value.view)
+        r.repo.put("b", "B")
+        r.repo.markReplayed()
+        val shown = real { r.vm.state.first { it.view is DashboardView.Shown } }
+        assertEquals("b", shown.selectedId)
+        assertEquals(DashboardChoice("b", "B"), r.prefs.selectedDashboard.value)
+    }
+
+    @Test
+    fun `a selected dashboard dropped on reconnect shows House but keeps the preference, and comes back when replayed`() = runTest {
+        val r = rig(saved = DashboardChoice("b", "B"))
+        r.repo.put("a", "A")
+        r.repo.put("b", "B")
+        r.repo.markReplayed()
+        real { r.vm.state.first { it.view is DashboardView.Shown } }
+        r.repo.markLinkUp()
+        r.repo.onRetained("a", """{"name":"A","widgets":[]}""")
+        testScheduler.advanceTimeBy(5_001)
+        testScheduler.runCurrent()
+        val house = real { r.vm.state.first { it.view == DashboardView.House } }
+        assertEquals("house", house.selectedId)
+        assertEquals(DashboardChoice("b", "B"), r.prefs.selectedDashboard.value)
+        r.repo.put("b", "B")
+        val back = real { r.vm.state.first { it.view is DashboardView.Shown } }
+        assertEquals("b", back.selectedId)
+        assertEquals(DashboardChoice("b", "B"), r.prefs.selectedDashboard.value)
     }
 }

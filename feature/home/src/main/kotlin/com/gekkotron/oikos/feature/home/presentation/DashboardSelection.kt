@@ -17,7 +17,8 @@ object DashboardSelection {
     /**
      * Which view the stored [choice] means. House users must never see a waiting line, so an unread
      * preference (null) is House. A stored dashboard the hub has not sent yet is Loading until the
-     * snapshot settles, then falls back to House (and the caller resets the stored choice).
+     * snapshot settles, then falls back to House. The caller resets the stored choice unless the dashboard was only
+     * dropped by the reconnect confirm window (it may come back).
      */
     fun resolve(choice: DashboardChoice?, snapshot: DashboardsSnapshot): Resolution {
         val any = snapshot.dashboards.isNotEmpty()
@@ -26,7 +27,8 @@ object DashboardSelection {
         return when {
             found != null -> Resolution(ResolvedView.Shown(found), true, false)
             !snapshot.isSettled -> Resolution(ResolvedView.Loading(choice.name), true, false)
-            else -> Resolution(ResolvedView.House, any, true)
+            // A dashboard the reconnect window dropped may still exist: show House but keep the choice.
+            else -> Resolution(ResolvedView.House, any, choice.id !in snapshot.dropped)
         }
     }
 }
