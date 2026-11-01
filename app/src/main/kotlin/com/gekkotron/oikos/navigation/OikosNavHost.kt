@@ -213,6 +213,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         onRouteChange = viewModel::setRoute,
                         windowInsets = tabInsets,
                         onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
+                        onOpenEnergy = { selectTab(backStack, EnergyKey) },
                     )
                 }
                 entry<SettingsKey> {

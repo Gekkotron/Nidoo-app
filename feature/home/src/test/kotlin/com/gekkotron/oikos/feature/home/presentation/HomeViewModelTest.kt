@@ -25,6 +25,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceTimeBy
 import com.gekkotron.oikos.model.Capabilities
 import com.gekkotron.oikos.model.CoverState
+import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.TransportMode
 import java.io.File
 import org.junit.After
 import org.junit.Before
@@ -374,6 +376,80 @@ class HomeViewModelTest {
             ),
             events.toSet(),
         )
+    }
+
+    /** [groupSource] plus a lone "den" room, selected so House does not show the living-room group. */
+    private fun dashboardSource() = groupSource().apply {
+        entities.value += "d" to testEntity("d", Kind.SWITCH, area = "den")
+        areas.value += Area("den", "Den")
+    }
+
+    /** The living-room cover group card as another view (a dashboard) would hold it; House stays on Favourites. */
+    private fun livingGroupCard(src: FakeEntitySource, stale: Boolean = false): CardUi {
+        val states = if (stale) src.entities.value.keys.associateWith { EntityState(it, StateValue.Cover(CoverState.OPEN, 100), stale = true) } else emptyMap()
+        return HomeUiBuilder.build(
+            src.entities.value, states, src.areas.value, RoomFilter.Area("living"),
+            LinkState.Connected(TransportMode.DEMO), java.util.Locale.US,
+        ).cards.single { it.isGroup }
+    }
+
+    @Test
+    fun `group send reaches members when House shows another filter`() = runTest(dispatcher) {
+        val src = dashboardSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Area("den"))
+        val card = livingGroupCard(src)
+        assertEquals(null, vm.state.value.card(card.id))
+        vm.sendGroup(card.id, Command.Close, group = card)
+        assertEquals(setOf("a" to Command.Close, "b" to Command.Close, "c" to Command.Close), src.sent.toSet())
+    }
+
+    @Test
+    fun `tapping a stale dashboard card that House does not show waits for connection`() = runTest(dispatcher) {
+        val src = dashboardSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Area("living"))
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        val den = HomeUiBuilder.build(
+            src.entities.value, mapOf("d" to EntityState("d", StateValue.Unknown, stale = true)), src.areas.value,
+            RoomFilter.Area("den"), LinkState.Connected(TransportMode.DEMO), java.util.Locale.US,
+        ).cards.single()
+        assertEquals(null, vm.state.value.card("d"))
+        vm.tap(den)
+        assertTrue(src.sent.isEmpty())
+        assertEquals(listOf<HomeEvent>(HomeEvent.WaitingForConnection), events)
+    }
+
+    @Test
+    fun `retry without a card reuses the last group card given`() = runTest(dispatcher) {
+        val src = dashboardSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Area("den"))
+        val card = livingGroupCard(src)
+        vm.sendGroup(card.id, Command.Close, group = card)
+        src.sent.clear()
+        vm.sendGroup(card.id, Command.Close, only = listOf("b"))
+        assertEquals(listOf<Pair<String, Command>>("b" to Command.Close), src.sent)
+    }
+
+    @Test
+    fun `a stale dashboard card waits for connection`() = runTest(dispatcher) {
+        val src = dashboardSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Area("den"))
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        val staleGroup = livingGroupCard(src, stale = true)
+        vm.sendGroup(staleGroup.id, Command.Open, group = staleGroup)
+        val staleCard = staleGroup.members.first().copy(stale = true)
+        vm.send("zzz", Command.Open, card = staleCard)
+        assertTrue(src.sent.isEmpty())
+        assertEquals(listOf<HomeEvent>(HomeEvent.WaitingForConnection, HomeEvent.WaitingForConnection), events)
     }
 }
 

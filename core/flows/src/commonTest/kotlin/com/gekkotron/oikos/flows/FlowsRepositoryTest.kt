@@ -17,12 +17,19 @@ class FlowsRepositoryTest {
 
     private class FakeClient : FlowsClient {
         val calls = mutableListOf<Pair<String, Boolean>>()
+        val runs = mutableListOf<String>()
+        var runGate: CompletableDeferred<Result<Unit>>? = null
         var gate: CompletableDeferred<Result<Unit>>? = null
         var result: Result<Unit> = Result.success(Unit)
 
         override suspend fun setEnabled(id: String, enabled: Boolean): Result<Unit> {
             calls += id to enabled
             return gate?.await() ?: result
+        }
+
+        override suspend fun run(id: String): Result<Unit> {
+            runs += id
+            return runGate?.await() ?: result
         }
     }
 
@@ -297,5 +304,29 @@ class FlowsRepositoryTest {
         advanceTimeBy(6_000)
         runCurrent()
         assertEquals(listOf("b"), r.flows.value.flows.map { it.id })
+    }
+
+    @Test
+    fun `repository run delegates to the client and survives caller cancellation`() = runTest {
+        val client = FakeClient().apply { runGate = CompletableDeferred() }
+        val r = repo(client)
+        r.onRetained("a", payload("a"))
+        val before = r.flows.value
+        val call = async { r.run("a") }
+        runCurrent()
+        assertEquals(listOf("a"), client.runs)
+        call.cancel()
+        runCurrent()
+        client.runGate!!.complete(Result.failure(RuntimeException("late")))
+        runCurrent()
+        assertEquals(before, r.flows.value)
+
+        val ok = FakeClient()
+        assertTrue(repo(ok).run("b").isSuccess)
+        val boom = object : FlowsClient {
+            override suspend fun setEnabled(id: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
+            override suspend fun run(id: String): Result<Unit> = throw IllegalStateException("boom")
+        }
+        assertTrue(repo(boom).run("b").isFailure)
     }
 }

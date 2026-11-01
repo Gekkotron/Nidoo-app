@@ -73,6 +73,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         alarm("demo_alarm", "Alarm", "Hallway", ALARM)
         waterHeater("demo_water_heater", "Water heater", "Garage", "demo/water_heater")
         vacuum("Living room", "demo/living/vacuum")
+        dashboards()
         override("demo_outdoor_temperature", """{"cardStyle":"hero_weather"}""")
         override("demo_living_lamp", """{"favorite":true}""")
         override("demo_living_ac", """{"favorite":true}""")
@@ -147,6 +148,28 @@ class DemoHouse(private val random: Random = Random(7)) {
             """{"id":"${name.lowercase().replace(' ', '_')}","name":"$name","order":${i + 1}}"""
         }
         extras += DemoMessage("oikos/ui/_areas", """{"areas":[$areas]}""")
+    }
+
+    /** Two retained dashboards the way the hub publishes them; no flow buttons, the demo has no flows. */
+    private fun dashboards() {
+        fun w(id: String, kind: String, span: String, config: String, row: Int? = null, col: Int? = null) =
+            """{"id":"$id","kind":"$kind","span":"$span","config":$config""" +
+                (if (row != null) ""","pos":{"row":$row,"col":$col}""" else "") + "}"
+        val evening = listOf(
+            w("w1", "light", "1x1", """{"entity_id":"demo_living_lamp"}""", 0, 0),
+            w("w2", "cover", "1x1", """{"entity_id":"demo_living_shutter"}""", 0, 1),
+            w("w3", "room_group", "2x1", """{"area_id":"living_room"}""", 1, 0),
+            w("w4", "climate", "1x1", """{"entity_id":"demo_living_ac"}""", 2, 0),
+            w("w5", "lock", "1x1", """{"entity_id":"demo_front_door"}""", 2, 1),
+        )
+        val energy = listOf(
+            w("e1", "energy_stat", "1x1", """{"metric":"pv_power_now"}"""),
+            w("e2", "energy_stat", "1x1", """{"metric":"self_consumption_pct"}"""),
+            w("e3", "energy_stat", "2x1", """{"metric":"today_kwh"}"""),
+            w("e4", "history_chart", "2x2", """{"entity_id":"demo_bedroom_temperature","range":"24h"}"""),
+        )
+        extras += DemoMessage("oikos/ui/dashboards/evening", """{"id":"evening","name":"Soirée","order":1,"show_header":true,"widgets":[${evening.joinToString(",")}]}""")
+        extras += DemoMessage("oikos/ui/dashboards/energy", """{"id":"energy","name":"Énergie","order":2,"widgets":[${energy.joinToString(",")}]}""")
     }
 
     private fun override(id: String, json: String) {

@@ -6,4 +6,5 @@ plugins {
 dependencies {
     api(project(":core:transport"))
     testImplementation(project(":core:source"))
+    testImplementation(project(":core:dashboards"))
 }

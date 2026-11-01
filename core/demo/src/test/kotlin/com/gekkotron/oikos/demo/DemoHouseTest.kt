@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.demo
 
+import com.gekkotron.oikos.dashboards.DashboardJson
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -105,5 +106,15 @@ class DemoHouseTest {
         val before = kwh()
         repeat(5) { house.tick() }
         assertTrue(kwh() > before)
+    }
+
+    @Test
+    fun `the demo publishes two dashboards`() {
+        val decoded = DemoHouse().retainedMessages()
+            .filter { it.topic.startsWith("oikos/ui/dashboards/") }
+            .map { DashboardJson.decode(it.topic.substringAfterLast('/'), it.payload) }
+            .sortedBy { it.order }
+        assertEquals(listOf("Soirée", "Énergie"), decoded.map { it.name })
+        assertEquals(listOf(5, 4), decoded.map { it.widgets.size })
     }
 }

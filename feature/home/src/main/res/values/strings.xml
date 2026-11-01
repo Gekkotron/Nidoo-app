@@ -259,4 +259,22 @@
     <string name="water_heater_inlet">Inlet %1$s</string>
     <string name="card_description_water_heater">%1$s, %2$s, %3$s, %4$s</string>
     <string name="card_force_toggle">Force %1$s</string>
+    <string name="dashboard_house">House</string>
+    <string name="dashboard_picker_title">Dashboards</string>
+    <string name="dashboard_switcher_cd">Dashboard: %1$s</string>
+    <string name="dashboard_switcher_action">change</string>
+    <string name="dashboard_loading">Waiting for the hub…</string>
+    <string name="dashboard_empty">Nothing here yet — add widgets on the web</string>
+    <string name="widget_unavailable">Unavailable</string>
+    <string name="widget_open_on_web">Open on the web</string>
+    <string name="widget_flow_run">Run</string>
+    <string name="widget_flow_off">This flow is off</string>
+    <string name="widget_flow_failed">Could not run the flow</string>
+    <string name="widget_flow_refused">The hub refused to run this flow</string>
+    <string name="widget_energy_today">Today</string>
+    <string name="widget_energy_week">This week</string>
+    <string name="widget_energy_month">This month</string>
+    <string name="widget_energy_grid_now">Grid now</string>
+    <string name="widget_energy_solar_now">Solar now</string>
+    <string name="widget_energy_self">Self-consumption</string>
 </resources>
