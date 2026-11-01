@@ -75,18 +75,18 @@ class MqttDiscoverySourceTest {
     @Test
     fun `subscribes to the ha prefix and to oikos first`() = runTest {
         val h = start()
-        assertEquals(setOf("homeassistant/#", "oikos/#"), h.transport.subscriptionHistory.first())
+        assertEquals(setOf("homeassistant/#", "nidoo/#"), h.transport.subscriptionHistory.first())
     }
 
     @Test
     fun `oikos-prefix discovery becomes an entity`() = runTest {
         val h = start()
         h.transport.deliver(
-            "oikos/alarm_control_panel/alarm/house/config",
-            """{"unique_id":"oikos_alarm_house","command_topic":"oikos/alarm/panel/set","state_topic":"oikos/alarm/panel"}""",
+            "nidoo/alarm_control_panel/alarm/house/config",
+            """{"unique_id":"nidoo_alarm_house","command_topic":"nidoo/alarm/panel/set","state_topic":"nidoo/alarm/panel"}""",
         )
         runCurrent()
-        assertTrue("oikos_alarm_house" in h.source.entities.value)
+        assertTrue("nidoo_alarm_house" in h.source.entities.value)
     }
 
     @Test
@@ -98,7 +98,7 @@ class MqttDiscoverySourceTest {
         val light = h.source.entities.value.getValue(lightId)
         assertEquals("Lampe", light.name)
         assertEquals("Salon", light.area)
-        assertEquals(setOf("homeassistant/#", "oikos/#"), h.transport.subscriptions)
+        assertEquals(setOf("homeassistant/#", "nidoo/#"), h.transport.subscriptions)
 
         settle()
         assertTrue("z2m/lampe" in h.transport.subscriptions)
@@ -123,14 +123,14 @@ class MqttDiscoverySourceTest {
     fun `override name and area take precedence and can be cleared`() = runTest {
         val h = start()
         h.transport.deliver(lightTopic, lightConfig)
-        h.transport.deliver("oikos/ui/$lightId", """{"name":"Lampe salon","area":"Cuisine","favorite":true}""")
+        h.transport.deliver("nidoo/ui/$lightId", """{"name":"Lampe salon","area":"Cuisine","favorite":true}""")
         runCurrent()
         var light = h.source.entities.value.getValue(lightId)
         assertEquals("Lampe salon", light.name)
         assertEquals("Cuisine", light.area)
         assertTrue(light.ui.favorite)
 
-        h.transport.deliver("oikos/ui/$lightId", "")
+        h.transport.deliver("nidoo/ui/$lightId", "")
         runCurrent()
         light = h.source.entities.value.getValue(lightId)
         assertEquals("Lampe", light.name)
@@ -140,11 +140,11 @@ class MqttDiscoverySourceTest {
     @Test
     fun `areas resolve by id or name and are ordered declared, implicit, unassigned`() = runTest {
         val h = start()
-        h.transport.deliver("oikos/ui/_areas", """{"areas":[{"id":"garage","name":"Garage","order":2},{"id":"kitchen","name":"Cuisine","order":1}]}""")
+        h.transport.deliver("nidoo/ui/_areas", """{"areas":[{"id":"garage","name":"Garage","order":2},{"id":"kitchen","name":"Cuisine","order":1}]}""")
         h.transport.deliver(lightTopic, lightConfig) // suggested_area Salon -> implicit
         h.transport.deliver("homeassistant/switch/a/config", switchConfig("a"))
         h.transport.deliver("homeassistant/switch/b/config", switchConfig("b"))
-        h.transport.deliver("oikos/ui/a", """{"area":"Cuisine"}""")
+        h.transport.deliver("nidoo/ui/a", """{"area":"Cuisine"}""")
         runCurrent()
 
         assertEquals("kitchen", h.source.entities.value.getValue("a").area)
@@ -270,7 +270,7 @@ class MqttDiscoverySourceTest {
         runCurrent()
         h.source.setOverride(lightId, UiOverride(name = "X"))
         assertEquals("X", h.source.entities.value.getValue(lightId).name)
-        assertEquals(MqttMessage("oikos/ui/$lightId", """{"name":"X"}""".encodeToByteArray(), retained = true), h.transport.published.last())
+        assertEquals(MqttMessage("nidoo/ui/$lightId", """{"name":"X"}""".encodeToByteArray(), retained = true), h.transport.published.last())
         runCurrent()
         assertEquals("X", h.source.entities.value.getValue(lightId).name)
     }
@@ -288,7 +288,7 @@ class MqttDiscoverySourceTest {
     fun `setAreas publishes the areas document`() = runTest {
         val h = start()
         h.source.setAreas(listOf(Area("salon", "Salon", order = 1)))
-        assertEquals("oikos/ui/_areas" to """{"areas":[{"id":"salon","name":"Salon","order":1}]}""", h.transport.publishedStrings().last())
+        assertEquals("nidoo/ui/_areas" to """{"areas":[{"id":"salon","name":"Salon","order":1}]}""", h.transport.publishedStrings().last())
         assertEquals(listOf("salon"), h.source.areas.value.map { it.id })
     }
 
@@ -296,7 +296,7 @@ class MqttDiscoverySourceTest {
     fun `status and unknown topics are harmless`() = runTest {
         val h = start()
         h.transport.deliver("homeassistant/status", "online")
-        h.transport.deliver("oikos/ui/x", "not json")
+        h.transport.deliver("nidoo/ui/x", "not json")
         runCurrent()
         assertTrue(h.source.entities.value.isEmpty())
         assertEquals(1, h.diagnostics.size)
@@ -347,7 +347,7 @@ class MqttDiscoverySourceTest {
         h.source.setOverride(lightId, UiOverride(name = "X"))
         h.source.setOverride(lightId, UiOverride())
         val last = h.transport.published.last()
-        assertEquals("oikos/ui/$lightId", last.topic)
+        assertEquals("nidoo/ui/$lightId", last.topic)
         assertEquals(0, last.payload.size)
         assertTrue(last.retained)
         assertEquals(discoveredName, h.source.entities.value.getValue(lightId).name)
@@ -529,14 +529,14 @@ class MqttDiscoverySourceTest {
     @Test
     fun `voice shortcut topic is subscribed via the oikos prefix`() = runTest {
         val h = start()
-        assertEquals(setOf("homeassistant/#", "oikos/#"), h.transport.subscriptions)
+        assertEquals(setOf("homeassistant/#", "nidoo/#"), h.transport.subscriptions)
     }
 
     @Test
     fun `an incoming shortcut appears in the shortcuts flow`() = runTest {
         val h = start()
         h.transport.deliver(
-            "oikos/voice/shortcut/abc1234567890abc1234567890abc123",
+            "nidoo/voice/shortcut/abc1234567890abc1234567890abc123",
             """{"v":1,"phrase":"il fait sombre","lang":"fr","action":"TURN_ON","entityIds":["lampe"]}""",
         )
         runCurrent()
@@ -556,7 +556,7 @@ class MqttDiscoverySourceTest {
         )
         h.source.saveShortcut(sc)
         val last = h.transport.published.last()
-        assertEquals("oikos/voice/shortcut/${sc.id}", last.topic)
+        assertEquals("nidoo/voice/shortcut/${sc.id}", last.topic)
         assertEquals(true, last.retained)
         assertTrue(last.payloadString().contains("\"phrase\":\"test\""))
     }
@@ -566,7 +566,7 @@ class MqttDiscoverySourceTest {
         val h = start()
         h.source.deleteShortcut("abc1234567890abc1234567890abc123")
         val last = h.transport.published.last()
-        assertEquals("oikos/voice/shortcut/abc1234567890abc1234567890abc123", last.topic)
+        assertEquals("nidoo/voice/shortcut/abc1234567890abc1234567890abc123", last.topic)
         assertEquals(0, last.payload.size)
         assertEquals(true, last.retained)
     }
@@ -579,7 +579,7 @@ class MqttDiscoverySourceTest {
         settle()
         assertEquals(Kind.SWITCH, h.source.entities.value.getValue("a").kind)
 
-        h.transport.deliver("oikos/ui/a", """{"showAs":"light"}""")
+        h.transport.deliver("nidoo/ui/a", """{"showAs":"light"}""")
         runCurrent()
         val e = h.source.entities.value.getValue("a")
         assertEquals(Kind.LIGHT, e.kind)
@@ -591,7 +591,7 @@ class MqttDiscoverySourceTest {
         assertEquals(CommandResult.Accepted, h.source.send("a", Command.TurnOn()))
         assertEquals("sw/a/set" to "1", h.transport.publishedStrings().last())
 
-        h.transport.deliver("oikos/ui/a", "")
+        h.transport.deliver("nidoo/ui/a", "")
         runCurrent()
         assertEquals(Kind.SWITCH, h.source.entities.value.getValue("a").kind)
     }
@@ -602,7 +602,7 @@ class MqttDiscoverySourceTest {
         h.transport.deliver("homeassistant/switch/a/config", switchConfig("a"))
         runCurrent()
         settle()
-        h.transport.deliver("oikos/ui/a", """{"asLight":true}""")
+        h.transport.deliver("nidoo/ui/a", """{"asLight":true}""")
         runCurrent()
         val e = h.source.entities.value.getValue("a")
         assertEquals(Kind.LIGHT, e.kind)
@@ -616,7 +616,7 @@ class MqttDiscoverySourceTest {
         h.transport.deliver("homeassistant/switch/a/config", switchConfig("a"))
         runCurrent()
         settle()
-        h.transport.deliver("oikos/ui/a", """{"showAs":"door"}""")
+        h.transport.deliver("nidoo/ui/a", """{"showAs":"door"}""")
         runCurrent()
         val e = h.source.entities.value.getValue("a")
         assertEquals(Kind.SWITCH, e.kind)
@@ -627,7 +627,7 @@ class MqttDiscoverySourceTest {
     fun `showAs leaves a real light alone`() = runTest {
         val h = start()
         h.transport.deliver(lightTopic, lightConfig)
-        h.transport.deliver("oikos/ui/$lightId", """{"showAs":"light"}""")
+        h.transport.deliver("nidoo/ui/$lightId", """{"showAs":"light"}""")
         runCurrent()
         val e = h.source.entities.value.getValue(lightId)
         assertEquals(Kind.LIGHT, e.kind)
@@ -640,7 +640,7 @@ class MqttDiscoverySourceTest {
     fun `a hub group definition payload surfaces in hubGroups`() = runTest {
         val h = start()
         h.transport.deliver(
-            "oikos/group/living/definition",
+            "nidoo/group/living/definition",
             """{"name":"Living shutters","kind":"cover","members":["a","b"],"hideMembers":true}""",
         )
         runCurrent()
@@ -655,12 +655,12 @@ class MqttDiscoverySourceTest {
     fun `an empty payload removes a known hub group`() = runTest {
         val h = start()
         h.transport.deliver(
-            "oikos/group/living/definition",
+            "nidoo/group/living/definition",
             """{"name":"g","kind":"cover","members":["a"]}""",
         )
         runCurrent()
         assertTrue("living" in h.source.hubGroups.value)
-        h.transport.deliver("oikos/group/living/definition", "")
+        h.transport.deliver("nidoo/group/living/definition", "")
         runCurrent()
         assertFalse("living" in h.source.hubGroups.value)
     }
@@ -668,7 +668,7 @@ class MqttDiscoverySourceTest {
     @Test
     fun `an invalid hub group payload is reported and ignored`() = runTest {
         val h = start()
-        h.transport.deliver("oikos/group/living/definition", "not-json")
+        h.transport.deliver("nidoo/group/living/definition", "not-json")
         runCurrent()
         assertFalse("living" in h.source.hubGroups.value)
         assertTrue(h.diagnostics.any { it.message.contains("invalid group spec") })

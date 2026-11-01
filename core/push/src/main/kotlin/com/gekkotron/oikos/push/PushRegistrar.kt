@@ -87,31 +87,12 @@ class PushRegistrar(
         return when {
             error == null -> {
                 store.save(token, target.tokenTopic, clock())
-                clearLegacyTokenOnce(target.installId)
                 _lastError.value = null
                 RegisterOutcome.Done
             }
             error is NotConfigured -> RegisterOutcome.NotConfigured
             else -> failed(RegisterOutcome.Retry(reasonOf(error)))
         }
-    }
-
-    /**
-     * Hub spec §9: once the Rust hub takes over, the install also publishes an empty retained payload to the
-     * legacy `oikos-push/tokens/<installId>` so the hub does not count it twice. Best effort; a failure retries
-     * on the next registration until it lands.
-     */
-    private suspend fun clearLegacyTokenOnce(installId: String) {
-        if (store.legacyCleared()) return
-        val outcome = try {
-            publisher.publish(PushTopics.legacyTokenTopic(installId), ByteArray(0), retain = true)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-        val error = outcome.exceptionOrNull()
-        if (error == null || error is NotConfigured) store.markLegacyCleared()
     }
 
     /** A new FCM token, the end of onboarding or "Register again": replaces any pending work. */

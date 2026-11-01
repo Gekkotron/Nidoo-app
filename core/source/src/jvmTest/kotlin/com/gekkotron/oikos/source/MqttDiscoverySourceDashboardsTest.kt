@@ -48,7 +48,7 @@ class MqttDiscoverySourceDashboardsTest {
     fun `retained dashboard topic forwards id and payload`() = runTest {
         val sink = RecordingDashboards()
         val h = start(sink)
-        h.transport.deliver("oikos/ui/dashboards/evening", """{"name":"Evening"}""", retain = true)
+        h.transport.deliver("nidoo/ui/dashboards/evening", """{"name":"Evening"}""", retain = true)
         runCurrent()
         assertEquals(listOf<Pair<String, String?>>("evening" to """{"name":"Evening"}"""), sink.retained)
         assertTrue(h.diagnostics.isEmpty())
@@ -58,7 +58,7 @@ class MqttDiscoverySourceDashboardsTest {
     fun `empty dashboard payload forwards as delete`() = runTest {
         val sink = RecordingDashboards()
         val h = start(sink)
-        h.transport.deliver("oikos/ui/dashboards/evening", "", retain = true)
+        h.transport.deliver("nidoo/ui/dashboards/evening", "", retain = true)
         runCurrent()
         assertEquals(listOf<Pair<String, String?>>("evening" to null), sink.retained)
     }
@@ -74,15 +74,15 @@ class MqttDiscoverySourceDashboardsTest {
         )
         val doc = """{"favorite":true}"""
         for (t in listOf("dashboards/evening", "ambiances/soir", "_home", "_types", "light_a")) {
-            h.transport.deliver("oikos/ui/$t", doc, retain = true)
+            h.transport.deliver("nidoo/ui/$t", doc, retain = true)
         }
         runCurrent()
         val entities = h.source.entities.value
         assertEquals(setOf("light_a"), entities.filterValues { it.ui.favorite }.keys)
         assertFalse(entities.keys.any { "dashboards" in it })
         val keys = h.source.journal().keys
-        for (t in listOf("dashboards/evening", "ambiances/soir", "_home", "_types")) assertFalse("oikos/ui/$t" in keys, "oikos/ui/$t leaked into overrides")
-        assertTrue("oikos/ui/light_a" in keys)
+        for (t in listOf("dashboards/evening", "ambiances/soir", "_home", "_types")) assertFalse("nidoo/ui/$t" in keys, "nidoo/ui/$t leaked into overrides")
+        assertTrue("nidoo/ui/light_a" in keys)
         assertEquals(3, h.diagnostics.size)
     }
 
@@ -90,21 +90,21 @@ class MqttDiscoverySourceDashboardsTest {
     fun `a nested dashboards topic is ignored`() = runTest {
         val sink = RecordingDashboards()
         val h = start(sink)
-        h.transport.deliver("oikos/ui/dashboards/a/b", """{"favorite":true}""", retain = true)
+        h.transport.deliver("nidoo/ui/dashboards/a/b", """{"favorite":true}""", retain = true)
         runCurrent()
         assertTrue(sink.retained.isEmpty())
         assertTrue(h.source.entities.value.isEmpty())
-        assertFalse("oikos/ui/dashboards/a/b" in h.source.journal().keys)
-        assertEquals(listOf("oikos/ui/dashboards/a/b: not an override, ignored"), h.diagnostics.map { it.message })
+        assertFalse("nidoo/ui/dashboards/a/b" in h.source.journal().keys)
+        assertEquals(listOf("nidoo/ui/dashboards/a/b: not an override, ignored"), h.diagnostics.map { it.message })
     }
 
     @Test
     fun `an ignored document is reported once`() = runTest {
         val h = start(RecordingDashboards())
-        h.transport.deliver("oikos/ui/_home", """{"a":1}""", retain = true)
-        h.transport.deliver("oikos/ui/_home", """{"a":2}""", retain = true)
+        h.transport.deliver("nidoo/ui/_home", """{"a":1}""", retain = true)
+        h.transport.deliver("nidoo/ui/_home", """{"a":2}""", retain = true)
         runCurrent()
-        assertEquals(listOf("oikos/ui/_home: not an override, ignored"), h.diagnostics.map { it.message })
+        assertEquals(listOf("nidoo/ui/_home: not an override, ignored"), h.diagnostics.map { it.message })
     }
 
     @Test
@@ -115,7 +115,7 @@ class MqttDiscoverySourceDashboardsTest {
             """{"name":"A","unique_id":"light_a","command_topic":"t/set","state_topic":"t/state"}""",
             retain = true,
         )
-        h.transport.deliver("oikos/ui/light_a", """{"favorite":true}""", retain = true)
+        h.transport.deliver("nidoo/ui/light_a", """{"favorite":true}""", retain = true)
         runCurrent()
         assertTrue(h.source.entities.value["light_a"]!!.ui.favorite)
     }
@@ -143,7 +143,7 @@ class MqttDiscoverySourceDashboardsTest {
     fun `restored dashboard messages are not forwarded`() = runTest {
         val sink = RecordingDashboards()
         val h = start(sink)
-        h.source.restore(mapOf("oikos/ui/dashboards/x" to """{"name":"X"}"""))
+        h.source.restore(mapOf("nidoo/ui/dashboards/x" to """{"name":"X"}"""))
         runCurrent()
         assertTrue(sink.retained.isEmpty())
     }
@@ -156,7 +156,7 @@ class MqttDiscoverySourceDashboardsTest {
         val h = start(sink, transport)
         h.transport.setLink(LinkState.Connected(TransportMode.DIRECT))
         runCurrent()
-        h.transport.deliver("oikos/ui/dashboards/evening", """{"name":"Evening"}""", retain = true)
+        h.transport.deliver("nidoo/ui/dashboards/evening", """{"name":"Evening"}""", retain = true)
         runCurrent()
         assertEquals(0, sink.replayed)
         advanceTimeBy(MqttDiscoverySource.SETTLE_QUIET.inWholeMilliseconds + 1)

@@ -60,7 +60,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-/** Home Assistant MQTT Discovery + `oikos/ui/…` overrides (spec §4.3). */
+/** Home Assistant MQTT Discovery + `nidoo/ui/…` overrides (spec §4.3). */
 @OptIn(FlowPreview::class)
 class MqttDiscoverySource(
     private val transport: MqttTransport,
@@ -121,9 +121,9 @@ class MqttDiscoverySource(
     private val _hubGroups = MutableStateFlow<Map<String, HubGroup>>(emptyMap())
     override val hubGroups: StateFlow<Map<String, HubGroup>> = _hubGroups.asStateFlow()
 
-    // The hub publishes HA-discovery under its own `oikos/` prefix (alarm panel, groups, virtual
+    // The hub publishes HA-discovery under its own `nidoo/` prefix (alarm panel, groups, virtual
     // entities, …), beside whatever prefix a legacy controller like Jeedom publishes under; the app
-    // reads both. `oikos/#` subsumes `oikos/ui/#` and `oikos/voice/shortcut/#` so they drop out.
+    // reads both. `nidoo/#` subsumes `nidoo/ui/#` and `nidoo/voice/shortcut/#` so they drop out.
     private val prefixes: Set<String> = linkedSetOf(prefix, HUB_PREFIX)
     private val baseFilters = prefixes.map { "$it/#" }.toSet()
     private val stateTopics = MutableStateFlow<Set<String>>(emptySet())
@@ -518,15 +518,15 @@ class MqttDiscoverySource(
 
     private fun report(message: String) = diagnostics.report(Diagnostic("discovery", message))
 
-    /** The flow id of an `oikos/automation/<id>` topic (exactly one non-empty segment after the prefix), else null. */
+    /** The flow id of an `nidoo/automation/<id>` topic (exactly one non-empty segment after the prefix), else null. */
     private fun flowIdOf(topic: String): String? =
         topic.takeIf { it.startsWith(FLOW_PREFIX) }?.removePrefix(FLOW_PREFIX)?.takeIf { it.isNotEmpty() && '/' !in it }
 
-    /** The dashboard id of an `oikos/ui/dashboards/<id>` topic (exactly one non-empty segment), else null. */
+    /** The dashboard id of an `nidoo/ui/dashboards/<id>` topic (exactly one non-empty segment), else null. */
     private fun dashboardIdOf(topic: String): String? =
         topic.takeIf { it.startsWith(DASHBOARD_PREFIX) }?.removePrefix(DASHBOARD_PREFIX)?.takeIf { it.isNotEmpty() && '/' !in it }
 
-    /** `oikos/ui/` documents that are not entity overrides (`_home`, `_types`, `ambiances/x`, nested dashboards...), except [AREAS_TOPIC]. */
+    /** `nidoo/ui/` documents that are not entity overrides (`_home`, `_types`, `ambiances/x`, nested dashboards...), except [AREAS_TOPIC]. */
     private fun isIgnoredUiDocument(topic: String): Boolean {
         if (!topic.startsWith(UI_PREFIX) || topic == AREAS_TOPIC) return false
         val rest = topic.removePrefix(UI_PREFIX)
@@ -538,11 +538,11 @@ class MqttDiscoverySource(
 
     companion object {
         const val DEFAULT_PREFIX = "homeassistant"
-        const val HUB_PREFIX = "oikos"
-        const val UI_PREFIX = "oikos/ui/"
-        const val VOICE_PREFIX = "oikos/voice/shortcut/"
+        const val HUB_PREFIX = "nidoo"
+        const val UI_PREFIX = "nidoo/ui/"
+        const val VOICE_PREFIX = "nidoo/voice/shortcut/"
         const val FLOW_PREFIX = "$HUB_PREFIX/automation/"
-        const val HUB_GROUP_PREFIX = "oikos/group/"
+        const val HUB_GROUP_PREFIX = "nidoo/group/"
         const val HUB_GROUP_DEFINITION_SUFFIX = "/definition"
         const val DASHBOARD_PREFIX = UI_PREFIX + "dashboards/"
         const val AREAS_ID = "_areas"

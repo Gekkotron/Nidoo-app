@@ -12,7 +12,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DashboardsModule {
-    /** The hub's dashboards, fed by the main session's MQTT source (retained `oikos/ui/dashboards/<id>`). */
+    /** The hub's dashboards, fed by the main session's MQTT source (retained `nidoo/ui/dashboards/<id>`). */
     @Provides
     @Singleton
     fun dashboardsRepository(@ApplicationScope scope: CoroutineScope): DashboardsRepository =

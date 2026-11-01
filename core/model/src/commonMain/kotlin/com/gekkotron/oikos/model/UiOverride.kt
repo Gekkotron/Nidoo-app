@@ -11,7 +11,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** Retained JSON on `oikos/ui/<unique_id>`. */
+/** Retained JSON on `nidoo/ui/<unique_id>`. */
 @Serializable
 data class UiOverride(
     val name: String? = null,

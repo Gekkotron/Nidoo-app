@@ -8,7 +8,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 
 /** Device identifier Oikos-OS stamps on every group entity it publishes. */
-const val HUB_GROUP_DEVICE_ID = "oikos_group"
+const val HUB_GROUP_DEVICE_ID = "nidoo_group"
 
 /** A hub-owned group as the app sees it (hub cover groups spec §1). */
 data class HubGroup(
@@ -22,7 +22,7 @@ data class HubGroup(
         private val KINDS = Kind.entries.associateBy { it.name.lowercase() }
 
         /**
-         * Parses the retained JSON at `oikos/group/<id>/definition`. Returns null when the payload
+         * Parses the retained JSON at `nidoo/group/<id>/definition`. Returns null when the payload
          * is malformed or missing a required field — the hub's schema may grow, unknown keys are
          * ignored.
          */

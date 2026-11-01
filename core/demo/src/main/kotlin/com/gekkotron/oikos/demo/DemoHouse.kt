@@ -147,7 +147,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         val areas = listOf("Living room", "Kitchen", "Bedroom", "Hallway", "Garage").withIndex().joinToString(",") { (i, name) ->
             """{"id":"${name.lowercase().replace(' ', '_')}","name":"$name","order":${i + 1}}"""
         }
-        extras += DemoMessage("oikos/ui/_areas", """{"areas":[$areas]}""")
+        extras += DemoMessage("nidoo/ui/_areas", """{"areas":[$areas]}""")
     }
 
     /** Two retained dashboards the way the hub publishes them; no flow buttons, the demo has no flows. */
@@ -168,12 +168,12 @@ class DemoHouse(private val random: Random = Random(7)) {
             w("e3", "energy_stat", "2x1", """{"metric":"today_kwh"}"""),
             w("e4", "history_chart", "2x2", """{"entity_id":"demo_bedroom_temperature","range":"24h"}"""),
         )
-        extras += DemoMessage("oikos/ui/dashboards/evening", """{"id":"evening","name":"Soirée","order":1,"show_header":true,"widgets":[${evening.joinToString(",")}]}""")
-        extras += DemoMessage("oikos/ui/dashboards/energy", """{"id":"energy","name":"Énergie","order":2,"widgets":[${energy.joinToString(",")}]}""")
+        extras += DemoMessage("nidoo/ui/dashboards/evening", """{"id":"evening","name":"Soirée","order":1,"show_header":true,"widgets":[${evening.joinToString(",")}]}""")
+        extras += DemoMessage("nidoo/ui/dashboards/energy", """{"id":"energy","name":"Énergie","order":2,"widgets":[${energy.joinToString(",")}]}""")
     }
 
     private fun override(id: String, json: String) {
-        extras += DemoMessage("oikos/ui/$id", json)
+        extras += DemoMessage("nidoo/ui/$id", json)
     }
 
     private fun config(component: String, id: String, device: String, name: String?, area: String, body: JsonObjectBuilder.() -> Unit) {
@@ -188,7 +188,7 @@ class DemoHouse(private val random: Random = Random(7)) {
             })
             body()
         }
-        configs += DemoMessage("homeassistant/$component/oikos_demo/$id/config", json.toString())
+        configs += DemoMessage("homeassistant/$component/nidoo_demo/$id/config", json.toString())
     }
 
     private fun doc(topic: String, json: JsonObject) {

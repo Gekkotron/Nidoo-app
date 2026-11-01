@@ -43,16 +43,16 @@ class FakeMqttTransportTest {
     @Test
     fun `publish is recorded, echoed, and empty retained clears`() = runTest {
         val t = FakeMqttTransport()
-        t.setSubscriptions(setOf("oikos/ui/#"))
-        t.publish("oikos/ui/x", "{}".encodeToByteArray(), retain = true)
-        assertEquals(listOf("oikos/ui/x" to "{}"), t.publishedStrings())
+        t.setSubscriptions(setOf("nidoo/ui/#"))
+        t.publish("nidoo/ui/x", "{}".encodeToByteArray(), retain = true)
+        assertEquals(listOf("nidoo/ui/x" to "{}"), t.publishedStrings())
 
-        t.publish("oikos/ui/x", ByteArray(0), retain = true)
+        t.publish("nidoo/ui/x", ByteArray(0), retain = true)
         val got = mutableListOf<String>()
         backgroundScope.launch { t.messages().collect { got += it.topic } }
         runCurrent()
         t.setSubscriptions(emptySet())
-        t.setSubscriptions(setOf("oikos/ui/#"))
+        t.setSubscriptions(setOf("nidoo/ui/#"))
         runCurrent()
         assertEquals(emptyList(), got)
     }

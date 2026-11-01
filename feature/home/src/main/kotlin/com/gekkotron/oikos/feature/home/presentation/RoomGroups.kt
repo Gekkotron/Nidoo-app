@@ -115,7 +115,7 @@ object RoomGroups {
         }
     }
 
-    /** Unique id of the hub group entity for group id [id] (`oikos/cover/group/<id>/config`'s `unique_id`). */
+    /** Unique id of the hub group entity for group id [id] (`nidoo/cover/group/<id>/config`'s `unique_id`). */
     fun groupEntityId(id: String): String = "group_$id"
 
     private fun coverValue(members: List<CardUi>): CardValue.CoverGroup {

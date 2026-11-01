@@ -23,30 +23,21 @@ internal data class StoredRegistration(
     val token: String = "",
     val topic: String = "",
     val at: Long = 0,
-    val legacyCleared: Boolean = false,
 )
 
 /** The last registration that reached the broker (push alerts spec §5.4). */
-data class LastRegistration(val token: String, val topic: String, val at: Instant, val legacyCleared: Boolean = false)
+data class LastRegistration(val token: String, val topic: String, val at: Instant)
 
 /** Kept apart from the profile and preferences so "Set up again" can forget it on its own. */
 class RegistrationStore internal constructor(private val store: DataStore<StoredRegistration>) {
     fun observe(): Flow<LastRegistration?> = store.data.map { stored ->
-        stored.takeIf { it.token.isNotBlank() }?.let { LastRegistration(it.token, it.topic, Instant.ofEpochSecond(it.at), it.legacyCleared) }
+        stored.takeIf { it.token.isNotBlank() }?.let { LastRegistration(it.token, it.topic, Instant.ofEpochSecond(it.at)) }
     }
 
     suspend fun last(): LastRegistration? = observe().first()
 
-    /** Preserves [legacyCleared], the one-shot flag for the hub takeover (hub spec §9). */
     suspend fun save(token: String, topic: String, at: Instant) {
         store.updateData { it.copy(token = token, topic = topic, at = at.epochSecond) }
-    }
-
-    /** True once the `oikos-push/tokens/<installId>` retained message has been cleared on the broker (hub spec §9). */
-    suspend fun legacyCleared(): Boolean = store.data.first().legacyCleared
-
-    suspend fun markLegacyCleared() {
-        store.updateData { it.copy(legacyCleared = true) }
     }
 
     suspend fun clear() {

@@ -17,8 +17,8 @@ class TransportSpecsTest {
 
     @Test
     fun `client ids are short, stable and distinct for the setup test`() {
-        assertEquals("oikos-3f2a9c1e", clientIdFor(id))
-        assertEquals("oikos-3f2a9c1e-setup", setupClientIdFor(id))
+        assertEquals("nidoo-3f2a9c1e", clientIdFor(id))
+        assertEquals("nidoo-3f2a9c1e-setup", setupClientIdFor(id))
     }
 
     @Test

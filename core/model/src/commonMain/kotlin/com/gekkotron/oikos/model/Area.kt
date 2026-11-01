@@ -16,6 +16,6 @@ data class Area(
     val groupFavorites: Set<String> = emptySet(),
 )
 
-/** Retained payload of `oikos/ui/_areas`. */
+/** Retained payload of `nidoo/ui/_areas`. */
 @Serializable
 data class AreasDocument(val areas: List<Area> = emptyList())

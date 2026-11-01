@@ -44,6 +44,19 @@ class ProfileRepositoryTest {
     }
 
     @Test
+    fun `a profile saved with the old oikos namespace reads as nidoo`() = runTest {
+        val r = repo()
+        r.save(direct.copy(prefix = "oikos", pushTokenTopic = "oikos/push/tokens/{installId}"))
+        val read = (r.state.first { it is ProfileState.Ready } as ProfileState.Ready).profile as ConnectionProfile.Direct
+        assertEquals("nidoo", read.prefix)
+        assertEquals("nidoo/push/tokens/{installId}", read.pushTokenTopic)
+        // A custom value is left alone.
+        r.save(direct)
+        val custom = (r.state.first { (it as? ProfileState.Ready)?.profile == direct } as ProfileState.Ready).profile as ConnectionProfile.Direct
+        assertEquals("homeassistant", custom.prefix)
+    }
+
+    @Test
     fun `demo profile round-trips`() = runTest {
         val r = repo()
         r.save(ConnectionProfile.Demo)

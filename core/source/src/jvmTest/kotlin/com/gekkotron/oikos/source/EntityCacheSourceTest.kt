@@ -27,7 +27,7 @@ class EntityCacheSourceTest {
     private val cached = mapOf(
         lightTopic to lightConfig,
         "z2m/lampe" to """{"state":"ON","brightness":254}""",
-        "oikos/ui/$lightId" to UiOverrides.encode(UiOverride(name = "Plafonnier")),
+        "nidoo/ui/$lightId" to UiOverrides.encode(UiOverride(name = "Plafonnier")),
     )
 
     private fun offline() = FakeMqttTransport().apply { setLink(LinkState.Offline("test")) }

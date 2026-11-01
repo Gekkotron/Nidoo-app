@@ -8,7 +8,7 @@ import com.gekkotron.oikos.data.RoutePreference
 import com.gekkotron.oikos.transport.Route
 import com.gekkotron.oikos.transport.TransportSpec
 
-fun clientIdFor(installId: String): String = "oikos-" + installId.filter { it != '-' }.take(8)
+fun clientIdFor(installId: String): String = "nidoo-" + installId.filter { it != '-' }.take(8)
 
 /** The onboarding test connection has its own id: a duplicate id makes the broker kick the other client. */
 fun setupClientIdFor(installId: String): String = clientIdFor(installId) + "-setup"

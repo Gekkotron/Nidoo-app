@@ -14,7 +14,7 @@ class EnvelopeCryptoTest {
     private val fixedNonce = ByteArray(12) { it.toByte() }
 
     // Produced by the gateway scheme (Python cryptography AESGCM), key 00..1f, nonce 00..0b.
-    private val vectorPlaintext = """{"timestamp": 1790241732, "topic": "oikos/test", "message": "hello"}"""
+    private val vectorPlaintext = """{"timestamp": 1790241732, "topic": "nidoo/test", "message": "hello"}"""
     private val vectorEnvelope =
         "AAECAwQFBgcICQoLPCCicqiAsW/sLOepi8lJWrrmtQDBTGxOFEfH8XIZadEjKo7ewKh59weLC4j78woUznsN6Cmlwr1atRA5OouQgpxT5AeCAOF1ohlJF6GrNozuys49"
 
@@ -30,7 +30,7 @@ class EnvelopeCryptoTest {
     fun `open decrypts the gateway vector`() {
         val obj = crypto().open(vectorEnvelope)
         assertEquals(1790241732L, obj["timestamp"]!!.jsonPrimitive.long)
-        assertEquals("oikos/test", obj["topic"]!!.jsonPrimitive.content)
+        assertEquals("nidoo/test", obj["topic"]!!.jsonPrimitive.content)
         assertEquals("hello", obj["message"]!!.jsonPrimitive.content)
     }
 

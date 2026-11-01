@@ -19,10 +19,10 @@ class DemoHouseTest {
     @Test
     fun `the LED strip announces effects, a colour mode and two numbers on its device`() {
         val configs = DemoHouse().retainedMessages().filter { it.topic.endsWith("/config") }
-        val light = configs.single { it.topic == "homeassistant/light/oikos_demo/demo_bedroom_strip/config" }
+        val light = configs.single { it.topic == "homeassistant/light/nidoo_demo/demo_bedroom_strip/config" }
         assertTrue(""""effect_list":["solid","breathe","rainbow","candle"]""" in light.payload, light.payload)
         assertTrue(""""supported_color_modes":["xy"]""" in light.payload, light.payload)
-        val numbers = configs.filter { it.topic.startsWith("homeassistant/number/oikos_demo/demo_bedroom_strip_") }
+        val numbers = configs.filter { it.topic.startsWith("homeassistant/number/nidoo_demo/demo_bedroom_strip_") }
         assertEquals(2, numbers.size)
         assertTrue(numbers.all { "\"demo_led_strip\"" in it.payload })
     }
@@ -44,7 +44,7 @@ class DemoHouseTest {
 
     @Test
     fun `the alarm takes a remote code for disarming only`() {
-        val config = DemoHouse().retainedMessages().single { it.topic == "homeassistant/alarm_control_panel/oikos_demo/demo_alarm/config" }.payload
+        val config = DemoHouse().retainedMessages().single { it.topic == "homeassistant/alarm_control_panel/nidoo_demo/demo_alarm/config" }.payload
         assertTrue(""""code":"REMOTE_CODE"""" in config, config)
         assertTrue(""""code_arm_required":false""" in config, config)
         assertTrue(""""code_disarm_required":true""" in config, config)
@@ -111,7 +111,7 @@ class DemoHouseTest {
     @Test
     fun `the demo publishes two dashboards`() {
         val decoded = DemoHouse().retainedMessages()
-            .filter { it.topic.startsWith("oikos/ui/dashboards/") }
+            .filter { it.topic.startsWith("nidoo/ui/dashboards/") }
             .map { DashboardJson.decode(it.topic.substringAfterLast('/'), it.payload) }
             .sortedBy { it.order }
         assertEquals(listOf("Soirée", "Énergie"), decoded.map { it.name })

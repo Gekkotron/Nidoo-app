@@ -61,9 +61,9 @@ class PresenceWorkerTest {
         val sent = publisher.sent
         assertEquals(3, sent.size, "expected discovery + availability + state, got ${sent.map { it.topic }}")
         val topics = sent.map { it.topic }
-        assertTrue(topics.contains("homeassistant/device_tracker/oikos_pixel/config"), topics.toString())
-        assertTrue(topics.contains("oikos/presence/pixel/available"), topics.toString())
-        assertTrue(topics.contains("oikos/presence/pixel/state"), topics.toString())
+        assertTrue(topics.contains("homeassistant/device_tracker/nidoo_pixel/config"), topics.toString())
+        assertTrue(topics.contains("nidoo/presence/pixel/available"), topics.toString())
+        assertTrue(topics.contains("nidoo/presence/pixel/state"), topics.toString())
         sent.forEach { assertTrue(it.retain, "${it.topic} must be retained") }
     }
 
@@ -116,7 +116,7 @@ class PresenceWorkerTest {
         run(PresenceState.HOME)
         val cfg = publisher.sent.single { it.topic.contains("/config") }.payload
         val json = Json.parseToJsonElement(cfg).jsonObject
-        assertEquals("Oikos Pixel 9", json["name"]!!.jsonPrimitive.content)
+        assertEquals("Nidoo Pixel 9", json["name"]!!.jsonPrimitive.content)
     }
 
     private class Recorder : TopicPublisher {

@@ -90,12 +90,23 @@ class ProfileRepository internal constructor(
         val l = local ?: return null
         return ConnectionProfile.Direct(
             local = LocalBroker(l.host, l.port, l.tls, l.ws, l.username, l.passCipher?.let { open(it).decodeToString() }),
-            prefix = prefix,
+            prefix = prefix.renamedNamespace(),
             gateway = gateway?.let { GatewayConfig(it.url, open(it.keyCipher), it.brokerHost) },
-            pushTokenTopic = pushTokenTopic,
+            pushTokenTopic = pushTokenTopic?.renamedNamespace(),
             historyUrl = historyUrl,
             frigate = frigate?.let { FrigateConfig(it.url, it.username, it.passCipher?.let { c -> open(c).decodeToString() }) },
         )
+    }
+
+    /**
+     * The hub moved its MQTT namespace from `oikos` to `nidoo`. A profile saved before that still holds the old
+     * value (a discovery prefix `oikos`, a token topic `oikos/push/...`): read it as the new one, and the next
+     * save writes it back renamed.
+     */
+    private fun String.renamedNamespace(): String = when {
+        this == "oikos" -> "nidoo"
+        startsWith("oikos/") -> "nidoo/" + removePrefix("oikos/")
+        else -> this
     }
 
     private fun toStored(p: ConnectionProfile, id: String): StoredProfile = when (p) {

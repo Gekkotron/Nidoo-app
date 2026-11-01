@@ -44,7 +44,7 @@ class MqttDiscoverySourceFlowsTest {
     fun `retained flow topic forwards id and payload`() = runTest {
         val sink = RecordingSink()
         val h = start(sink)
-        h.transport.deliver("oikos/automation/abc", """{"id":"abc"}""", retain = true)
+        h.transport.deliver("nidoo/automation/abc", """{"id":"abc"}""", retain = true)
         runCurrent()
         assertEquals(listOf<Pair<String, String?>>("abc" to """{"id":"abc"}"""), sink.retained)
         assertTrue(h.diagnostics.isEmpty())
@@ -54,7 +54,7 @@ class MqttDiscoverySourceFlowsTest {
     fun `empty payload forwards as delete`() = runTest {
         val sink = RecordingSink()
         val h = start(sink)
-        h.transport.deliver("oikos/automation/abc", "", retain = true)
+        h.transport.deliver("nidoo/automation/abc", "", retain = true)
         runCurrent()
         assertEquals(listOf<Pair<String, String?>>("abc" to null), sink.retained)
     }
@@ -63,8 +63,8 @@ class MqttDiscoverySourceFlowsTest {
     fun `deeper sub-topic is not forwarded`() = runTest {
         val sink = RecordingSink()
         val h = start(sink)
-        h.transport.deliver("oikos/automation/abc/state", "on", retain = true)
-        h.transport.deliver("oikos/automation/", "x", retain = true)
+        h.transport.deliver("nidoo/automation/abc/state", "on", retain = true)
+        h.transport.deliver("nidoo/automation/", "x", retain = true)
         runCurrent()
         assertTrue(sink.retained.isEmpty())
     }
@@ -72,7 +72,7 @@ class MqttDiscoverySourceFlowsTest {
     @Test
     fun `null sink is a no-op and never reaches the store`() = runTest {
         val h = start(null)
-        h.transport.deliver("oikos/automation/abc", """{"id":"abc"}""", retain = true)
+        h.transport.deliver("nidoo/automation/abc", """{"id":"abc"}""", retain = true)
         runCurrent()
         assertTrue(h.source.entities.value.isEmpty())
         assertTrue(h.diagnostics.isEmpty())
@@ -83,7 +83,7 @@ class MqttDiscoverySourceFlowsTest {
     fun `restored automation message is not forwarded`() = runTest {
         val sink = RecordingSink()
         val h = start(sink)
-        h.source.restore(mapOf("oikos/automation/abc" to """{"id":"abc"}"""))
+        h.source.restore(mapOf("nidoo/automation/abc" to """{"id":"abc"}"""))
         runCurrent()
         assertTrue(sink.retained.isEmpty())
     }

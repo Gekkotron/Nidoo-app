@@ -35,9 +35,9 @@ class TopicFilterTest {
 
     @Test
     fun `publish topics cannot contain wildcards`() {
-        assertTrue(isValidPublishTopic("oikos/ui/0x00_light"))
-        assertFalse(isValidPublishTopic("oikos/ui/a+b"))
-        assertFalse(isValidPublishTopic("oikos/ui/#"))
+        assertTrue(isValidPublishTopic("nidoo/ui/0x00_light"))
+        assertFalse(isValidPublishTopic("nidoo/ui/a+b"))
+        assertFalse(isValidPublishTopic("nidoo/ui/#"))
         assertFalse(isValidPublishTopic(""))
     }
 }

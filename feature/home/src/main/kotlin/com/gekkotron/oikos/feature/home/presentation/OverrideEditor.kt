@@ -7,7 +7,7 @@ import com.gekkotron.oikos.source.EntitySource
 import kotlinx.coroutines.CancellationException
 
 /**
- * The one feature-side writer of `oikos/ui/…` (spec §4.3), shared by the override sheet and the Rooms
+ * The one feature-side writer of `nidoo/ui/…` (spec §4.3), shared by the override sheet and the Rooms
  * step. Every write reports success as a Boolean: offline (PublishFailed, after the source rolled back)
  * and an id that cannot be a topic (IllegalArgumentException) both become false, never a crash.
  */

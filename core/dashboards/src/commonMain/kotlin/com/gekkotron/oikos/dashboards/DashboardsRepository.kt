@@ -37,7 +37,7 @@ data class DashboardsSnapshot(
 )
 
 /**
- * The hub's dashboards (retained MQTT, `oikos/ui/dashboards/<id>`). Read-only in the app.
+ * The hub's dashboards (retained MQTT, `nidoo/ui/dashboards/<id>`). Read-only in the app.
  *
  * All state lives in one immutable [State] behind a [MutableStateFlow], so [onRetained]
  * (MQTT thread) and the timers update it atomically.
