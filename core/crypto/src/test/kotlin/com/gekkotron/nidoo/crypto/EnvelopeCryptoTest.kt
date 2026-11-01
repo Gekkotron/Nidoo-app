@@ -16,7 +16,7 @@ class EnvelopeCryptoTest {
     // Produced by the gateway scheme (Python cryptography AESGCM), key 00..1f, nonce 00..0b.
     private val vectorPlaintext = """{"timestamp": 1790241732, "topic": "nidoo/test", "message": "hello"}"""
     private val vectorEnvelope =
-        "AAECAwQFBgcICQoLPCCicqiAsW/sLOepi8lJWrrmtQDBTGxOFEfH8XIZadEjKo7ewKh59weLC4j78woUznsN6Cmlwr1atRA5OouQgpxT5AeCAOF1ohlJF6GrNozuys49"
+        "AAECAwQFBgcICQoLPCCicqiAsW/sLOepi8lJWrrmtQDBTGxOFEfH8XIZadEjKo7ewah29xuLC4j78woUznsN6Cmlwr1atRA5OouQgpxT5AewiNzfq0+5R2Vimndevizb"
 
     private fun crypto(now: Long = 1790241732L) =
         EnvelopeCrypto(key, maxAgeSeconds = 60, nowSeconds = { now }, nonceSource = { fixedNonce.copyOf() })
