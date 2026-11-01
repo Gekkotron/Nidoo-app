@@ -5,6 +5,18 @@ plugins {
 
 android {
     namespace = "com.gekkotron.oikos.designsystem"
+
+    testOptions {
+        screenshotTests.create("screenshotTest") {
+            engineVersion = libs.versions.screenshot.get()
+            targetVariants.add("debug")
+            dependencies {
+                implementation(project.dependencies.platform(libs.compose.bom))
+                implementation(libs.compose.ui.tooling)
+                implementation(libs.screenshot.validation.api)
+            }
+        }
+    }
 }
 
 dependencies {
@@ -15,4 +27,11 @@ dependencies {
     implementation(libs.androidx.activity.compose) // the permission launcher
     implementation(libs.androidx.core.ktx)
     implementation(libs.vico.compose.m3)
+}
+
+// Compose Preview packages resources through the host-test APK, so every variant needs unit tests.
+androidComponents {
+    beforeVariants { variant ->
+        variant.hostTests[com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
+    }
 }

@@ -37,6 +37,20 @@ The debug build talks to a built-in demo house, so no broker is needed.
 
 Build and test: `./gradlew check koverXmlReport`.
 
+## Screenshot tests
+
+`:core:designsystem` has Compose screenshot tests (AGP test suites, experimental) that render a sheet of the design system and the opening icons in both Night Glass and Ivoire. They catch unintended theme changes.
+
+```bash
+# Validate against the committed references
+./gradlew :core:designsystem:testDebugScreenshotTestDefaultTestSuite
+
+# Regenerate the references after an intended visual change
+./gradlew :core:designsystem:updateDebugScreenshotTestDefaultTestSuite
+```
+
+The sources live in `core/designsystem/src/screenshotTest/` and the reference PNGs in `core/designsystem/src/screenshotTestDefaultDebug/reference/`. This is local only: `check` and CI do not run it.
+
 ## Highlights (v1)
 
 - Live state over MQTT subscriptions, with no polling.
