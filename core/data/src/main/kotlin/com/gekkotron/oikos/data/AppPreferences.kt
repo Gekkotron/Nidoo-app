@@ -8,10 +8,15 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -59,39 +64,50 @@ internal data class StoredPreferences(
     val dashboardName: String? = null,
 )
 
-/** Per-phone preferences, kept apart from the profile so "Set up again" leaves them alone. */
+/**
+ * Per-phone preferences, kept apart from the profile so "Set up again" leaves them alone.
+ *
+ * The flows are not fed by collecting `store.data`. DataStore (1.2.1 `DataStoreImpl.readDataAndUpdateCache`)
+ * opens each collection with an unlocked read; if a write is between its version bump and its rename,
+ * that read returns the old file tagged with the new version, and the collection then drops the write as
+ * already seen until some later write. So the file is read once while no write can be in flight, and each
+ * write publishes the value DataStore committed. [writes] orders both, so the flows only move forward.
+ * This holds because this class is the file's only writer.
+ */
 class AppPreferences internal constructor(private val store: DataStore<StoredPreferences>, scope: CoroutineScope) {
+    private val writes = Mutex()
+    private var loaded = false // guarded by [writes]
+
+    private val _theme = MutableStateFlow<ThemePreference?>(null)
+    private val _voiceEnabled = MutableStateFlow<Boolean?>(null)
+    private val _presence = MutableStateFlow<PresenceConfig?>(null)
+    private val _selectedDashboard = MutableStateFlow<DashboardChoice?>(null)
+
     /** null until the file has been read. */
-    val theme: StateFlow<ThemePreference?> = store.data
-        .map { stored ->
-            // WARM_MINIMAL was saved before Ivoire replaced Warm Minimal.
-            val name = if (stored.theme == "WARM_MINIMAL") ThemePreference.IVOIRE.name else stored.theme
-            ThemePreference.entries.firstOrNull { it.name == name } ?: ThemePreference.SYSTEM
-        }
-        .stateIn(scope, SharingStarted.Eagerly, null)
+    val theme: StateFlow<ThemePreference?> = _theme.asStateFlow()
 
-    suspend fun setTheme(theme: ThemePreference) {
-        store.updateData { it.copy(theme = theme.name) }
+    /** null until the file has been read. */
+    val voiceEnabled: StateFlow<Boolean?> = _voiceEnabled.asStateFlow()
+
+    /** null until the file has been read. */
+    val presence: StateFlow<PresenceConfig?> = _presence.asStateFlow()
+
+    /** null until the file has been read. */
+    val selectedDashboard: StateFlow<DashboardChoice?> = _selectedDashboard.asStateFlow()
+
+    init {
+        scope.launch {
+            writes.withLock { if (!loaded) publish(store.data.first()) }
+        }
     }
 
-    val voiceEnabled: StateFlow<Boolean?> = store.data
-        .map { it.voiceEnabled }
-        .stateIn(scope, SharingStarted.Eagerly, null)
+    suspend fun setTheme(theme: ThemePreference) = update { it.copy(theme = theme.name) }
 
-    suspend fun setVoiceEnabled(enabled: Boolean) {
-        store.updateData { it.copy(voiceEnabled = enabled) }
-    }
-
-    val presence: StateFlow<PresenceConfig?> = store.data
-        .map { stored ->
-            val s = stored.presence
-            PresenceConfig(s.enabled, s.alias, s.homeLat, s.homeLng, s.radiusM)
-        }
-        .stateIn(scope, SharingStarted.Eagerly, null)
+    suspend fun setVoiceEnabled(enabled: Boolean) = update { it.copy(voiceEnabled = enabled) }
 
     suspend fun setPresence(config: PresenceConfig) {
         val radius = config.radiusM.coerceIn(PresenceConfig.MIN_RADIUS_M, PresenceConfig.MAX_RADIUS_M)
-        store.updateData {
+        update {
             it.copy(
                 presence = StoredPresence(
                     enabled = config.enabled,
@@ -104,18 +120,29 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
         }
     }
 
-    /** null until the file has been read. */
-    val selectedDashboard: StateFlow<DashboardChoice?> = store.data
-        .map { DashboardChoice(it.dashboardId, it.dashboardName) }
-        .stateIn(scope, SharingStarted.Eagerly, null)
-
-    suspend fun setSelectedDashboard(id: String, name: String?) {
-        store.updateData { it.copy(dashboardId = id, dashboardName = name) }
-    }
+    suspend fun setSelectedDashboard(id: String, name: String?) = update { it.copy(dashboardId = id, dashboardName = name) }
 
     /** Writes the choice only while the stored id is still [expectedId], so a tap that raced a rename or reset is never overwritten. */
-    suspend fun replaceSelectedDashboard(expectedId: String, id: String, name: String?) {
-        store.updateData { if (it.dashboardId == expectedId) it.copy(dashboardId = id, dashboardName = name) else it }
+    suspend fun replaceSelectedDashboard(expectedId: String, id: String, name: String?) =
+        update { if (it.dashboardId == expectedId) it.copy(dashboardId = id, dashboardName = name) else it }
+
+    /** The flows show the write as soon as this returns. */
+    private suspend fun update(transform: (StoredPreferences) -> StoredPreferences) {
+        writes.withLock {
+            // DataStore finishes a write whose caller was cancelled, so publish it regardless.
+            withContext(NonCancellable) { publish(store.updateData(transform)) }
+        }
+    }
+
+    private fun publish(stored: StoredPreferences) {
+        loaded = true
+        // WARM_MINIMAL was saved before Ivoire replaced Warm Minimal.
+        val themeName = if (stored.theme == "WARM_MINIMAL") ThemePreference.IVOIRE.name else stored.theme
+        _theme.value = ThemePreference.entries.firstOrNull { it.name == themeName } ?: ThemePreference.SYSTEM
+        _voiceEnabled.value = stored.voiceEnabled
+        val p = stored.presence
+        _presence.value = PresenceConfig(p.enabled, p.alias, p.homeLat, p.homeLng, p.radiusM)
+        _selectedDashboard.value = DashboardChoice(stored.dashboardId, stored.dashboardName)
     }
 
     companion object {

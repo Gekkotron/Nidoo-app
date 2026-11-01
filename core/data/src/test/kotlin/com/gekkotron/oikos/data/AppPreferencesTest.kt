@@ -1,13 +1,25 @@
 package com.gekkotron.oikos.data
 
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.Serializer
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.OutputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -173,5 +185,123 @@ class AppPreferencesTest {
         profiles.save(ConnectionProfile.Demo)
         profiles.clear()
         assertEquals(DashboardChoice("evening", "Soirée"), p.selectedDashboard.first { it == DashboardChoice("evening", "Soirée") })
+    }
+
+    private fun store(serializer: Serializer<StoredPreferences>, scope: CoroutineScope, f: File = file()) =
+        DataStoreFactory.create(serializer, ReplaceFileCorruptionHandler { StoredPreferences() }, scope = scope) { f }
+
+    /** Holds every write between DataStore's version bump and the file rename, so a read can be staged inside that window. */
+    private class HeldWrites : Serializer<StoredPreferences> by PreferencesSerializer {
+        val writing = CompletableDeferred<Unit>()
+        val release = CountDownLatch(1)
+        override suspend fun writeTo(t: StoredPreferences, output: OutputStream) {
+            writing.complete(Unit)
+            release.await()
+            PreferencesSerializer.writeTo(t, output)
+        }
+    }
+
+    /**
+     * Regression: DataStore's `data` starts with an unlocked read that, while a write is between its
+     * version bump and its rename, returns the old file tagged with the new version, then drops the
+     * write itself as "already seen". A write overlapping the first read must still reach the flows.
+     */
+    @Test
+    fun `a write overlapping the first read is not lost`() = runBlocking {
+        val prefsThread = Executors.newSingleThreadExecutor()
+        val firstReadMayStart = CountDownLatch(1)
+        prefsThread.execute { firstReadMayStart.await() } // queues the preferences' own work behind this
+        val scope = CoroutineScope(prefsThread.asCoroutineDispatcher() + SupervisorJob())
+        val storeScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val held = HeldWrites()
+        try {
+            withTimeout(10_000) {
+                val p = AppPreferences(store(held, storeScope), scope)
+                val write = async(Dispatchers.Default) { p.setTheme(ThemePreference.IVOIRE) }
+                held.writing.await() // the version is bumped; the new file is not in place yet
+                firstReadMayStart.countDown()
+                // Let a first read run inside the window if the implementation starts one there.
+                withTimeoutOrNull(500) { p.theme.first { it != null } }
+                held.release.countDown()
+                write.await()
+                val seen = withTimeoutOrNull(2_000) { p.theme.first { it == ThemePreference.IVOIRE } }
+                assertEquals(ThemePreference.IVOIRE, seen, "the write was lost: theme stayed ${p.theme.value}")
+            }
+        } finally {
+            held.release.countDown()
+            firstReadMayStart.countDown()
+            scope.cancel()
+            storeScope.cancel()
+            prefsThread.shutdown()
+        }
+    }
+
+    /** The unstaged shape of the same race: a write straight after creation, many times over. */
+    @Test
+    fun `a write straight after creation is always seen`() = runBlocking {
+        var lost = 0
+        repeat(STRESS_ROUNDS) { i ->
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            try {
+                val p = AppPreferences.create(file("stress-$i.json"), scope)
+                val want = DashboardChoice("d$i", "D $i")
+                p.setSelectedDashboard(want.id, want.name)
+                if (withTimeoutOrNull(1_000) { p.selectedDashboard.first { it == want } } == null) lost++
+            } finally {
+                scope.cancel()
+            }
+        }
+        assertEquals(0, lost, "$lost of $STRESS_ROUNDS writes never reached selectedDashboard")
+    }
+
+    @Test
+    fun `a write shows as soon as the setter returns`() = realTest {
+        val p = prefs()
+        p.setSelectedDashboard("a", "A")
+        assertEquals(DashboardChoice("a", "A"), p.selectedDashboard.value)
+        p.setTheme(ThemePreference.IVOIRE)
+        assertEquals(ThemePreference.IVOIRE, p.theme.value)
+        p.setVoiceEnabled(true)
+        assertEquals(true, p.voiceEnabled.value)
+        p.setPresence(PresenceConfig(enabled = true, alias = "x", radiusM = 100))
+        assertEquals(PresenceConfig(enabled = true, alias = "x", radiusM = 100), p.presence.value)
+    }
+
+    @Test
+    fun `concurrent writers leave the flows on what the file holds`() = realTest {
+        val f = file("concurrent.json")
+        val p = prefs(f)
+        coroutineScope {
+            repeat(50) { i -> launch(Dispatchers.Default) { p.setSelectedDashboard("d$i", "D $i") } }
+            repeat(50) { i -> launch(Dispatchers.Default) { p.setVoiceEnabled(i % 2 == 0) } }
+            repeat(30) { i -> launch(Dispatchers.Default) { p.setTheme(ThemePreference.entries[i % ThemePreference.entries.size]) } }
+        }
+        val onDisk = f.inputStream().use { PreferencesSerializer.readFrom(it) }
+        assertEquals(DashboardChoice(onDisk.dashboardId, onDisk.dashboardName), p.selectedDashboard.value)
+        assertEquals(onDisk.voiceEnabled, p.voiceEnabled.value)
+        assertEquals(onDisk.theme, p.theme.value?.name)
+    }
+
+    @Test
+    fun `a write whose caller is cancelled still shows`() = realTest {
+        val storeScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val held = HeldWrites()
+        try {
+            val p = AppPreferences(store(held, storeScope), this)
+            p.theme.filterNotNull().first()
+            val caller = launch { p.setTheme(ThemePreference.IVOIRE) }
+            held.writing.await()
+            caller.cancel() // DataStore still finishes the write
+            held.release.countDown()
+            caller.join()
+            assertEquals(ThemePreference.IVOIRE, p.theme.value)
+        } finally {
+            held.release.countDown()
+            storeScope.cancel()
+        }
+    }
+
+    private companion object {
+        const val STRESS_ROUNDS = 300
     }
 }
