@@ -13,6 +13,8 @@ jobs:
   test:
     name: ${{ matrix.group.name }} tests
     runs-on: ubuntu-latest
+    # A green run takes ~15 min; a hung test task otherwise holds the runner for the 6 h default.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +52,9 @@ jobs:
               :core:demo:koverXmlReport
               :core:designsystem:koverXmlReport
           - name: feature
+            # Per-module koverXmlReport, as in core: the root one still dragged
+            # :app:testDebugUnitTest in despite -x :app:koverXmlReport, and that task
+            # deadlocks next to the parallel :feature:*:test tasks (6 h hang on 2026-10-29).
             tasks: >-
               :feature:home:test
               :feature:onboarding:test
@@ -61,8 +66,16 @@ jobs:
               :feature:alerts:test
               :feature:widget:test
               :feature:voice:test
-              koverXmlReport
-              -x :app:koverXmlReport
+              :feature:home:koverXmlReport
+              :feature:onboarding:koverXmlReport
+              :feature:energy:koverXmlReport
+              :feature:history:koverXmlReport
+              :feature:security:koverXmlReport
+              :feature:automations:koverXmlReport
+              :feature:settings:koverXmlReport
+              :feature:alerts:koverXmlReport
+              :feature:widget:koverXmlReport
+              :feature:voice:koverXmlReport
           - name: app
             tasks: >-
               :app:test
@@ -84,8 +97,8 @@ jobs:
         # Hilt KSP + Compose UI + Robolectric combo hangs the invocation under CC in CI
         # even though it stores a cache entry cleanly on a dev machine. Revisit when AGP /
         # Hilt / KSP CC compatibility improves.
-        # :core and :feature jobs pass -x :app:koverXmlReport so Gradle doesn't drag
-        # :app:testDebugUnitTest in through koverXmlReport's cross-module aggregation —
+        # :core and :feature jobs use per-module koverXmlReport so Gradle doesn't drag
+        # :app:testDebugUnitTest in through the root report's cross-module aggregation —
         # that task deadlocks when co-scheduled with the parallel :feature:*:test tasks.
         # :app coverage is uploaded by the dedicated :app matrix job.
         run: ./gradlew ${{ matrix.group.tasks }} -Dorg.gradle.configuration-cache=false --stacktrace --continue
@@ -94,8 +107,9 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           # core job writes per-module XMLs under core/*/build/reports/kover/report.xml;
-          # feature + app jobs still produce the root-aggregated report.
-          files: ${{ matrix.group.name == 'core' && 'core/model/build/reports/kover/report.xml,core/crypto/build/reports/kover/report.xml,core/transport/build/reports/kover/report.xml,core/state/build/reports/kover/report.xml,core/source/build/reports/kover/report.xml,core/voice/build/reports/kover/report.xml,core/data/build/reports/kover/report.xml,core/alerts/build/reports/kover/report.xml,core/history/build/reports/kover/report.xml,core/flows/build/reports/kover/report.xml,core/push/build/reports/kover/report.xml,core/demo/build/reports/kover/report.xml,core/designsystem/build/reports/kover/report.xml' || 'build/reports/kover/report.xml' }}
+          # feature job writes per-module XMLs under feature/*/build/reports/kover/report.xml;
+          # the app job still produces the root-aggregated report.
+          files: ${{ matrix.group.name == 'core' && 'core/model/build/reports/kover/report.xml,core/crypto/build/reports/kover/report.xml,core/transport/build/reports/kover/report.xml,core/state/build/reports/kover/report.xml,core/source/build/reports/kover/report.xml,core/voice/build/reports/kover/report.xml,core/data/build/reports/kover/report.xml,core/alerts/build/reports/kover/report.xml,core/history/build/reports/kover/report.xml,core/flows/build/reports/kover/report.xml,core/push/build/reports/kover/report.xml,core/demo/build/reports/kover/report.xml,core/designsystem/build/reports/kover/report.xml' || matrix.group.name == 'feature' && 'feature/home/build/reports/kover/report.xml,feature/onboarding/build/reports/kover/report.xml,feature/energy/build/reports/kover/report.xml,feature/history/build/reports/kover/report.xml,feature/security/build/reports/kover/report.xml,feature/automations/build/reports/kover/report.xml,feature/settings/build/reports/kover/report.xml,feature/alerts/build/reports/kover/report.xml,feature/widget/build/reports/kover/report.xml,feature/voice/build/reports/kover/report.xml' || 'build/reports/kover/report.xml' }}
           flags: ${{ matrix.group.name }}
           fail_ci_if_error: false
       - name: Upload debug APK

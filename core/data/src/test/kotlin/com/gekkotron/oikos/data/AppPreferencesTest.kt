@@ -26,8 +26,8 @@ class AppPreferencesTest {
     @Test
     fun `theme round-trips`() = runTest {
         val p = prefs()
-        p.setTheme(ThemePreference.WARM_MINIMAL)
-        assertEquals(ThemePreference.WARM_MINIMAL, p.theme.first { it == ThemePreference.WARM_MINIMAL })
+        p.setTheme(ThemePreference.IVOIRE)
+        assertEquals(ThemePreference.IVOIRE, p.theme.first { it == ThemePreference.IVOIRE })
     }
 
     @Test
@@ -71,7 +71,13 @@ class AppPreferencesTest {
         val f = file().apply { writeText("""{"theme":"WARM_MINIMAL"}""") }
         val p = prefs(f)
         assertEquals(false, p.voiceEnabled.filterNotNull().first())
-        assertEquals(ThemePreference.WARM_MINIMAL, p.theme.first { it == ThemePreference.WARM_MINIMAL })
+        assertEquals(ThemePreference.IVOIRE, p.theme.first { it == ThemePreference.IVOIRE })
+    }
+
+    @Test
+    fun `a stored WARM_MINIMAL opens as Ivoire`() = runTest {
+        val f = file().apply { writeText("""{"theme":"WARM_MINIMAL"}""") }
+        assertEquals(ThemePreference.IVOIRE, prefs(f).theme.first { it != null })
     }
 
     @Test

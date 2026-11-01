@@ -92,8 +92,8 @@ class GroupScreenshotTest {
     }
 
     @Test
-    fun `home with groups in Warm Minimal`() {
-        home(ThemeChoice.WARM_MINIMAL)
+    fun `home with groups in Ivoire`() {
+        home(ThemeChoice.IVOIRE)
         assertTheme("groups-home-warm", dark = false)
     }
 
@@ -104,8 +104,8 @@ class GroupScreenshotTest {
     }
 
     @Test
-    fun `light group sheet in Warm Minimal`() {
-        sheet(ThemeChoice.WARM_MINIMAL, Kind.LIGHT)
+    fun `light group sheet in Ivoire`() {
+        sheet(ThemeChoice.IVOIRE, Kind.LIGHT)
         assertTheme("groups-sheet-lights-warm", dark = false)
     }
 }

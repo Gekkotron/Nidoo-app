@@ -214,8 +214,8 @@ class MainActivityTest {
     fun `settings opens from the gear, the theme sticks, and back returns Home`() {
         openDemo()
         openSettings()
-        compose.onNodeWithText("Warm Minimal").performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Warm Minimal") and isSelected(), timeoutMillis = 10_000) // the store write is async
+        compose.onNodeWithText("Ivoire").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Ivoire") and isSelected(), timeoutMillis = 10_000) // the store write is async
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntilAtLeastOneExists(hasContentDescription("Air conditioner", substring = true), timeoutMillis = 10_000)
     }

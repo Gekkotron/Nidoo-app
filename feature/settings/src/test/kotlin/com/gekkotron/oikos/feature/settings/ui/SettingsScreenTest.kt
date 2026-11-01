@@ -63,8 +63,8 @@ class SettingsScreenTest {
     fun `theme rows show the choice and report a pick`() {
         show()
         compose.onNodeWithText("Follow the system").assertIsSelected()
-        compose.onNodeWithText("Warm Minimal").performClick()
-        assertEquals(listOf(ThemePreference.WARM_MINIMAL), themes)
+        compose.onNodeWithText("Ivoire").performClick()
+        assertEquals(listOf(ThemePreference.IVOIRE), themes)
     }
 
     @Test

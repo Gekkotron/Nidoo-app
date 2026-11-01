@@ -22,7 +22,7 @@ class RoomChipsTest {
     fun `selected chip is marked and a click reports its key`() {
         val picked = mutableListOf<String>()
         compose.setContent {
-            OikosTheme(ThemeChoice.WARM_MINIMAL) {
+            OikosTheme(ThemeChoice.IVOIRE) {
                 RoomChips(listOf(ChipItem("all", "All"), ChipItem("area:kitchen", "Kitchen")), "all", { picked += it })
             }
         }

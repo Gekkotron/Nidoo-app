@@ -57,7 +57,7 @@ class AutomationsScreenTest {
     ) = AutomationsUiState(isLoading, isOffline, chips, ALL_KEY, rows, toast)
 
     private fun show(state: AutomationsUiState, dark: Boolean = true) = compose.setContent {
-        OikosTheme(if (dark) ThemeChoice.NIGHT_GLASS else ThemeChoice.WARM_MINIMAL) {
+        OikosTheme(if (dark) ThemeChoice.NIGHT_GLASS else ThemeChoice.IVOIRE) {
             OikosBackground {
                 AutomationsScreen(
                     state,

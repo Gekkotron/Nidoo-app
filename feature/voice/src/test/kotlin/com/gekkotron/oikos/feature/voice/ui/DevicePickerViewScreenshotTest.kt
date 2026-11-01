@@ -56,7 +56,7 @@ class DevicePickerViewScreenshotTest {
 
     @Test fun devicePicker_default_light() {
         var picked: String? = null
-        show(ThemeChoice.WARM_MINIMAL, "") { picked = it }
+        show(ThemeChoice.IVOIRE, "") { picked = it }
         rule.onNodeWithText("Salon").assertExists()
         rule.onNodeWithText("Chambre").assertExists()
         rule.onNodeWithText("Lumière · 60 %").assertExists()
@@ -72,7 +72,7 @@ class DevicePickerViewScreenshotTest {
     }
 
     @Test fun devicePicker_filtered_light() {
-        show(ThemeChoice.WARM_MINIMAL, "lum")
+        show(ThemeChoice.IVOIRE, "lum")
         rule.onNodeWithText("Plafonnier").assertExists()
         rule.onNodeWithText("Chevet").assertExists()
         rule.onNodeWithText("Volet baie").assertDoesNotExist()
@@ -80,7 +80,7 @@ class DevicePickerViewScreenshotTest {
     }
 
     @Test fun devicePicker_no_match_shows_empty_state() {
-        show(ThemeChoice.WARM_MINIMAL, "zzz")
+        show(ThemeChoice.IVOIRE, "zzz")
         rule.onNodeWithText("Aucun résultat").assertExists()
     }
 }

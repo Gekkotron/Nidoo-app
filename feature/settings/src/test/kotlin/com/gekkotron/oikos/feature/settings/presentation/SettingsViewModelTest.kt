@@ -72,8 +72,8 @@ class SettingsViewModelTest {
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
         assertEquals(ConnectionSummary.Demo, vm.state.first { it.connection != null }.connection)
-        vm.setTheme(ThemePreference.WARM_MINIMAL)
-        assertEquals(ThemePreference.WARM_MINIMAL, vm.state.first { it.theme == ThemePreference.WARM_MINIMAL }.theme)
+        vm.setTheme(ThemePreference.IVOIRE)
+        assertEquals(ThemePreference.IVOIRE, vm.state.first { it.theme == ThemePreference.IVOIRE }.theme)
     }
 
     @Test

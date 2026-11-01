@@ -220,7 +220,7 @@ internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
                 SwingShape.GARAGE -> GarageIcon(progress, accent, m)
             }
         }
-        // Warm Minimal's on-card is espresso: its dark amber would vanish, so a lit glyph uses the card's content color there.
+        // Ivoire's on-card is pale amber: the bright amber warning would vanish, so a lit glyph uses the card's content color there.
         is IconSpec.Static -> StaticIcon(spec.glyph, if (spec.on) (if (c.isDark) c.warning else neutral) else null, m)
         is IconSpec.Climate -> ClimateIcon(spec.running, spec.fanMode, animate, m)
         is IconSpec.Vacuum -> {

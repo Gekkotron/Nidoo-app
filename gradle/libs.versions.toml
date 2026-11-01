@@ -8,13 +8,14 @@ coroutines = "1.11.0"
 serialization = "1.11.0"
 kover = "0.9.9"
 junit = "6.1.3"
-agp = "9.4.1"
+agp = "9.5.0"
 ksp = "2.3.12"
 room = "2.8.5"
 hilt = "2.60.1"
 androidxHilt = "1.3.0"
 reorderable = "3.1.0"
 composeBom = "2026.06.01"
+screenshot = "0.0.1-alpha17"
 activity = "1.13.0"
 lifecycle = "2.10.0"
 navigation3 = "1.1.7"
@@ -73,6 +74,7 @@ compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeB
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+screenshot-validation-api = { module = "com.android.tools.screenshot:screenshot-validation-api", version.ref = "screenshot" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 compose-material3 = { module = "androidx.compose.material3:material3" }

@@ -18,7 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-enum class ThemeChoice { SYSTEM, NIGHT_GLASS, WARM_MINIMAL }
+enum class ThemeChoice { SYSTEM, NIGHT_GLASS, IVOIRE }
 
 private val LocalOikosColors = staticCompositionLocalOf { NightGlassColors }
 private val LocalOikosType = staticCompositionLocalOf { oikosType(dark = true) }
@@ -32,13 +32,13 @@ private val NightScheme = darkColorScheme(
     inverseSurface = Color(0xFFE8ECFF), inverseOnSurface = Color(0xFF0B1020), outline = Color(0x33FFFFFF),
 )
 
-private val WarmScheme = lightColorScheme(
-    primary = Color(0xFF1F1B16), onPrimary = Color(0xFFF5F1EA), secondary = Color(0xFFD98B3A),
-    background = Color(0xFFF5F1EA), onBackground = Color(0xFF1F1B16),
-    surface = Color(0xFFFFFDF9), onSurface = Color(0xFF1F1B16), onSurfaceVariant = Color(0xFF5E574E),
-    surfaceContainerLow = Color(0xFFFFFDF9), surfaceContainer = Color(0xFFFFFDF9), surfaceContainerHigh = Color(0xFFF8F3EB),
-    secondaryContainer = Color(0xFFECE5DA), onSecondaryContainer = Color(0xFF1F1B16),
-    inverseSurface = Color(0xFF1F1B16), inverseOnSurface = Color(0xFFF5F1EA), outline = Color(0xFFD9D0C2),
+private val IvoireScheme = lightColorScheme(
+    primary = Color(0xFF232A26), onPrimary = Color(0xFFFFFDF8), secondary = Color(0xFF4F6B4A),
+    background = Color(0xFFF3F0E8), onBackground = Color(0xFF1F2420),
+    surface = Color(0xFFFFFDF8), onSurface = Color(0xFF1F2420), onSurfaceVariant = Color(0xFF5F665C),
+    surfaceContainerLow = Color(0xFFFFFDF8), surfaceContainer = Color(0xFFFFFDF8), surfaceContainerHigh = Color(0xFFF7F5EF),
+    secondaryContainer = Color(0xFFE3EADF), onSecondaryContainer = Color(0xFF2F4A2B),
+    inverseSurface = Color(0xFF1F2420), inverseOnSurface = Color(0xFFF3F0E8), outline = Color(0xFFD9D0C2),
 )
 
 /** Follows the system unless the user picked a theme (spec §1.1). */
@@ -47,11 +47,11 @@ fun OikosTheme(choice: ThemeChoice = ThemeChoice.SYSTEM, content: @Composable ()
     val dark = when (choice) {
         ThemeChoice.SYSTEM -> isSystemInDarkTheme()
         ThemeChoice.NIGHT_GLASS -> true
-        ThemeChoice.WARM_MINIMAL -> false
+        ThemeChoice.IVOIRE -> false
     }
-    val colors = if (dark) NightGlassColors else WarmMinimalColors
+    val colors = if (dark) NightGlassColors else IvoireColors
     CompositionLocalProvider(LocalOikosColors provides colors, LocalOikosType provides oikosType(dark)) {
-        MaterialTheme(colorScheme = if (dark) NightScheme else WarmScheme, typography = materialTypography(), content = content)
+        MaterialTheme(colorScheme = if (dark) NightScheme else IvoireScheme, typography = materialTypography(), content = content)
     }
 }
 
@@ -62,7 +62,7 @@ object OikosTheme {
         @Composable @ReadOnlyComposable get() = LocalOikosType.current
 }
 
-/** Night Glass: radial gradient from the top-left; Warm Minimal: flat paper. */
+/** Night Glass: radial gradient from the top-left; Ivoire: flat paper. */
 @Composable
 fun OikosBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val c = OikosTheme.colors

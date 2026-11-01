@@ -19,7 +19,7 @@ class LicencesResourceTest {
         val json = context.resources.openRawResource(R.raw.aboutlibraries).bufferedReader().use { it.readText() }
         val rows = licenceRows(json)
         val names = rows.map { it.name }
-        assertTrue("Inter" in names && "Fraunces" in names, "fonts missing: $names")
+        assertTrue("Inter" in names && "Manrope" in names, "fonts missing: $names")
         val blank = rows.filter { it.text.isBlank() }.map { it.name }
         assertTrue(blank.isEmpty(), "libraries without licence text: $blank")
         assertEquals(rows.size, rows.map { it.id }.toSet().size, "row ids must be unique")

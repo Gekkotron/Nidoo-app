@@ -19,7 +19,7 @@ import java.io.InputStream
 import java.io.OutputStream
 
 /** The theme the user picked on this phone (settings spec §3). Mirrors `ThemeChoice` without depending on the design system. */
-enum class ThemePreference { SYSTEM, NIGHT_GLASS, WARM_MINIMAL }
+enum class ThemePreference { SYSTEM, NIGHT_GLASS, IVOIRE }
 
 /** Phone-local presence settings. [radiusM] is clamped on save; a null home means no geofence can register yet. */
 @Serializable
@@ -57,7 +57,11 @@ internal data class StoredPreferences(
 class AppPreferences internal constructor(private val store: DataStore<StoredPreferences>, scope: CoroutineScope) {
     /** null until the file has been read. */
     val theme: StateFlow<ThemePreference?> = store.data
-        .map { stored -> ThemePreference.entries.firstOrNull { it.name == stored.theme } ?: ThemePreference.SYSTEM }
+        .map { stored ->
+            // WARM_MINIMAL was saved before Ivoire replaced Warm Minimal.
+            val name = if (stored.theme == "WARM_MINIMAL") ThemePreference.IVOIRE.name else stored.theme
+            ThemePreference.entries.firstOrNull { it.name == name } ?: ThemePreference.SYSTEM
+        }
         .stateIn(scope, SharingStarted.Eagerly, null)
 
     suspend fun setTheme(theme: ThemePreference) {

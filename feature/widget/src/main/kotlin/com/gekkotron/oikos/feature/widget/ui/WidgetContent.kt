@@ -99,20 +99,20 @@ fun tilesThatFit(width: Dp, height: Dp): Int {
 }
 
 /**
- * Oikos colours for text and icons (day = Warm Minimal, night = Night Glass), explicit rather than Glance's dynamic colours so
+ * Oikos colours for text and icons (day = Ivoire, night = Night Glass), explicit rather than Glance's dynamic colours so
  * the widget keeps the app's identity and an on/off accent. The surfaces are shape drawables over `res/values{,-night}/colors.xml`
  * (they also give rounded corners below API 31); keep the two in step.
  */
 private fun tone(day: Long, night: Long) = ColorProvider(day = Color(day), night = Color(night))
 
 private object Palette {
-    val content = tone(0xFF1F1B16, 0xFFE8ECFF)
-    val contentOn = tone(0xFFF5F1EA, 0xFFFFF3DC)
-    val muted = tone(0xFF6F6A63, 0xFFA3A9C6)
-    val mutedOn = tone(0xFFB9B2A6, 0xFFE0CFA8)
+    val content = tone(0xFF1F2420, 0xFFE8ECFF)
+    val contentOn = tone(0xFF5C4208, 0xFFFFF3DC)
+    val muted = tone(0xFF5F665C, 0xFFA3A9C6)
+    val mutedOn = tone(0xFF8A5F12, 0xFFE0CFA8)
     val dim = tone(0xFFA09A90, 0xFF6F7694)
-    val icon = tone(0xFF6F6A63, 0xFFA3A9C6)
-    val iconOn = tone(0xFFFFC457, 0xFFFFC457)
+    val icon = tone(0xFF5F665C, 0xFFA3A9C6)
+    val iconOn = tone(0xFF2F4A2B, 0xFFFFC457)
     val error = tone(0xFFA23B4F, 0xFFFF9AB2)
     val onError = tone(0xFFFFFFFF, 0xFF10172E)
 }

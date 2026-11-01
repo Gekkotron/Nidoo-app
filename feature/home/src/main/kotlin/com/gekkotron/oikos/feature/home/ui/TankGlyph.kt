@@ -24,7 +24,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 internal fun TankGlyph(heating: Boolean, modifier: Modifier = Modifier) {
     val border = OikosTheme.colors.cardBorder
     // Fixed mid-grey so an idle tank looks muted in every theme — lerping toward the theme's `contentMuted`
-    // (espresso on Warm Minimal, ink on Night Glass) turns the gradient into mud or ink.
+    // (dark sage on Ivoire, ink on Night Glass) turns the gradient into mud or ink.
     val neutral = Color(0xFF999999)
     Canvas(
         modifier

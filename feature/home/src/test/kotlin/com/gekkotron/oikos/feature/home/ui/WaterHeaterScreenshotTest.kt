@@ -99,8 +99,8 @@ class WaterHeaterScreenshotTest {
     }
 
     @Test
-    fun `cards in Warm Minimal`() {
-        cards(ThemeChoice.WARM_MINIMAL)
+    fun `cards in Ivoire`() {
+        cards(ThemeChoice.IVOIRE)
         check("water_heater_cards_warm", dark = false)
     }
 
@@ -126,8 +126,8 @@ class WaterHeaterScreenshotTest {
     }
 
     @Test
-    fun `sheets in Warm Minimal`() {
-        sheets(ThemeChoice.WARM_MINIMAL)
+    fun `sheets in Ivoire`() {
+        sheets(ThemeChoice.IVOIRE)
         check("water_heater_sheets_warm", dark = false)
     }
 }

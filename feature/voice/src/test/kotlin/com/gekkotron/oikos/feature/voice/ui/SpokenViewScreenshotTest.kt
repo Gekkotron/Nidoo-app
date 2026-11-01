@@ -23,7 +23,7 @@ class SpokenViewScreenshotTest {
 
     @Test fun spokenView_light() {
         var repeated = false
-        show(ThemeChoice.WARM_MINIMAL, true) { repeated = true }
+        show(ThemeChoice.IVOIRE, true) { repeated = true }
         rule.onNodeWithText("Le salon est à 21 degrés").assertExists()
         rule.onNodeWithText("Répéter").performClick()
         assert(repeated)
@@ -36,7 +36,7 @@ class SpokenViewScreenshotTest {
     }
 
     @Test fun spokenView_text_only_when_not_speakable_light() {
-        show(ThemeChoice.WARM_MINIMAL, false)
+        show(ThemeChoice.IVOIRE, false)
         rule.onNodeWithText("Le salon est à 21 degrés").assertExists()
         rule.onNodeWithText("Répéter").assertDoesNotExist()
     }

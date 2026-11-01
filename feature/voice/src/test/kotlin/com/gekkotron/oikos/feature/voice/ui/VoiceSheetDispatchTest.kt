@@ -29,7 +29,7 @@ class VoiceSheetDispatchTest {
     )
 
     private fun show(state: VoiceSessionState) = rule.setContent {
-        OikosTheme(ThemeChoice.WARM_MINIMAL) {
+        OikosTheme(ThemeChoice.IVOIRE) {
             VoiceSheet(
                 state = MutableStateFlow(state),
                 onPick = {}, onConfirm = {}, onCode = {}, onCancel = {},

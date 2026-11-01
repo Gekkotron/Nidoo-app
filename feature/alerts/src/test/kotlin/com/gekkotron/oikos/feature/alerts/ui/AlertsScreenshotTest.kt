@@ -52,8 +52,8 @@ class AlertsScreenshotTest {
     }
 
     @Test
-    fun `All in Warm Minimal`() {
-        val bitmap = render(ThemeChoice.WARM_MINIMAL, "alerts-all-warm", null)
+    fun `All in Ivoire`() {
+        val bitmap = render(ThemeChoice.IVOIRE, "alerts-all-warm", null)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) > 0.6f)
     }
@@ -64,7 +64,7 @@ class AlertsScreenshotTest {
     }
 
     @Test
-    fun `an empty filter in Warm Minimal`() {
-        assertTrue(render(ThemeChoice.WARM_MINIMAL, "alerts-empty-warm", AlertChannel.MISC).distinctColors() > 4)
+    fun `an empty filter in Ivoire`() {
+        assertTrue(render(ThemeChoice.IVOIRE, "alerts-empty-warm", AlertChannel.MISC).distinctColors() > 4)
     }
 }
