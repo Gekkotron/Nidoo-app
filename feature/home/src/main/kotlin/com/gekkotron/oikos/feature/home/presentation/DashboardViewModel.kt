@@ -78,7 +78,7 @@ class DashboardViewModel internal constructor(
     /** What the shown dashboard needs fetched: energy windows (days) and history series (entity, range). */
     private data class Needs(val days: Set<Int> = emptySet(), val series: Set<Pair<String, WidgetRange>> = emptySet())
 
-    private data class Fetched(val kwhByDays: Map<Int, Double> = emptyMap(), val series: Map<Pair<String, WidgetRange>, List<HistoryPoint>> = emptyMap())
+    private data class Fetched(val kwhByDays: Map<Int, Double> = emptyMap(), val series: Map<Pair<String, WidgetRange>, List<HistoryPoint>?> = emptyMap())
 
     private class Selected(val choice: DashboardChoice?, val snapshotDashboards: List<Dashboard>, val resolution: Resolution)
 
@@ -145,7 +145,7 @@ class DashboardViewModel internal constructor(
                     } else {
                         null
                     }
-                    val extras = TileExtras(flowSnap.flows, EnergyFigures(fetchedNow.kwhByDays, live), fetchedNow.series)
+                    val extras = TileExtras(flowSnap.flows, EnergyFigures(fetchedNow.kwhByDays, live), fetchedNow.series, flowSnap.isSettled)
                     val ui = DashboardUiBuilder.build(dashboard, house, extras, Locale.getDefault(), labels, clock())
                     DashboardScreenState(true, entriesOf(sel), dashboard.id, DashboardView.Shown(ui), runningNow)
                 }
@@ -188,8 +188,10 @@ class DashboardViewModel internal constructor(
         }
         val series = needs.series.map { (id, range) ->
             async {
-                val ref = entities[id]?.let(HistoryRefs::of) ?: return@async null
-                (safely { history.series(ref, DashboardUiBuilder.historyRange(range)) } as? HistoryResult.Ok)?.let { (id to range) to it.value.points }
+                // A failed or unrecorded series is kept as null: the tile says "no data" instead of staying a blank box.
+                val ref = entities[id]?.let(HistoryRefs::of) ?: return@async (id to range) to null
+                val result = safely { history.series(ref, DashboardUiBuilder.historyRange(range)) }
+                (id to range) to (result as? HistoryResult.Ok)?.value?.points
             }
         }
         Fetched(kwh.awaitAll().filterNotNull().toMap(), series.awaitAll().filterNotNull().toMap())

@@ -9,7 +9,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.ThemeChoice
@@ -162,5 +164,13 @@ class DashboardScreenTest {
         compose.onNodeWithTag("card-coffee").assertDoesNotExist()
         compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNodeWithTag("card-coffee").assertExists()
+    }
+
+    @Test
+    fun `long-pressing a dashboard card House does not show opens its controls`() {
+        val garage = card("lamp").copy(id = "garage-lamp", name = "Garage lamp")
+        show(shown(listOf(tile("a", TileContent.Entity(garage)))))
+        compose.onNodeWithTag("card-garage-lamp").performTouchInput { longClick() }
+        compose.onNodeWithText("Brightness").assertExists()
     }
 }

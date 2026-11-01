@@ -29,8 +29,8 @@ class DashboardUiBuilderTest {
     private val areas = listOf(Area("kitchen", "Kitchen"), Area("living", "Living room"))
     private val now = 1_800_000_000_000L
 
-    private fun house(vararg e: Entity) = HouseData(
-        e.associateBy { it.uniqueId }, emptyMap(), areas, LinkState.Connected(TransportMode.DEMO), emptyMap(), false,
+    private fun house(vararg e: Entity, historyEnabled: Boolean = true) = HouseData(
+        e.associateBy { it.uniqueId }, emptyMap(), areas, LinkState.Connected(TransportMode.DEMO), emptyMap(), historyEnabled,
     )
 
     private fun w(
@@ -161,6 +161,35 @@ class DashboardUiBuilderTest {
         assertEquals(TileContent.FlowButton("f1", "Night mode", false), ui.tiles.single().content)
         val titled = build(dash(w("f", WidgetKind.FLOW_BUTTON, config = WidgetConfig(flowId = "f1", title = "Go"))), house(), x)
         assertEquals(TileContent.FlowButton("f1", "Go", false), titled.tiles.single().content)
+    }
+
+    @Test
+    fun `a flow button whose flow is unknown waits disabled until flows settle`() {
+        val d = dash(
+            w("f", WidgetKind.FLOW_BUTTON, config = WidgetConfig(flowId = "f1")),
+            w("g", WidgetKind.FLOW_BUTTON, config = WidgetConfig(flowId = "f2", title = "Go")),
+        )
+        val unsettled = build(d, house(), TileExtras(flowsSettled = false))
+        assertEquals(
+            listOf<TileContent>(TileContent.FlowButton("f2", "Go", false), TileContent.FlowButton("f1", "f1", false)).toSet(),
+            unsettled.tiles.map { it.content }.toSet(),
+        )
+        build(d, house(), TileExtras(flowsSettled = true)).tiles.forEach { assertIs<TileContent.Unavailable>(it.content) }
+    }
+
+    @Test
+    fun `history is Unavailable when the history service is off`() {
+        val cfg = WidgetConfig(entityId = "t", range = WidgetRange.H24)
+        val ui = build(dash(w("h", WidgetKind.HISTORY_CHART, config = cfg)), house(testEntity("t", Kind.SENSOR, unit = "C"), historyEnabled = false))
+        assertIs<TileContent.Unavailable>(ui.tiles.single().content)
+    }
+
+    @Test
+    fun `a failed history fetch is no data, not loading`() {
+        val cfg = WidgetConfig(entityId = "t", range = WidgetRange.H24, title = "Bedroom")
+        val e = testEntity("t", Kind.SENSOR, unit = "C")
+        val ui = build(dash(w("h", WidgetKind.HISTORY_CHART, config = cfg)), house(e), TileExtras(series = mapOf(("t" to WidgetRange.H24) to null)))
+        assertEquals(TileContent.Unavailable("Bedroom"), ui.tiles.single().content)
     }
 
     @Test

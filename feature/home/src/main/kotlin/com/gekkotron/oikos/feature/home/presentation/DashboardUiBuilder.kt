@@ -32,7 +32,10 @@ data class HouseData(
 data class TileExtras(
     val flows: List<FlowDto> = emptyList(),
     val energy: EnergyFigures = EnergyFigures(),
-    val series: Map<Pair<String, WidgetRange>, List<HistoryPoint>> = emptyMap(),
+    /** A key that is present with a null value was fetched and failed (or is not recorded): "no data", not loading. */
+    val series: Map<Pair<String, WidgetRange>, List<HistoryPoint>?> = emptyMap(),
+    /** False until the flows snapshot has settled; an unknown flow is then "not loaded yet" rather than missing. */
+    val flowsSettled: Boolean = true,
 )
 
 object DashboardUiBuilder {
@@ -84,7 +87,11 @@ object DashboardUiBuilder {
             WidgetKind.ROOM_GROUP -> room(c.areaId, c.title, h, locale, labels)
             WidgetKind.FLOW_BUTTON -> {
                 val flow = x.flows.firstOrNull { it.id == c.flowId }
-                if (flow == null) TileContent.Unavailable(c.title) else TileContent.FlowButton(flow.id, c.title ?: flow.name, flow.enabled)
+                when {
+                    flow != null -> TileContent.FlowButton(flow.id, c.title ?: flow.name, flow.enabled)
+                    !x.flowsSettled && c.flowId != null -> TileContent.FlowButton(c.flowId!!, c.title ?: c.flowId!!, false)
+                    else -> TileContent.Unavailable(c.title)
+                }
             }
             WidgetKind.ENERGY_STAT -> {
                 val metric = EnergyMetric.of(c.metric)
@@ -120,14 +127,17 @@ object DashboardUiBuilder {
         if (entity == null || HistoryRefs.of(entity) == null || range == null || range == WidgetRange.UNKNOWN) {
             return TileContent.Unavailable(c.title)
         }
+        if (!h.historyEnabled) return TileContent.Unavailable(c.title)
         // Series timestamps are epoch seconds.
         val since = when (range) {
             WidgetRange.H1 -> nowMillis / 1000 - 3_600
             WidgetRange.H6 -> nowMillis / 1000 - 6 * 3_600
             else -> null
         }
-        val points = x.series[entity.uniqueId to range]?.let { pts -> if (since == null) pts else pts.filter { it.t >= since } }
+        val key = entity.uniqueId to range
         val name = c.title ?: HomeUiBuilder.cardFor(h.entities, h.states, h.areas, entity.uniqueId, locale, labels, h.historyEnabled)?.name ?: entity.name
+        if (key in x.series && x.series[key] == null) return TileContent.Unavailable(name)
+        val points = x.series[key]?.let { pts -> if (since == null) pts else pts.filter { it.t >= since } }
         return TileContent.History(entity.uniqueId, name, range, entity.unit, points)
     }
 }

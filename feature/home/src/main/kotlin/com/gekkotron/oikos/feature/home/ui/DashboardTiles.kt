@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.dashboards.WidgetKind
@@ -72,7 +74,7 @@ internal fun LazyGridScope.dashboardTiles(
             is TileContent.Entity ->
                 TileCard(content.card, modifier, onEntityClick, onEntityLongClick, onSendGroup, onForce)
             is TileContent.Room -> Column(modifier, verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap)) {
-                Text(content.title, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
+                Text(content.title, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted, modifier = Modifier.semantics { heading() })
                 content.cards.forEach { TileCard(it, Modifier, onEntityClick, onEntityLongClick, onSendGroup, onForce) }
             }
             is TileContent.FlowButton -> FlowTile(content, content.flowId in running, modifier, onRunFlow)

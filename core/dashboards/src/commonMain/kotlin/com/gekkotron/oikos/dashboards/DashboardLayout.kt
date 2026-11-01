@@ -51,7 +51,7 @@ object DashboardLayout {
                 cursor = Cell(at.row, at.col + w.span.cols)
             }
         }
-        val used = taken.flatMap { it.row until it.row + it.h }.toSortedSet()
+        val used = taken.flatMap { it.row until it.row + it.h }.toSet()
         return cells.map { c ->
             val at = c ?: Cell(0, 0)
             Cell(used.count { it < at.row }, at.col) // rows above that some widget covers

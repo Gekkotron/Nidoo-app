@@ -37,7 +37,7 @@ internal fun DashboardSwitcher(title: String, onClick: () -> Unit) {
     val action = stringResource(R.string.dashboard_switcher_action)
     Text(
         "$title ▾",
-        style = OikosTheme.type.cardName,
+        style = OikosTheme.type.cardValue,
         modifier = Modifier
             .heightIn(min = 48.dp)
             .clickable(onClickLabel = action, role = Role.Button, onClick = onClick)

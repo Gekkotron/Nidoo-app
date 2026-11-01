@@ -90,7 +90,7 @@ class DashboardViewModelTest {
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
 
-    private val prefsScope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        private val prefsScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val rigs = mutableListOf<Rig>()
 
     @After
@@ -113,9 +113,8 @@ class DashboardViewModelTest {
     }
 
     /**
-     * DataStore answers from its own IO thread and, now and then, the state flow never reports the
-     * first write (the value stays at the default). A fresh store gets another try instead of
-     * the whole class timing out.
+     * DataStore answers from its own IO thread and, now and then (more under load), a state flow
+     * never reports the first write. A fresh store gets another try instead of the test timing out.
      */
     private suspend fun seededPrefs(saved: DashboardChoice?): AppPreferences {
         repeat(4) {
