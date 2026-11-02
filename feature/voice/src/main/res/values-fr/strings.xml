@@ -29,4 +29,6 @@
     <string name="voice_picker_read_value">Lire la valeur</string>
     <string name="voice_picker_read_state">Lire l\'état</string>
     <string name="voice_repeat">Répéter</string>
+    <string name="voice_disabled">L\'assistant vocal est désactivé. Activez-le dans les Réglages.</string>
+    <string name="voice_open_settings">Ouvrir les Réglages</string>
 </resources>

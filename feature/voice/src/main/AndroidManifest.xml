@@ -12,6 +12,7 @@
             android:launchMode="singleTask"
             android:taskAffinity=""
             android:configChanges="orientation|screenSize|smallestScreenSize|keyboardHidden|layoutDirection|fontScale|uiMode"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.NidooVoice.Translucent" />
     </application>
 </manifest>

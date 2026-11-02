@@ -212,7 +212,7 @@ class VoiceSessionTest {
         assertTrue(engine.spoken.isEmpty())
     }
 
-    @Test fun `onPickOther from NotUnderstood goes to Picking(Device) with the heard text as filter`() = runTest {
+    @Test fun `onPickOther from NotUnderstood goes to Picking(Device) with an empty filter so every device shows`() = runTest {
         val session = notUnderstoodSession(scope = backgroundScope)
         session.state.test {
             skipItems(1)
@@ -222,7 +222,7 @@ class VoiceSessionTest {
             val picking = assertIs<VoiceSessionState.Picking>(awaitItem())
             assertEquals(PickStep.Device, picking.step)
             assertEquals("quelque chose salon", picking.heardText)
-            assertEquals("quelque chose salon", picking.filter)
+            assertEquals("", picking.filter)
             assertNull(picking.pickedId)
             assertEquals(not.suggestions, picking.suggestions)
         }

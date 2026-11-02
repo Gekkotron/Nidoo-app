@@ -37,4 +37,6 @@
     <string name="widget_voice">Dis une commande</string>
     <string name="voice_widget_name">Nidoo voix</string>
     <string name="voice_widget_description">Un appui pour dicter une commande à votre maison.</string>
+    <string name="widget_voice_off">Voix désactivée</string>
+    <string name="widget_voice_off_description">Assistant vocal désactivé. Ouvrez les Réglages pour l\'activer.</string>
 </resources>
