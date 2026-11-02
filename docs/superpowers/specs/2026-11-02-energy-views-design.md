@@ -101,8 +101,9 @@ easy default.
   `EntitySource` → `EnergyViewModel` → `EnergyUiState`; the new views read only that state.
 - **Unknown / stale values**: mirror the hub's `energy_sankey.rs` — only a LIVE node's value sizes
   bands and arcs (null or non-LIVE counts as 0, values under `IDLE_W` are idle). To keep "unknown
-  looks unknown", a non-LIVE node still keeps its bar/arc label and is drawn with Classic's
-  `statusAlpha` fade; it never silently vanishes while the others look fine.
+  looks unknown", Flux and Orbite show a muted caption under the diagram naming every source,
+  house or consumer that is not reporting ("Not reporting: Grid, AC"); a node never silently
+  vanishes while the others look fine. (A faded zero-size bar/arc can't be drawn, hence a caption.)
 - **Balancing**: port the hub's rules as they are (house = measured, else derived; unitemised =
   house − shown consumers, clamped at 0; fold to "Others" past 4).
 - **Night Glass palette**: the hub's dark values (`.energy-preview` / `.energy` block in
