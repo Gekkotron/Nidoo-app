@@ -103,8 +103,9 @@ page entry exactly as it passes them to `SettingsRoute` now, `onOpenLicences` to
 (→ `RoomOrderKey`) to the list. "Set up again" keeps today's behaviour (`viewModel.setUpAgain` resets the profile and
 the back stack); no extra pop is added.
 
-The push `refreshPush()` on resume and the 60 s "N min ago" ticker that live in `SettingsRoute` today run on both the
-list (for the short status word) and the Notifications page (for the full text with its age).
+The push `refreshPush()` on resume, which lives in `SettingsRoute` today, runs on both the list (for the short status
+word) and the Notifications page. The 60 s "N min ago" ticker only runs on the Notifications page, because the list's
+short word carries no age.
 
 ## Glyphs
 
