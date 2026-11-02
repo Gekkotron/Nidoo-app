@@ -1,33 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Themed-icon silhouette: the house with its window cut out, cat inside. -->
+<!-- Themed-icon silhouette: the house (window cut out, cat inside) in its nest on
+     the branch. The walls stop short of the rim so the nest still reads as a cup. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M0,87 Q28,79 54,81 Q80,83 108,75 L108,79 Q80,87 54,85 Q28,84 0,91 Z" />
     <group
         android:pivotX="54"
-        android:pivotY="56"
-        android:scaleX="0.84"
-        android:scaleY="0.84">
-        <path android:fillColor="#FFFFFFFF" android:pathData="M64,36.5 Q64,35 65.5,35 H69.5 Q71,35 71,36.5 V48 H64 Z" />
+        android:pivotY="58"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
         <path
-            android:pathData="M29.5,52.5 L54,32.5 L78.5,52.5"
-            android:strokeWidth="7"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
+            android:pathData="M28,66 a26,6 0 1,0 52,0 a26,6 0 1,0 -52,0 Z"
+            android:strokeWidth="1.6"
+            android:strokeColor="#FFFFFFFF" />
+        <group
+            android:pivotX="54"
+            android:pivotY="56"
+            android:scaleX="0.86"
+            android:scaleY="0.86"
+            android:translateY="-4">
+            <path android:fillColor="#FFFFFFFF" android:pathData="M64,36.5 Q64,35 65.5,35 H69.5 Q71,35 71,36.5 V48 H64 Z" />
+            <path
+                android:pathData="M29.5,52.5 L54,32.5 L78.5,52.5"
+                android:strokeWidth="7"
+                android:strokeColor="#FFFFFFFF"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round" />
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:fillType="evenOdd"
+                android:pathData="M35,49 H73 V74.4 Q54,78.6 35,74.4 Z M47.2,56 H60.8 Q63,56 63,58.2 V68.8 Q63,71 60.8,71 H47.2 Q45,71 45,68.8 V58.2 Q45,56 47.2,56 Z" />
+            <group
+                android:pivotX="51"
+                android:pivotY="71"
+                android:scaleX="0.78"
+                android:scaleY="0.78">
+                <path android:fillColor="#FFFFFFFF" android:pathData="M48.6,71 C47.6,68.4 47.9,65.8 49.1,64.4 L48.7,61.6 L50.3,63 Q51,62.8 51.7,63 L53.1,61.6 L52.9,64.4 C54,65.7 54.1,68.5 53.3,71 Z" />
+            </group>
+            <path android:fillColor="#FFFFFFFF" android:pathData="M44.5,70.6 H63.5 Q64.5,70.6 64.5,71.6 Q64.5,72.6 63.5,72.6 H44.5 Q43.5,72.6 43.5,71.6 Q43.5,70.6 44.5,70.6 Z" />
+        </group>
+        <!-- nest, with two woven gaps cut through it -->
         <path
             android:fillColor="#FFFFFFFF"
             android:fillType="evenOdd"
-            android:pathData="M35,49 H73 V76 Q73,79 70,79 H38 Q35,79 35,76 Z M47.2,56 H60.8 Q63,56 63,58.2 V68.8 Q63,71 60.8,71 H47.2 Q45,71 45,68.8 V58.2 Q45,56 47.2,56 Z" />
-        <group
-            android:pivotX="51"
-            android:pivotY="71"
-            android:scaleX="0.78"
-            android:scaleY="0.78">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M48.6,71 C47.6,68.4 47.9,65.8 49.1,64.4 L48.7,61.6 L50.3,63 Q51,62.8 51.7,63 L53.1,61.6 L52.9,64.4 C54,65.7 54.1,68.5 53.3,71 Z" />
-        </group>
-        <path android:fillColor="#FFFFFFFF" android:pathData="M44.5,70.6 H63.5 Q64.5,70.6 64.5,71.6 Q64.5,72.6 63.5,72.6 H44.5 Q43.5,72.6 43.5,71.6 Q43.5,70.6 44.5,70.6 Z" />
+            android:pathData="M28,66 Q54,78 80,66 C82,77 70,85 54,85 C38,85 26,77 28,66 Z M31,73 Q54,85.5 77,73 Q54,83.3 31,73 Z M36,79 Q54,88 72,79 Q54,86.2 36,79 Z" />
+        <path
+            android:pathData="M28.5,66.5 L22,63 M79.5,66.5 L86,62.5 M27.5,69.5 L23,71 M80,70 L85.5,71.5"
+            android:strokeWidth="1.4"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round" />
     </group>
 </vector>
