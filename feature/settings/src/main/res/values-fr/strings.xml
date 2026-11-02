@@ -88,4 +88,9 @@
     <string name="settings_voice_tts_language_missing">pack de langue manquant</string>
     <string name="settings_voice_tts_engine_missing">moteur non installé</string>
     <string name="settings_voice_tts_download_action">Télécharger</string>
+    <string name="settings_energy_view">Vue énergie</string>
+    <string name="settings_energy_view_classic">Classique</string>
+    <string name="settings_energy_view_flux">Flux</string>
+    <string name="settings_energy_view_orbite">Orbite</string>
+    <string name="settings_energy_view_hint">Comment l\'onglet Énergie dessine le flux en direct sur ce téléphone.</string>
 </resources>

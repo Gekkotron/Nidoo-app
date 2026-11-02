@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.data.DEFAULT_FRIGATE_URL
+import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
@@ -104,7 +105,7 @@ fun SettingsRoute(
         onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
         onOpenChannels = { openNotificationSettings(context) },
         onVoiceEnabled = viewModel::setVoiceEnabled, onDeleteShortcut = viewModel::deleteShortcut,
-        presenceSection = presenceSection,
+        presenceSection = presenceSection, onEnergyView = viewModel::setEnergyView,
     )
 }
 
@@ -127,6 +128,7 @@ fun SettingsScreen(
     onVoiceEnabled: (Boolean) -> Unit = {},
     onDeleteShortcut: (String) -> Unit = {},
     presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = {},
+    onEnergyView: (EnergyViewPreference) -> Unit = {},
 ) {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -165,6 +167,9 @@ fun SettingsScreen(
                     NidooRadioRow(stringResource(R.string.settings_theme_night), state.theme == ThemePreference.NIGHT_GLASS, { onTheme(ThemePreference.NIGHT_GLASS) })
                     NidooRadioRow(stringResource(R.string.settings_theme_ivoire), state.theme == ThemePreference.IVOIRE, { onTheme(ThemePreference.IVOIRE) })
                 }
+            }
+            Section(stringResource(R.string.settings_energy_view)) {
+                EnergyViewSection(state.energyView, onEnergyView)
             }
             NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)
             NavRow(stringResource(R.string.settings_push), pushStatusText(state.push, now), onClick = { pushSheet = true })

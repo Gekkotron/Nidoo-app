@@ -88,4 +88,9 @@
     <string name="settings_voice_tts_language_missing">language pack missing</string>
     <string name="settings_voice_tts_engine_missing">engine not installed</string>
     <string name="settings_voice_tts_download_action">Download</string>
+    <string name="settings_energy_view">Energy view</string>
+    <string name="settings_energy_view_classic">Classic</string>
+    <string name="settings_energy_view_flux">Flux</string>
+    <string name="settings_energy_view_orbite">Orbite</string>
+    <string name="settings_energy_view_hint">How the Energy tab draws the live flow on this phone.</string>
 </resources>
