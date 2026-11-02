@@ -26,6 +26,9 @@ import java.io.OutputStream
 /** The theme the user picked on this phone (settings spec §3). Mirrors `ThemeChoice` without depending on the design system. */
 enum class ThemePreference { SYSTEM, NIGHT_GLASS, IVOIRE }
 
+/** How the Energy tab draws the live flow on this phone (energy views spec). Independent of the hub's own choice. */
+enum class EnergyViewPreference { CLASSIC, FLUX, ORBITE }
+
 /** Phone-local presence settings. [radiusM] is clamped on save; a null home means no geofence can register yet. */
 @Serializable
 data class PresenceConfig(
@@ -62,6 +65,7 @@ internal data class StoredPreferences(
     // "house" must match HOUSE_DASHBOARD_ID in :core:dashboards (the hub refuses "house" as a dashboard id). Literal here so :core:data stays independent.
     val dashboardId: String = "house",
     val dashboardName: String? = null,
+    val energyView: String = EnergyViewPreference.CLASSIC.name,
 )
 
 /**
@@ -82,6 +86,7 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
     private val _voiceEnabled = MutableStateFlow<Boolean?>(null)
     private val _presence = MutableStateFlow<PresenceConfig?>(null)
     private val _selectedDashboard = MutableStateFlow<DashboardChoice?>(null)
+    private val _energyView = MutableStateFlow<EnergyViewPreference?>(null)
 
     /** null until the file has been read. */
     val theme: StateFlow<ThemePreference?> = _theme.asStateFlow()
@@ -95,6 +100,9 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
     /** null until the file has been read. */
     val selectedDashboard: StateFlow<DashboardChoice?> = _selectedDashboard.asStateFlow()
 
+    /** null until the file has been read. */
+    val energyView: StateFlow<EnergyViewPreference?> = _energyView.asStateFlow()
+
     init {
         scope.launch {
             writes.withLock { if (!loaded) publish(store.data.first()) }
@@ -102,6 +110,8 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
     }
 
     suspend fun setTheme(theme: ThemePreference) = update { it.copy(theme = theme.name) }
+
+    suspend fun setEnergyView(view: EnergyViewPreference) = update { it.copy(energyView = view.name) }
 
     suspend fun setVoiceEnabled(enabled: Boolean) = update { it.copy(voiceEnabled = enabled) }
 
@@ -143,6 +153,7 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
         val p = stored.presence
         _presence.value = PresenceConfig(p.enabled, p.alias, p.homeLat, p.homeLng, p.radiusM)
         _selectedDashboard.value = DashboardChoice(stored.dashboardId, stored.dashboardName)
+        _energyView.value = EnergyViewPreference.entries.firstOrNull { it.name == stored.energyView } ?: EnergyViewPreference.CLASSIC
     }
 
     companion object {

@@ -104,6 +104,26 @@ class AppPreferencesTest {
     }
 
     @Test
+    fun `energyViewDefaultsToClassic`() = realTest {
+        assertEquals(EnergyViewPreference.CLASSIC, prefs().energyView.filterNotNull().first())
+    }
+
+    @Test
+    fun `setEnergyViewPersists`() = realTest {
+        val f = file()
+        val p = prefs(f)
+        p.setEnergyView(EnergyViewPreference.ORBITE)
+        assertEquals(EnergyViewPreference.ORBITE, p.energyView.first { it == EnergyViewPreference.ORBITE })
+        assertEquals(true, f.readText().contains("\"energyView\":\"ORBITE\""))
+    }
+
+    @Test
+    fun `unknownEnergyViewDecodesAsClassic`() = realTest {
+        val f = file().apply { writeText("""{"energyView":"SPIRAL"}""") }
+        assertEquals(EnergyViewPreference.CLASSIC, prefs(f).energyView.filterNotNull().first())
+    }
+
+    @Test
     fun `a stored WARM_MINIMAL opens as Ivoire`() = realTest {
         val f = file().apply { writeText("""{"theme":"WARM_MINIMAL"}""") }
         assertEquals(ThemePreference.IVOIRE, prefs(f).theme.first { it != null })
