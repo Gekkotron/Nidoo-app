@@ -93,4 +93,24 @@
     <string name="settings_energy_view_flux">Flux</string>
     <string name="settings_energy_view_orbite">Orbite</string>
     <string name="settings_energy_view_hint">Comment l\'onglet Énergie dessine le flux en direct sur ce téléphone.</string>
+    <string name="settings_group_house">Maison</string>
+    <string name="settings_group_app">Application</string>
+    <string name="settings_appearance">Apparence</string>
+    <string name="settings_appearance_hint">Thème, vue énergie</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_hint">Alertes push et canaux</string>
+    <string name="settings_presence_hint">Armer l\'alarme quand vous partez</string>
+    <string name="settings_voice_hint">Commandes vocales et raccourcis</string>
+    <string name="settings_connection_hint">Broker, accès, historique, Frigate</string>
+    <string name="settings_about_hint">Version et licences</string>
+    <string name="settings_on">Activé</string>
+    <string name="settings_off">Désactivé</string>
+    <string name="settings_voice_status">Activé · %1$d</string>
+    <string name="settings_push_short_registered">Enregistré</string>
+    <string name="settings_push_short_waiting">En attente</string>
+    <string name="settings_push_short_failed">Échec</string>
+    <string name="settings_push_short_off">Désactivées</string>
+    <string name="settings_link_online">En ligne</string>
+    <string name="settings_link_connecting">Connexion…</string>
+    <string name="settings_link_offline">Hors ligne</string>
 </resources>

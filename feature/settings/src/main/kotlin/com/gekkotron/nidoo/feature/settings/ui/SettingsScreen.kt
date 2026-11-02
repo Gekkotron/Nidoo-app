@@ -219,13 +219,13 @@ fun SettingsScreen(
     }
 }
 
-/** Shared by the three Settings screens: a back arrow and a title on the transparent background. */
+/** Shared by the Settings screens: a back arrow and a title on the transparent background. No title on the list, whose header carries it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SettingsTopBar(title: String, onBack: () -> Unit) {
+internal fun SettingsTopBar(title: String?, onBack: () -> Unit) {
     val backLabel = stringResource(R.string.settings_back)
     TopAppBar(
-        title = { Text(title, style = NidooTheme.type.display) },
+        title = { if (title != null) Text(title, style = NidooTheme.type.display) },
         navigationIcon = {
             IconButton(onClick = onBack, modifier = Modifier.semantics { contentDescription = backLabel }) {
                 Text("←", style = NidooTheme.type.cardValue, modifier = Modifier.clearAndSetSemantics {})
