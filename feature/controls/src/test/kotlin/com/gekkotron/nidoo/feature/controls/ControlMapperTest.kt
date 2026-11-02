@@ -112,4 +112,11 @@ class ControlMapperTest {
         assertEquals(ControlStatus.AUTH_FAILED, ControlMapper.status(Failure.AUTH_FAILED))
         assertEquals(ControlStatus.NOT_CONFIGURED, ControlMapper.status(Failure.NOT_CONFIGURED))
     }
+
+    @Test
+    fun a_lit_light_never_shows_zero_percent() {
+        val e = entity(Kind.LIGHT, caps = Capabilities(brightness = true))
+        assertEquals(1, ControlMapper.model(e, state(StateValue.Light(true, 1)), emptyList()).brightnessPercent)
+        assertEquals(0, ControlMapper.model(e, state(StateValue.Light(false, 0)), emptyList()).brightnessPercent)
+    }
 }

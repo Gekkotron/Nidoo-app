@@ -26,7 +26,9 @@ object ControlMapper {
             is StateValue.OnOff -> value.on
             else -> false
         }
-        val percent = (value as? StateValue.Light)?.brightness?.takeIf { dimmable }?.let { (it * 100 / 255f).roundToInt() }
+        // A lit light at brightness 1–2 rounds to 0 %: show 1 % so it never reads as off.
+        val percent = (value as? StateValue.Light)?.brightness?.takeIf { dimmable }
+            ?.let { b -> (b * 100 / 255f).roundToInt().let { if (on && b > 0) it.coerceAtLeast(1) else it } }
         val zone = if (entity.area == UNASSIGNED_AREA) null else areas.firstOrNull { it.id == entity.area }?.name
         val effective = if (status == ControlStatus.OK && state?.available == false) ControlStatus.UNAVAILABLE else status
         return ControlModel(

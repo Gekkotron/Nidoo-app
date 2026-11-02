@@ -49,8 +49,15 @@ class ControlsSessionTest {
         var refreshResult: RefreshResult = RefreshResult.Failed(Failure.OFFLINE)
         var catalogResult: CatalogResult = CatalogResult.Failed(Failure.OFFLINE)
         val sent = mutableListOf<Sent>()
+        var catalogCalls = 0
 
-        override suspend fun refresh(ids: Set<String>) = refreshResult
+        /** When set, refresh suspends until it completes (a slow cold session). */
+        var refreshGate: CompletableDeferred<Unit>? = null
+
+        override suspend fun refresh(ids: Set<String>): RefreshResult {
+            refreshGate?.await()
+            return refreshResult
+        }
 
         override suspend fun send(id: String, command: Command): SendResult {
             val call = Sent(id, command)
@@ -58,7 +65,10 @@ class ControlsSessionTest {
             return call.result.await()
         }
 
-        override suspend fun catalog() = catalogResult
+        override suspend fun catalog(): CatalogResult {
+            catalogCalls++
+            return catalogResult
+        }
     }
 
     private fun TestScope.session(fake: FakeEntities, live: () -> Flow<RefreshResult.Ok>? = { null }) =
@@ -185,5 +195,81 @@ class ControlsSessionTest {
         runCurrent()
         assertTrue(out.last().on)
         assertEquals(100, out.last().brightnessPercent)
+    }
+
+    @Test
+    fun offline_with_no_catalog_still_shows_a_tile() = runTest {
+        val fake = FakeEntities()
+        fake.refreshResult = RefreshResult.Failed(Failure.OFFLINE)
+        fake.catalogResult = CatalogResult.Failed(Failure.OFFLINE)
+        val out = collect(session(fake), "l")
+        assertEquals("l", out.single().id)
+        assertEquals(ControlStatus.OFFLINE, out.single().status)
+    }
+
+    @Test
+    fun catalog_fallback_runs_once_for_many_ids() = runTest {
+        val fake = FakeEntities()
+        fake.refreshResult = RefreshResult.Failed(Failure.OFFLINE)
+        fake.catalogResult = CatalogResult.Ok(listOf(entity("a"), entity("b"), entity("c")), emptyList())
+        val out = collect(session(fake), "a", "b", "c")
+        assertEquals(3, out.size)
+        assertEquals(1, fake.catalogCalls)
+    }
+
+    @Test
+    fun never_seen_missing_id_while_settling_shows_unavailable() = runTest {
+        val fake = FakeEntities()
+        fake.refreshResult = ok(emptyList(), complete = false)
+        val out = collect(session(fake), "x")
+        assertEquals(ControlStatus.UNAVAILABLE, out.single().status)
+    }
+
+    @Test
+    fun a_refresh_that_lands_after_a_send_does_not_revert_it() = runTest {
+        val fake = FakeEntities()
+        val e = entity("l")
+        fake.refreshGate = CompletableDeferred()
+        fake.refreshResult = ok(listOf(e), listOf(light("l", false, 0)))
+        val session = session(fake)
+        val out = collect(session, "l")
+        // Tapped while the cold refresh is still running: accepted, not refused.
+        assertTrue(session.perform("l", ControlAction.SetOn(true)))
+        runCurrent()
+        fake.sent.single().result.complete(SendResult.Confirmed(e, light("l", true, 255), historyEnabled = false))
+        runCurrent()
+        assertTrue(out.last().on)
+        fake.refreshGate!!.complete(Unit)
+        runCurrent()
+        assertTrue(out.last().on)
+    }
+
+    @Test
+    fun identical_live_updates_are_not_resent() = runTest {
+        val fake = FakeEntities()
+        val e = entity("l")
+        val other = entity("o")
+        fake.refreshResult = ok(listOf(e), listOf(light("l", true, 255)))
+        val live = MutableStateFlow(ok(listOf(e, other), listOf(light("l", true, 255), light("o", false, 0))))
+        val out = collect(session(fake) { live }, "l")
+        val before = out.size
+        live.value = ok(listOf(e, other), listOf(light("l", true, 255), light("o", true, 255)))
+        runCurrent()
+        assertEquals(before, out.size)
+    }
+
+    @Test
+    fun cancelled_watch_stops_listening() = runTest {
+        val fake = FakeEntities()
+        fake.refreshGate = CompletableDeferred()
+        val live = MutableStateFlow(ok(emptyList()))
+        val session = session(fake) { live }
+        val job = backgroundScope.launch { session.watch(setOf("x")).collect {} }
+        runCurrent()
+        job.cancel()
+        runCurrent()
+        // No longer watched and never seen: a tap is refused.
+        assertFalse(session.perform("x", ControlAction.SetOn(true)))
+        assertEquals(0, live.subscriptionCount.value)
     }
 }
