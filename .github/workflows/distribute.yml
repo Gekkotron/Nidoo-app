@@ -46,6 +46,20 @@ jobs:
           fi
           jq -r '.client[].client_info.android_client_info.package_name' app/google-services.json
 
+      # The Firebase app ID lives in google-services.json next to the package it belongs to, so take it from
+      # there rather than from a second secret that can drift (a mismatch is a 400 "invalid argument" on upload).
+      - name: Resolve Firebase app ID
+        id: firebase
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: |
+          app_id=$(jq -r '.client[] | select(.client_info.android_client_info.package_name == "com.gekkotron.nidoo")
+            | .client_info.mobilesdk_app_id' app/google-services.json)
+          if [ -z "$app_id" ]; then echo "::error::no com.gekkotron.nidoo client in google-services.json"; exit 1; fi
+          echo "app ID: $app_id"
+          if [ "$app_id" = "$FIREBASE_APP_ID" ]; then echo "FIREBASE_APP_ID secret matches"; else echo "::warning::FIREBASE_APP_ID secret differs from google-services.json; using google-services.json"; fi
+          echo "app_id=$app_id" >> "$GITHUB_OUTPUT"
+
       - name: Increase app version
         run: ./gradlew increaseBuildNumber -PversionCode=$GITHUB_RUN_NUMBER
 
@@ -70,7 +84,7 @@ jobs:
       - name: Upload APK to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ steps.firebase.outputs.app_id }}
           serviceCredentialsFileContent: ${{ secrets.CREDENTIAL_FILE_CONTENT }}
           groups: Testers
           file: app/build/outputs/apk/release/app-release.apk
