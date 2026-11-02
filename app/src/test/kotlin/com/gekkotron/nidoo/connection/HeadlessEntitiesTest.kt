@@ -142,6 +142,14 @@ class HeadlessEntitiesTest {
     }
 
     @Test
+    fun refresh_returns_the_sources_areas() = runTest {
+        val areas = listOf(Area("salon", "Salon"))
+        val h = harness(live = FakeLiveSource(entity(switchId), areas))
+        val result = h.entities.refresh(setOf(switchId)) as RefreshResult.Ok
+        assertEquals(areas, result.areas)
+    }
+
+    @Test
     fun unsettled_session_never_overwrites_the_cache() = runTest {
         // Connected, but the broker replays nothing: only the cached (stale) house exists, so nothing may be saved.
         val cache = MemoryCache(mapOf(configTopic to config, "sw/1" to "OFF"))
@@ -279,11 +287,11 @@ class HeadlessEntitiesTest {
     private fun entity(id: String) = Entity(id, null, "Kettle", Kind.SWITCH, null, null, null, Capabilities(), NoBindings)
 
     /** A connected foreground source holding one switch that is on. */
-    private class FakeLiveSource(entity: Entity) : EntitySource {
+    private class FakeLiveSource(entity: Entity, areaList: List<Area> = emptyList()) : EntitySource {
         override val link: StateFlow<LinkState> = MutableStateFlow(LinkState.Connected(TransportMode.DIRECT))
         override val entities: StateFlow<Map<String, Entity>> = MutableStateFlow(mapOf(entity.uniqueId to entity))
         override val devices: StateFlow<Map<String, Device>> = MutableStateFlow(emptyMap())
-        override val areas: StateFlow<List<Area>> = MutableStateFlow(emptyList())
+        override val areas: StateFlow<List<Area>> = MutableStateFlow(areaList)
         override val shortcuts: kotlinx.coroutines.flow.StateFlow<Map<String, com.gekkotron.nidoo.voice.VoiceShortcut>> =
             kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
         override suspend fun saveShortcut(shortcut: com.gekkotron.nidoo.voice.VoiceShortcut) {}

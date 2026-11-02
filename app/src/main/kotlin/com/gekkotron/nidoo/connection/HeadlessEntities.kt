@@ -76,12 +76,12 @@ class HeadlessEntities(
         live()?.let { source ->
             // Just connected (or still restoring the cache), the live source may not list the whole house yet.
             val complete = (source as? MqttDiscoverySource)?.hasSettled?.value ?: true
-            return RefreshResult.Ok(source.entities.value, source.states().first(), complete, historyEnabled(readyProfile()))
+            return RefreshResult.Ok(source.entities.value, source.states().first(), complete, historyEnabled(readyProfile()), areas = source.areas.value)
         }
         val session = session(save = true) { source, history ->
             awaitLiveOrSettled(source, ids)
             withTimeoutOrNull(settleBudget) { source.hasSettled.first { it } }
-            RefreshResult.Ok(source.entities.value, source.states().first(), complete = source.hasSettled.value, historyEnabled = history)
+            RefreshResult.Ok(source.entities.value, source.states().first(), complete = source.hasSettled.value, historyEnabled = history, areas = source.areas.value)
         }
         return when (session) {
             is Session.Ok -> session.value
