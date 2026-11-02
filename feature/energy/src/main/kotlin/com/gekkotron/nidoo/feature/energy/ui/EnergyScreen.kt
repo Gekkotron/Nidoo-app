@@ -57,6 +57,7 @@ import com.gekkotron.nidoo.feature.energy.presentation.NodeKind
 import com.gekkotron.nidoo.feature.energy.presentation.NodeStatus
 import com.gekkotron.nidoo.feature.energy.presentation.SensorEdit
 import java.util.Locale
+import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.designsystem.R as DsR
 
 @Composable
@@ -68,6 +69,7 @@ fun EnergyRoute(
     viewModel: EnergyViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val view by viewModel.energyView.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val resources = LocalContext.current.resources
     LaunchedEffect(viewModel, snackbar) {
@@ -77,7 +79,7 @@ fun EnergyRoute(
             }
         }
     }
-    EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar)
+    EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar, view = view)
 }
 
 @Composable
@@ -89,6 +91,7 @@ fun EnergyScreen(
     onSave: (String, SensorEdit) -> Unit = { _, _ -> },
     onOpenHistory: (entityId: String?) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    view: EnergyViewPreference = EnergyViewPreference.CLASSIC,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var consumersSheet by rememberSaveable { mutableStateOf(false) }
@@ -128,7 +131,13 @@ fun EnergyScreen(
                     }
                     item(key = "diagram", span = { GridItemSpan(maxLineSpan) }) {
                         NidooCard(Modifier.fillMaxWidth()) {
-                            FlowDiagram(state, locale, onMore = { consumersSheet = true }, onNode = { detailId = it.id }, modifier = Modifier.padding(8.dp))
+                            val onMore = { consumersSheet = true }
+                            val onNode = { n: EnergyNode -> detailId = n.id }
+                            when (view) {
+                                EnergyViewPreference.CLASSIC -> FlowDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
+                                EnergyViewPreference.FLUX -> FluxDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
+                                EnergyViewPreference.ORBITE -> OrbiteDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
+                            }
                         }
                     }
                     items(state.cards, key = { "card-${it.id}" }) { node -> EnergyValueCard(node, locale, onClick = { detailId = node.id }) }
