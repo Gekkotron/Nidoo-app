@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="controls_on">Allumé</string>
+    <string name="controls_off">Éteint</string>
+    <string name="controls_unavailable">Indisponible</string>
+    <string name="controls_offline">Hors ligne</string>
+    <string name="controls_auth_failed">Échec de connexion</string>
+    <string name="controls_not_configured">Non configuré</string>
+    <string name="controls_no_response">Pas de réponse</string>
+    <string name="controls_action">Allumer ou éteindre</string>
+</resources>

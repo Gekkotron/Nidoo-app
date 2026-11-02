@@ -9,5 +9,7 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":feature:widget"))
+    implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.jdk9)
 }
