@@ -33,4 +33,14 @@ class ThemeTest {
     @Test
     @Config(qualifiers = "notnight")
     fun `system follows a light system`() = assertEquals(IvoireColors, colorsFor(ThemeChoice.SYSTEM))
+
+    @Test
+    fun `bothThemesHaveFiveEnergyConsumerColours`() {
+        assertEquals(5, IvoireColors.energyConsumers.size)
+        assertEquals(5, NightGlassColors.energyConsumers.size)
+    }
+
+    @Test
+    fun `ivoireEnergyConsumerColoursMatchHub`() =
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF35B9F0), IvoireColors.energyConsumers[0])
 }
