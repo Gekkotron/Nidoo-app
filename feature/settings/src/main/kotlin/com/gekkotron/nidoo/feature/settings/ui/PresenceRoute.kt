@@ -26,6 +26,7 @@ import com.gekkotron.nidoo.feature.settings.presentation.PresenceSettingsViewMod
 @Composable
 fun PresenceSettingsSlot(
     onInfoMessage: (String) -> Unit,
+    showTitle: Boolean = true,
     viewModel: PresenceSettingsViewModel = hiltViewModel(),
 ) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
@@ -82,6 +83,7 @@ fun PresenceSettingsSlot(
             if (fix != null) viewModel.setHome(fix.first, fix.second) else onInfoMessage(locationUnavailableMessage)
         },
         onRadiusChange = viewModel::setRadius,
+        showTitle = showTitle,
         onRequestPermission = {
             when (status) {
                 PresencePermissionStatus.FineMissing, PresencePermissionStatus.Denied -> fineLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)

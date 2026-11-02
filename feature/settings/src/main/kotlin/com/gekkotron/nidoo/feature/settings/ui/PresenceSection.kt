@@ -35,14 +35,18 @@ fun PresenceSection(
     onUseCurrentLocation: () -> Unit,
     onRadiusChange: (Int) -> Unit,
     onRequestPermission: () -> Unit,
+    /** Off on the Presence page, whose top bar already says "Presence". */
+    showTitle: Boolean = true,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            stringResource(R.string.presence_section_title),
-            style = NidooTheme.type.label,
-            color = NidooTheme.colors.contentMuted,
-            modifier = Modifier.semantics { heading() },
-        )
+        if (showTitle) {
+            Text(
+                stringResource(R.string.presence_section_title),
+                style = NidooTheme.type.label,
+                color = NidooTheme.colors.contentMuted,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
         val toggleEnabled = permissionStatus == PresencePermissionStatus.Granted
         Row(
             Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch)

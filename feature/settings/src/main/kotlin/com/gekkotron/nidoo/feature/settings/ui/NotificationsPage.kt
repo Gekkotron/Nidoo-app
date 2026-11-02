@@ -4,18 +4,13 @@ import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.settings.R
 import com.gekkotron.nidoo.push.PushStatus
@@ -40,24 +35,16 @@ private fun ageText(at: Instant, now: Instant): String {
     ).toString()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** The Notifications page (push alerts spec §7.4): the status, Register again, and the system's channel settings. */
 @Composable
-internal fun PushSheet(status: PushStatus, now: Instant, onRegisterAgain: () -> Unit, onOpenChannels: () -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(stringResource(R.string.settings_push), style = NidooTheme.type.display.copy(fontSize = 22.sp))
-            Text(pushStatusText(status, now), style = NidooTheme.type.body)
-            FilledTonalButton(
-                onClick = { onRegisterAgain(); onDismiss() },
-                enabled = status != PushStatus.Demo,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.settings_push_register_again)) }
-            OutlinedButton(onClick = { onOpenChannels(); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.settings_push_channels))
-            }
+internal fun NotificationsBody(status: PushStatus, now: Instant, onRegisterAgain: () -> Unit, onOpenChannels: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(pushStatusText(status, now), style = NidooTheme.type.body)
+        FilledTonalButton(onClick = onRegisterAgain, enabled = status != PushStatus.Demo, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.settings_push_register_again))
+        }
+        OutlinedButton(onClick = onOpenChannels, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.settings_push_channels))
         }
     }
 }
