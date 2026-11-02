@@ -17,6 +17,9 @@ import com.gekkotron.nidoo.push.PushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import com.gekkotron.nidoo.feature.voice.TtsAvailability
 import com.gekkotron.nidoo.feature.voice.TtsSpeaker
+import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.UNASSIGNED_AREA
+import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.voice.ShortcutMatcher
 import com.gekkotron.nidoo.voice.VoiceCatalogBuilder
@@ -39,7 +42,17 @@ data class SettingsUi(
     val push: PushStatus = PushStatus.Waiting,
     val voice: VoiceSettingsUi = VoiceSettingsUi(),
     val energyView: EnergyViewPreference = EnergyViewPreference.CLASSIC,
+    /** Broker link, for the Settings header and the Connection row. */
+    val link: LinkState = LinkState.Connecting,
+    /** Rooms the house has, Unassigned not counted (the Rooms row's status). */
+    val roomCount: Int = 0,
+    val presenceEnabled: Boolean = false,
 )
+
+/** What only the Settings list shows. */
+private data class ListExtras(val link: LinkState, val roomCount: Int, val presenceEnabled: Boolean)
+
+private fun roomCount(areas: List<Area>) = areas.count { it.id != UNASSIGNED_AREA }
 
 @HiltViewModel
 class SettingsViewModel internal constructor(
@@ -79,9 +92,16 @@ class SettingsViewModel internal constructor(
         VoiceSettingsUi(enabled, availability, rows, tts)
     }
 
-    val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state, push.status, voiceUi, preferences.energyView) { theme, profile, status, voice, energyView ->
-        SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), status, voice, energyView ?: EnergyViewPreference.CLASSIC)
-    }.stateIn(
+    private val listExtras = combine(source.link, source.areas, preferences.presence) { link, areas, presence ->
+        ListExtras(link, roomCount(areas), presence?.enabled == true)
+    }
+
+    val state: StateFlow<SettingsUi> = combine(
+        combine(preferences.theme, profiles.state, push.status, voiceUi, preferences.energyView) { theme, profile, status, voice, energyView ->
+            SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), status, voice, energyView ?: EnergyViewPreference.CLASSIC)
+        },
+        listExtras,
+    ) { ui, extras -> ui.copy(link = extras.link, roomCount = extras.roomCount, presenceEnabled = extras.presenceEnabled) }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         // Seeded from the live values so the radio does not show System for a frame.
@@ -91,6 +111,9 @@ class SettingsViewModel internal constructor(
             push.status.value,
             VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability, ttsAvailability = ttsAvailability.value),
             preferences.energyView.value ?: EnergyViewPreference.CLASSIC,
+            source.link.value,
+            roomCount(source.areas.value),
+            preferences.presence.value?.enabled == true,
         ),
     )
 
