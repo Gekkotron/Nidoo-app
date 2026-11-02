@@ -8,9 +8,16 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -28,20 +35,45 @@ internal data class StoredRegistration(
 /** The last registration that reached the broker (push alerts spec §5.4). */
 data class LastRegistration(val token: String, val topic: String, val at: Instant)
 
-/** Kept apart from the profile and preferences so "Set up again" can forget it on its own. */
-class RegistrationStore internal constructor(private val store: DataStore<StoredRegistration>) {
-    fun observe(): Flow<LastRegistration?> = store.data.map { stored ->
+/**
+ * Kept apart from the profile and preferences so "Set up again" can forget it on its own.
+ *
+ * [observe] is not fed by collecting `store.data`: a collection whose first read lands while a write is
+ * between its version bump and its rename gets the old file tagged with the new version, then drops that
+ * write as already seen (the race [com.gekkotron.nidoo.data.AppPreferences] documents). So the file is read
+ * once while no write can be in flight, and each write publishes the value DataStore committed. This holds
+ * because this class is the file's only writer.
+ */
+class RegistrationStore internal constructor(private val store: DataStore<StoredRegistration>, scope: CoroutineScope) {
+    private val writes = Mutex()
+    private var loaded = false // guarded by [writes]
+    private val current = MutableStateFlow<StoredRegistration?>(null)
+
+    init {
+        scope.launch { writes.withLock { if (!loaded) publish(store.data.first()) } }
+    }
+
+    fun observe(): Flow<LastRegistration?> = current.filterNotNull().map { stored ->
         stored.takeIf { it.token.isNotBlank() }?.let { LastRegistration(it.token, it.topic, Instant.ofEpochSecond(it.at)) }
     }
 
     suspend fun last(): LastRegistration? = observe().first()
 
-    suspend fun save(token: String, topic: String, at: Instant) {
-        store.updateData { it.copy(token = token, topic = topic, at = at.epochSecond) }
+    suspend fun save(token: String, topic: String, at: Instant) = update { it.copy(token = token, topic = topic, at = at.epochSecond) }
+
+    suspend fun clear() = update { StoredRegistration() }
+
+    /** [observe] shows the write as soon as this returns. */
+    private suspend fun update(transform: (StoredRegistration) -> StoredRegistration) {
+        writes.withLock {
+            // DataStore finishes a write whose caller was cancelled, so publish it regardless.
+            withContext(NonCancellable) { publish(store.updateData(transform)) }
+        }
     }
 
-    suspend fun clear() {
-        store.updateData { StoredRegistration() }
+    private fun publish(stored: StoredRegistration) {
+        loaded = true
+        current.value = stored
     }
 
     companion object {
@@ -49,13 +81,16 @@ class RegistrationStore internal constructor(private val store: DataStore<Stored
 
         fun create(context: Context, scope: CoroutineScope): RegistrationStore = create(context.filesDir.resolve(FILE), scope)
 
-        fun create(file: File, scope: CoroutineScope): RegistrationStore = RegistrationStore(
+        fun create(file: File, scope: CoroutineScope): RegistrationStore = create(file, scope, RegistrationSerializer)
+
+        internal fun create(file: File, scope: CoroutineScope, serializer: Serializer<StoredRegistration>): RegistrationStore = RegistrationStore(
             DataStoreFactory.create(
-                serializer = RegistrationSerializer,
+                serializer = serializer,
                 corruptionHandler = ReplaceFileCorruptionHandler { StoredRegistration() },
                 scope = CoroutineScope(scope.coroutineContext + Dispatchers.IO),
                 produceFile = { file },
             ),
+            scope,
         )
     }
 }
