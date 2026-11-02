@@ -10,7 +10,7 @@ import kotlin.math.abs
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Ported from the hub's `sankey_layout.rs` tests (Oikos-os 1226316). */
+/** Ported from the hub's `sankey_layout.rs` tests (hub repo @ 1226316). */
 class SankeyLayoutTest {
     private fun node(id: String, role: SankeyRole, column: Int, size: Double) = SankeyNode(id, role, column, null, size, size)
     private fun link(from: String, to: String, watts: Double) = SankeyLink(from, to, watts)

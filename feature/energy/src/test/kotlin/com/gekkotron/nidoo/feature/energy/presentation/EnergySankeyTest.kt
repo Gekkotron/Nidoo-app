@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Ported from the hub's `energy_sankey.rs` tests (Oikos-os 1226316), plus the app's own cases. */
+/** Ported from the hub's `energy_sankey.rs` tests (hub repo @ 1226316), plus the app's own cases. */
 class EnergySankeyTest {
     private fun node(id: String, kind: NodeKind, watts: Double, flow: Flow, status: NodeStatus = NodeStatus.LIVE) =
         EnergyNode(id = id, kind = kind, value = watts, flow = flow, status = status)

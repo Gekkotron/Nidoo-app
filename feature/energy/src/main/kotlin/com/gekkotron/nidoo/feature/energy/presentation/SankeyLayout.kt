@@ -3,7 +3,7 @@ package com.gekkotron.nidoo.feature.energy.presentation
 /**
  * Geometry of the Sankey model: where each bar, band and label sits in a frame, horizontal on wide
  * screens and vertical on phones. Pure; the Flux view scales it onto its Canvas. A port of the hub's
- * `sankey_layout.rs` (Oikos-os 1226316), emitting points instead of SVG paths.
+ * `sankey_layout.rs` (hub repo @ 1226316), emitting points instead of SVG paths.
  */
 data class Frame(val w: Double, val h: Double, val vertical: Boolean) {
     companion object {

@@ -8,7 +8,7 @@ import kotlin.math.sqrt
 /**
  * Geometry of the Orbite energy view: two concentric rings of arcs (inner = where power comes from,
  * outer = where it goes) and the dots that drift along them. Pure; a port of the hub's
- * `energy_orbite.rs` (Oikos-os 1226316).
+ * `energy_orbite.rs` (hub repo @ 1226316).
  */
 enum class Ring { INNER, OUTER }
 

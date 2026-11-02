@@ -5,7 +5,7 @@ import com.gekkotron.nidoo.feature.energy.presentation.EnergyFlowBuilder.IDLE_W
 /**
  * The live energy flow as a balanced Sankey: nodes in three columns (sources; the house and its
  * sinks; consumers) and the links between them. Pure; Flux and Orbite draw it. A port of the hub's
- * `energy_sankey.rs` (Oikos-os 1226316).
+ * `energy_sankey.rs` (hub repo @ 1226316).
  */
 enum class SankeyRole { SOLAR, GRID, BATTERY, HOUSE, EXPORT, BATTERY_CHARGE, CONSUMER, OTHERS, UNITEMISED }
 

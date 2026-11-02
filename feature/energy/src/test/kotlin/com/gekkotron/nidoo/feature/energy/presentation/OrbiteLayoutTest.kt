@@ -6,7 +6,7 @@ import kotlin.math.abs
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Ported from the hub's `energy_orbite.rs` tests (Oikos-os 1226316). */
+/** Ported from the hub's `energy_orbite.rs` tests (hub repo @ 1226316). */
 class OrbiteLayoutTest {
     private val wide = 8
 
