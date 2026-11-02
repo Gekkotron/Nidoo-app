@@ -42,12 +42,18 @@ object ClimateMapper : KindMapper {
         is Command.SetFanMode ->
             if (command.mode !in fanModes(b)) Encoded.NotSupported("fan mode '${command.mode}' not supported")
             else publish(b, "fan_mode_command_topic", "fan_mode_command_template", command.mode)
-        Command.TurnOff -> ThermostatBase.encodeMode(b, "off", modes(b))
+        is Command.TurnOn ->
+            if (b.str("power_command_topic") == null) Encoded.NotSupported("climate cannot $command")
+            else publish(b, "power_command_topic", "power_command_template", b.str("payload_on", "ON"))
+        Command.TurnOff ->
+            if (b.str("power_command_topic") == null) ThermostatBase.encodeMode(b, "off", modes(b))
+            else publish(b, "power_command_topic", "power_command_template", b.str("payload_off", "OFF"))
         else -> Encoded.NotSupported("climate cannot $command")
     }
 
     override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = when (command) {
         is Command.SetFanMode -> setOfNotNull(b.str("fan_mode_state_topic"))
+        is Command.TurnOn -> setOfNotNull(b.str("mode_state_topic"))
         else -> ThermostatBase.feedbackTopics(b, command) + setOfNotNull(b.str("fan_mode_state_topic"))
     }
 
@@ -55,6 +61,7 @@ object ClimateMapper : KindMapper {
         val prev = previous as? StateValue.Climate ?: StateValue.Climate(null, null, null)
         return when (command) {
             is Command.SetFanMode -> prev.copy(fanMode = command.mode)
+            is Command.TurnOn -> null
             else -> ThermostatBase.predict(command, previous)
         }
     }
