@@ -44,6 +44,36 @@ class ClimateMapperTest {
         assertIs<Encoded.NotSupported>(ClimateMapper.encode(daikin, Command.SetTemperature(40.0), Unknown))
     }
 
+    private val powered = bindings(
+        "climate",
+        """{"mode_state_topic":"m","mode_command_topic":"m/set","power_command_topic":"p/set","modes":["off","cool","heat","auto"]}""",
+    )
+
+    @Test
+    fun `power topic turns on and off without a mode`() {
+        assertEquals(publishes("p/set", "ON"), ClimateMapper.encode(powered, Command.TurnOn(), Unknown))
+        assertEquals(publishes("p/set", "OFF"), ClimateMapper.encode(powered, Command.TurnOff, Unknown))
+        assertEquals(setOf("m"), ClimateMapper.feedbackTopics(powered, Command.TurnOn()))
+        assertEquals(setOf("m"), ClimateMapper.feedbackTopics(powered, Command.TurnOff))
+        assertEquals(null, ClimateMapper.predict(Command.TurnOn(), Climate("off", 20.0, null)))
+        assertEquals(Climate("off", 20.0, null), ClimateMapper.predict(Command.TurnOff, Climate("heat", 20.0, null)))
+    }
+
+    @Test
+    fun `power topic honours custom payloads`() {
+        val custom = bindings(
+            "climate",
+            """{"mode_command_topic":"m/set","power_command_topic":"p/set","payload_on":"1","payload_off":"0"}""",
+        )
+        assertEquals(publishes("p/set", "1"), ClimateMapper.encode(custom, Command.TurnOn(), Unknown))
+        assertEquals(publishes("p/set", "0"), ClimateMapper.encode(custom, Command.TurnOff, Unknown))
+    }
+
+    @Test
+    fun `turn on without power topic is not supported`() {
+        assertIs<Encoded.NotSupported>(ClimateMapper.encode(daikin, Command.TurnOn(), Unknown))
+    }
+
     @Test
     fun `mode commands`() {
         assertEquals(publishes("m/set", "cool"), ClimateMapper.encode(daikin, Command.SetHvacMode("cool"), Unknown))

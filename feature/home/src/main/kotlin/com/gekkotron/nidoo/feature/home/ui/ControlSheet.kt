@@ -210,7 +210,7 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
     val powerable = "off" in caps.hvacModes && caps.hvacModes.any { it != "off" }
-    if (powerable) {
+    if (powerable || caps.power) {
         val isOn = climate?.mode != null && climate.mode != "off"
         val powerLabel = stringResource(R.string.sheet_power)
         Row(
@@ -221,6 +221,10 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             Switch(
                 checked = isOn,
                 onCheckedChange = { on ->
+                    if (caps.power) {
+                        onSend(if (on) Command.TurnOn() else Command.TurnOff)
+                        return@Switch
+                    }
                     val next = if (on) caps.hvacModes.firstOrNull { it == "auto" } ?: caps.hvacModes.first { it != "off" } else "off"
                     onSend(Command.SetHvacMode(next))
                 },

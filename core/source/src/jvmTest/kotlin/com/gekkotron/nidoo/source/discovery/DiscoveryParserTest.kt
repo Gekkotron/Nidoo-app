@@ -221,6 +221,9 @@ class DiscoveryParserTest {
         assertEquals(10.0, climate.minTemp)
         assertEquals(35.0, climate.maxTemp)
         assertEquals(emptyList(), climate.fanModes)
+        assertEquals(false, climate.power)
+        val powered = single("homeassistant/climate/p/config", """{"power_command_topic":"p/set"}""").entity.capabilities
+        assertEquals(true, powered.power)
         val fan = single("homeassistant/climate/f/config", """{"fan_mode_command_topic":"f","fan_modes":["auto","1","2"]}""").entity.capabilities
         assertEquals(listOf("auto", "1", "2"), fan.fanModes)
         val fanDefault = single("homeassistant/climate/g/config", """{"fan_mode_command_topic":"f"}""").entity.capabilities
