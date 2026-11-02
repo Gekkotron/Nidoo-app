@@ -48,6 +48,13 @@ enum class NidooGlyph(private val parts: List<Part>) {
     FAN(listOf(area("M12,12q0,-2.275 1.6125,-3.8875T17.5,6.5q2.275,0 3.8875,1.6125T23,12L12,12ZM6.5,17.5q-2.275,0 -3.8875,-1.6125T1,12h11q0,2.275 -1.6125,3.8875T6.5,17.5ZM12,12q-2.275,0 -3.8875,-1.6125T6.5,6.5q0,-2.275 1.6125,-3.8875T12,1v11ZM12,23v-11q2.275,0 3.8875,1.6125T17.5,17.5q0,2.275 -1.6125,3.8875T12,23Z"))),
     STAR(listOf(area("M12 2L14.3 8.8 21.5 8.9 15.8 13.2 17.9 20.1 12 16 6.1 20.1 8.2 13.2 2.5 8.9 9.7 8.8z"))),
     AUTOMATION(listOf(line("M4 20 14 10"), area("M14 10l2.5 2.5-9.8 9.8L4.2 19.8z"), line("M17.5 3v4M15.5 5h4M20 9.5v3M18.5 11h3"))),
+
+    // Settings list tiles, ported from the hub's icons.rs.
+    BELL(listOf(area("M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9z"), line("M10 21a2 2 0 0 0 4 0"))),
+    PIN(listOf(area("M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"), line("M14.5 9.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"))),
+    SUN_MOON(listOf(line("M20.5 12a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0z"), area("M12 3.5a8.5 8.5 0 0 0 0 17z"))),
+    BROKER(listOf(line("M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"))),
+    INFO(listOf(area("M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"), line("M12 11v5.5M12 7.5h.01"))),
     ;
 
     /** Parsed once per glyph. */
