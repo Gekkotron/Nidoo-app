@@ -182,3 +182,29 @@ object SankeyLayout {
         }
     }
 }
+
+/**
+ * The Sankey id under ([x], [y]) in frame units: a bar (grown by [slop] along the main axis, so thin
+ * bars stay tappable), else a band (its target), else null. Bands are approximated by a smoothstep
+ * between their ends, close enough to the drawn cubic for a finger.
+ */
+fun Placed.hit(x: Double, y: Double, frame: Frame, slop: Double): String? {
+    val v = frame.vertical
+    bars.firstOrNull { b ->
+        if (v) x in b.x..b.x + b.w && y in b.y - slop..b.y + b.h + slop else x in b.x - slop..b.x + b.w + slop && y in b.y..b.y + b.h
+    }?.let { return it.id }
+    val main = if (v) y else x
+    val cross = if (v) x else y
+    fun m(p: Pt) = if (v) p.y else p.x
+    fun c(p: Pt) = if (v) p.x else p.y
+    return bands.firstOrNull { b ->
+        val m0 = m(b.a0)
+        val m1 = m(b.b0)
+        if (m1 <= m0 || main < m0 || main > m1) return@firstOrNull false
+        val t = (main - m0) / (m1 - m0)
+        val s = t * t * (3 - 2 * t)
+        val e0 = c(b.a0) + (c(b.b0) - c(b.a0)) * s
+        val e1 = c(b.a1) + (c(b.b1) - c(b.a1)) * s
+        cross in minOf(e0, e1)..maxOf(e0, e1)
+    }?.to
+}
