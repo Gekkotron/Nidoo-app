@@ -123,3 +123,17 @@ jobs:
           name: nidoo-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: ignore
+
+  brand:
+    name: brand check
+    runs-on: ubuntu-latest
+    # The app's old name must not come back; docs/superpowers/ is history and keeps it.
+    # The pattern is written oi[k]os so this file does not match itself.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Old name check
+        run: |
+          if git grep -n -i 'oi[k]os' -- . ':!docs/superpowers'; then
+            echo "The old name is still here; rename it to nidoo." >&2
+            exit 1
+          fi
