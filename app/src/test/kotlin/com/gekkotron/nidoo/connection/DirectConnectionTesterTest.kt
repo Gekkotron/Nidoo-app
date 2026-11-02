@@ -48,10 +48,11 @@ class DirectConnectionTesterTest {
             "device":{"identifiers":["kettle"],"name":"Kitchen kettle"}}"""
         peer.publishWith().topic("homeassistant/switch/kettle/config").payload(config.encodeToByteArray())
             .qos(MqttQos.AT_LEAST_ONCE).retain(true).send()
-        val connected = withTimeout(10.seconds) {
-            tester.test(draft(b.port)).first { it is TestState.Connected && it.devices.isNotEmpty() }
-        }
-        assertEquals(TestState.Connected(listOf("Kitchen kettle")), connected)
+        // Wait for the settled list: the source publishes entities before devices, so one emission can
+        // briefly show the entity as a loose "Kitchen kettle Kettle" before its device lands.
+        val expected = TestState.Connected(listOf("Kitchen kettle"))
+        val connected = withTimeout(10.seconds) { tester.test(draft(b.port)).first { it == expected } }
+        assertEquals(expected, connected)
         peer.disconnect()
     }
 
@@ -150,10 +151,10 @@ class DirectConnectionTesterTest {
         val api = FakeGatewayApi().apply {
             onOpen = { it.connect(); it.message("homeassistant/switch/kettle/config", kettle, retained = true) }
         }
-        val connected = withTimeout(10.seconds) {
-            gatewayTester(api).test(awayDraft()).first { it is TestState.Connected && it.devices.isNotEmpty() }
-        }
-        assertEquals(TestState.Connected(listOf("Kitchen kettle"), viaGateway = true), connected)
+        // Settled list only — see `reachable broker reports discovered devices`.
+        val expected = TestState.Connected(listOf("Kitchen kettle"), viaGateway = true)
+        val connected = withTimeout(10.seconds) { gatewayTester(api).test(awayDraft()).first { it == expected } }
+        assertEquals(expected, connected)
     }
 
     @Test
