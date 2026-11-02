@@ -122,7 +122,7 @@ private fun FlowTile(flow: TileContent.FlowButton, running: Boolean, modifier: M
 
 @Composable
 private fun EnergyTile(stat: TileContent.EnergyStat, modifier: Modifier, onOpenEnergy: () -> Unit) {
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0]
     val label = stat.title ?: stringResource(metricLabel(stat.metric))
     val value = when (val v = stat.value) {
         is EnergyValue.Kwh -> EnergyFormat.energy(v.v, locale)
@@ -147,7 +147,7 @@ private fun metricLabel(metric: EnergyMetric): Int = when (metric) {
 
 @Composable
 private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpenHistory: (String) -> Unit) {
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0]
     val points = remember(history.points) { history.points.orEmpty().map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val time = remember(history.range, locale) { timeFormat(history.range, locale) }
     NidooCard(modifier = modifier.fillMaxWidth().testTag("history-${history.entityId}"), onClick = { onOpenHistory(history.entityId) }) {

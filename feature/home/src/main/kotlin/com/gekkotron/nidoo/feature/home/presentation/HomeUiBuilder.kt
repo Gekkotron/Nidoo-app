@@ -90,12 +90,21 @@ object HomeUiBuilder {
             // first; the client-side fold then runs over what remains, so a member cannot be
             // double-grouped.
             val hubFolded = RoomGroups.foldHubGroups(sorted, hubGroups)
-            // Within each area block, lift group cards above individual devices. Stable sort keeps
-            // the alphabetical intra-bucket order from the per-entity sort above; the explicit ui.order
-            // pin still wins since it's the first key.
-            RoomGroups.fold(hubFolded, areas, groupFavorites).sortedWith(
+            // A room's groups lead that room. A group takes the lowest Position of any card in its
+            // room, so a pinned device can still lift its room up the list but never above the group;
+            // ties fall to the area, then groups first. Stable sort keeps the alphabetical
+            // intra-bucket order from the per-entity sort above.
+            val folded = RoomGroups.fold(hubFolded, areas, groupFavorites)
+            val roomLead: Map<String, Int> = folded.filter { it.ui.order != null }
+                .groupBy { it.areaId }
+                .mapValues { (_, list) -> list.minOf { it.ui.order!! } }
+            fun position(card: CardUi): Int {
+                val own = card.ui.order ?: Int.MAX_VALUE
+                return if (card.isGroup) minOf(own, roomLead[card.areaId] ?: Int.MAX_VALUE) else own
+            }
+            folded.sortedWith(
                 compareBy(
-                    { it.ui.order ?: Int.MAX_VALUE },
+                    ::position,
                     { areaIndex[it.areaId] ?: Int.MAX_VALUE },
                     { !it.isGroup },
                 ),

@@ -104,6 +104,21 @@ class RoomGroupsTest {
     }
 
     @Test
+    fun `a device with a Position stays below its room's groups, and Position still orders the rooms`() {
+        val s = build(
+            testEntity("kswitch", Kind.SWITCH, "kswitch", area = "kitchen", ui = UiOverride(order = 0)),
+            testEntity("lsensor", Kind.SWITCH, "lsensor", area = "living", ui = UiOverride(order = 1)),
+            testEntity("lswitch", Kind.SWITCH, "lswitch", area = "living"),
+            shutter("s1"), shutter("s2"), light("l1"), light("l2"),
+        )
+        // The pinned kitchen switch still leads; every living card, pinned or not, sits under the living groups.
+        assertEquals(
+            listOf("kswitch", "group:living:light", "group:living:cover", "lsensor", "lswitch"),
+            s.cards.map { it.id },
+        )
+    }
+
+    @Test
     fun `a cover group aggregates open count, motion, positions and status`() {
         val s = build(
             shutter("a"), shutter("b"), shutter("c", position = false),

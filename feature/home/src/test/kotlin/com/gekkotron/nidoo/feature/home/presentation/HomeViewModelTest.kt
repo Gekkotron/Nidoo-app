@@ -87,6 +87,26 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `launch lands on Favorites even when the favourite flags arrive after the entities`() = runTest(dispatcher) {
+        // Cold start: discovery configs come in first, the retained nidoo/ui overrides a moment later.
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        assertEquals(RoomFilter.All, vm.state.value.selected)
+        source.entities.value += "lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen", ui = UiOverride(favorite = true))
+        assertEquals(RoomFilter.Favorites, vm.state.value.selected)
+        assertEquals(RoomFilter.Favorites, vm.state.value.chips.first().filter)
+    }
+
+    @Test
+    fun `picking All by hand sticks when favourites show up later`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.All)
+        source.entities.value += "lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen", ui = UiOverride(favorite = true))
+        assertEquals(RoomFilter.All, vm.state.value.selected)
+    }
+
+    @Test
     fun `tapping sends an absolute on-off so Retry repeats the intent, and ignores sheet cards`() = runTest(dispatcher) {
         source.entities.value += "off" to testEntity("off", Kind.SWITCH, area = "kitchen")
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())

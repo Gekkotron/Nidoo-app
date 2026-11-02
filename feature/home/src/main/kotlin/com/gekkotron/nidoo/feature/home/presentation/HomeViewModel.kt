@@ -67,7 +67,10 @@ class HomeViewModel @Inject constructor(
         // The selected chip may no longer exist (its last card was unhidden, its area emptied…); build()
         // already falls back to All for this state, but the saved key must follow, or a stale "hidden"
         // key comes back to life and jumps the screen back there as soon as something is hidden again.
-        if (ui.selected.key != key) savedState[KEY_FILTER] = ui.selected.key
+        // Favorites is the exception: it is the launch default, and on a cold start the retained
+        // favourite flags land after the entities, so its chip is briefly missing. Keeping the key
+        // lets the screen settle on Favorites once they arrive instead of sticking on All.
+        if (ui.selected.key != key && key != RoomFilter.Favorites.key) savedState[KEY_FILTER] = ui.selected.key
         ui
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
