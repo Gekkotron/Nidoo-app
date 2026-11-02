@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <service
+            android:name=".android.NidooControlsService"
+            android:exported="true"
+            android:permission="android.permission.BIND_CONTROLS"
+            tools:targetApi="30">
+            <intent-filter>
+                <action android:name="android.service.controls.ControlsProviderService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

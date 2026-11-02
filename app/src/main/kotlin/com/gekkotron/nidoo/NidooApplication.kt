@@ -14,6 +14,8 @@ import com.gekkotron.nidoo.connection.HistoryWiring
 import com.gekkotron.nidoo.connection.PushWiring
 import com.gekkotron.nidoo.connection.WidgetMirror
 import com.gekkotron.nidoo.shared.NidooShared
+import com.gekkotron.nidoo.feature.controls.ControlsComponent
+import com.gekkotron.nidoo.feature.controls.ControlsComponentProvider
 import com.gekkotron.nidoo.feature.widget.WidgetComponent
 import com.gekkotron.nidoo.feature.widget.WidgetComponentProvider
 import com.gekkotron.nidoo.feature.widget.work.WidgetWorkerFactory
@@ -28,7 +30,7 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class NidooApplication : Application(), PushComponentProvider, WidgetComponentProvider, Configuration.Provider, SingletonImageLoader.Factory {
+class NidooApplication : Application(), PushComponentProvider, WidgetComponentProvider, ControlsComponentProvider, Configuration.Provider, SingletonImageLoader.Factory {
     @Inject
     lateinit var transport: ActiveTransport
 
@@ -62,9 +64,14 @@ class NidooApplication : Application(), PushComponentProvider, WidgetComponentPr
     @Inject
     lateinit var widgetMirror: WidgetMirror
 
+    @Inject
+    lateinit var controls: ControlsComponent
+
     override fun pushComponent(): PushComponent = component
 
     override fun widgetComponent(): WidgetComponent = widgets
+
+    override fun controlsComponent(): ControlsComponent = controls
 
     /** On-demand WorkManager with the push and widget worker factories; the default initializer is removed from the manifest. */
     override val workManagerConfiguration: Configuration
