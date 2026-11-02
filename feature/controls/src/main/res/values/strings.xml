@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="controls_on">On</string>
+    <string name="controls_off">Off</string>
+    <string name="controls_unavailable">Unavailable</string>
+    <string name="controls_offline">Offline</string>
+    <string name="controls_auth_failed">Sign-in failed</string>
+    <string name="controls_not_configured">Not set up</string>
+    <string name="controls_no_response">No response</string>
+    <string name="controls_action">Turn on or off</string>
+</resources>

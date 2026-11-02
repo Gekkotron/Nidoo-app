@@ -9,7 +9,7 @@ enum class Failure { OFFLINE, AUTH_FAILED, NOT_CONFIGURED }
 
 sealed interface RefreshResult {
     /** [complete]: discovery settled, so an id missing from [entities] is really gone. */
-    data class Ok(val entities: Map<String, Entity>, val states: Map<String, EntityState>, val complete: Boolean, val historyEnabled: Boolean) : RefreshResult
+    data class Ok(val entities: Map<String, Entity>, val states: Map<String, EntityState>, val complete: Boolean, val historyEnabled: Boolean, val areas: List<Area> = emptyList()) : RefreshResult
 
     data class Failed(val reason: Failure) : RefreshResult
 }
