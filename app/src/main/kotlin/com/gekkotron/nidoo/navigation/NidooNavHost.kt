@@ -108,10 +108,11 @@ internal fun linkAction(root: NavKey, pending: AppLink?): AlertLinkAction = when
     else -> AlertLinkAction.WAIT
 }
 
-internal fun linkDestination(link: AppLink): NavKey = when (link) {
-    is AppLink.Alert -> AlertDetailKey(link.id)
-    is AppLink.History -> HistoryKey(HistoryTarget.Entity(link.entityId).encode())
-    AppLink.Settings -> SettingsKey
+/** The screens a link opens, bottom first: a Settings page sits over the Settings list so back returns to the list. */
+internal fun linkDestinations(link: AppLink): List<NavKey> = when (link) {
+    is AppLink.Alert -> listOf(AlertDetailKey(link.id))
+    is AppLink.History -> listOf(HistoryKey(HistoryTarget.Entity(link.entityId).encode()))
+    is AppLink.Settings -> listOfNotNull(SettingsKey, link.page?.let { SettingsPageKey(it.name) })
 }
 
 /** The main tabs share the bar's bottom inset; every other screen has no bar, so it keeps the full insets. */
@@ -161,7 +162,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
         val link = pendingLink ?: return@LaunchedEffect
         when (linkAction(root, link)) {
             AlertLinkAction.OPEN -> {
-                push(backStack, linkDestination(link))
+                linkDestinations(link).forEach { push(backStack, it) }
                 viewModel.linkOpened()
             }
             AlertLinkAction.DROP -> viewModel.linkOpened()
@@ -215,6 +216,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<HomeKey> {
                     HomeRoute(
                         onOpenSettings = { push(backStack, SettingsKey) },
+                        onOpenConnectionSettings = { linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)).forEach { push(backStack, it) } },
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         windowInsets = tabInsets,

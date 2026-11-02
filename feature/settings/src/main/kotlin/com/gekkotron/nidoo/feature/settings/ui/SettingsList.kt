@@ -50,6 +50,7 @@ import com.gekkotron.nidoo.feature.settings.R
 import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
+import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.transport.LinkState
 
@@ -122,7 +123,9 @@ fun SettingsListScreen(
             stringResource(if (state.presenceEnabled) R.string.settings_on else R.string.settings_off)
         },
         Entry(SettingsPage.VOICE, R.string.voice_section_title, R.string.settings_voice_hint, NidooGlyph.MIC, Tone.VIOLET) {
-            if (state.voice.enabled) stringResource(R.string.settings_voice_status, state.voice.shortcuts.size) else stringResource(R.string.settings_off)
+            // Same rule as the page's toggle: on only when the phone can actually listen.
+            val on = state.voice.enabled && state.voice.availability == SpeechAvailability.Status.Ready
+            if (on) stringResource(R.string.settings_voice_status, state.voice.shortcuts.size) else stringResource(R.string.settings_off)
         },
     )
     val app = listOf(

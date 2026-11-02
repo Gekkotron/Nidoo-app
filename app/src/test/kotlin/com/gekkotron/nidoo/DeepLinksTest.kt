@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo
 
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import android.content.Intent
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -55,7 +56,14 @@ class DeepLinksTest {
 
     @Test
     fun `the settings link`() {
-        assertEquals(AppLink.Settings, DeepLinks.link(Uri.parse("nidoo://settings")))
+        assertEquals(AppLink.Settings(), DeepLinks.link(Uri.parse("nidoo://settings")))
+    }
+
+    @Test
+    fun `a settings link may name its page, an unknown page opens the list`() {
+        assertEquals(AppLink.Settings(SettingsPage.CONNECTION), DeepLinks.link(Uri.parse("nidoo://settings/connection")))
+        assertEquals(AppLink.Settings(SettingsPage.VOICE), DeepLinks.link(Uri.parse("nidoo://settings/voice")))
+        assertEquals(AppLink.Settings(), DeepLinks.link(Uri.parse("nidoo://settings/nope")))
     }
 
     @Test

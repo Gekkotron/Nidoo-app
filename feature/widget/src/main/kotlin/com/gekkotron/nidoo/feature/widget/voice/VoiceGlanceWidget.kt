@@ -49,7 +49,7 @@ class VoiceGlanceWidget : GlanceAppWidget() {
         val initial = enabled.first()
         val openVoice = actionStartActivity(voiceIntent(context))
         val openSettings = actionStartActivity(
-            Intent(Intent.ACTION_VIEW, AppLinks.SETTINGS.toUri()).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            Intent(Intent.ACTION_VIEW, AppLinks.SETTINGS_VOICE.toUri()).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         provideContent {
             val on by enabled.collectAsState(initial = initial)

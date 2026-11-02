@@ -2,6 +2,7 @@ package com.gekkotron.nidoo
 
 import android.content.Intent
 import android.net.Uri
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 
 /** What a tapped notification or widget asks the app to show (push alerts spec §5.2, widgets spec §2.3). */
 sealed interface AppLink {
@@ -9,10 +10,11 @@ sealed interface AppLink {
 
     data class History(val entityId: String) : AppLink
 
-    data object Settings : AppLink
+    /** Settings, opened on [page] when the link names one (`nidoo://settings/connection`). */
+    data class Settings(val page: SettingsPage? = null) : AppLink
 }
 
-/** `nidoo://alert/<id>` (every alert notification), `nidoo://history/<entity id>` and `nidoo://settings` (the widget). */
+/** `nidoo://alert/<id>` (every alert notification), `nidoo://history/<entity id>` and `nidoo://settings[/<page>]` (widgets, voice). */
 object DeepLinks {
     fun link(uri: Uri?): AppLink? {
         if (uri == null || uri.scheme != "nidoo") return null
@@ -21,7 +23,7 @@ object DeepLinks {
         return when (uri.host) {
             "alert" -> first?.let(AppLink::Alert)
             "history" -> first?.let(AppLink::History)
-            "settings" -> AppLink.Settings
+            "settings" -> AppLink.Settings(first?.let { seg -> SettingsPage.entries.find { it.name.equals(seg, ignoreCase = true) } })
             else -> null
         }
     }

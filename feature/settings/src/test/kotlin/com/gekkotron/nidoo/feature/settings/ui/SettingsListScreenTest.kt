@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.feature.settings.ui
 
+import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -112,6 +113,12 @@ class SettingsListScreenTest {
         compose.onAllNodesWithText("0", useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodesWithText("Online", useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodesWithText("Connecting", useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun `voice reads Off when the phone cannot listen, as its page's toggle does`() {
+        show(full.copy(voice = full.voice.copy(availability = SpeechAvailability.Status.NoOnDevice)))
+        compose.onNode(hasText("Voice") and hasText("Off") and hasClickAction()).assertExists()
     }
 
     @Test

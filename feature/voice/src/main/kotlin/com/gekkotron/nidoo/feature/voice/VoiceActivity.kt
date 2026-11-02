@@ -104,7 +104,8 @@ class VoiceActivity : ComponentActivity() {
 }
 
 /** Parsed by `:app` (same link the widget's settings action uses). */
-private const val SETTINGS_LINK = "nidoo://settings"
+/** The voice sheet's "Open Settings" lands on the Voice page, where the toggle is. */
+private const val SETTINGS_LINK = "nidoo://settings/voice"
 
 private fun ThemePreference.toChoice(): ThemeChoice = when (this) {
     ThemePreference.SYSTEM -> ThemeChoice.SYSTEM

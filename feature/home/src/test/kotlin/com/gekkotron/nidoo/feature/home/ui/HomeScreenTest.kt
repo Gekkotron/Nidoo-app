@@ -127,6 +127,24 @@ class HomeScreenTest {
     }
 
     @Test
+    fun `the link sheet's Connection settings opens the connection page, the gear opens the list`() {
+        var list = 0
+        var connection = 0
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = state(), onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onOpenSettings = { list++ }, onOpenConnectionSettings = { connection++ },
+                )
+            }
+        }
+        compose.onNodeWithText("Demo").performClick()
+        compose.onNodeWithText("Connection settings").performClick()
+        assertEquals(0, list)
+        assertEquals(1, connection)
+    }
+
+    @Test
     fun `header shows greeting and demo pill`() {
         show()
         compose.onNodeWithText("Good afternoon").assertExists()
