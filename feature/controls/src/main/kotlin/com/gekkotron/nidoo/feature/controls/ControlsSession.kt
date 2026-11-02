@@ -56,7 +56,7 @@ class ControlsSession(
         val model = known.value[id] ?: return false
         synchronized(inFlight) {
             inFlight.remove(id)?.cancel()
-            inFlight[id] = scope.launch {
+            val job = scope.launch(start = CoroutineStart.LAZY) {
                 val outcome = when (val result = entities.send(id, ControlMapper.command(model, action))) {
                     is SendResult.Confirmed -> ControlMapper.model(result.entity, result.state, emptyList()).copy(zone = model.zone)
                     SendResult.NotConfirmed -> model.copy(status = ControlStatus.NO_RESPONSE)
@@ -65,6 +65,10 @@ class ControlsSession(
                 remember(outcome)
                 updates.emit(outcome)
             }
+            inFlight[id] = job
+            // Finished sends leave the map; a newer job for the same id is never removed by an older one.
+            job.invokeOnCompletion { synchronized(inFlight) { if (inFlight[id] === job) inFlight.remove(id) } }
+            job.start()
         }
         return true
     }
