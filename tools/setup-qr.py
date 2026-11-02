@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the Oikos setup QR code (format v:1, direct-connection spec §4.4).
+"""Builds the Nidoo setup QR code (format v:1, direct-connection spec §4.4).
 
 Starts from an existing setup JSON (the `local` section, `prefix`, `push`) and adds the optional
 `gateway` section: {"url", "key", "broker_host"?}. Without --gateway-url the gateway section is left
@@ -16,7 +16,7 @@ without login.
     tools/setup-qr.py --gateway-url https://house.example.ts.net \\
         --gateway-key-file ../HttpMqttEnd2EndEncryption/secret_key.txt --broker-host 192.168.1.91
 
-Writes oikos-setup.json and oikos-setup.png (both gitignored; they hold secrets). Needs `qrencode`.
+Writes nidoo-setup.json and nidoo-setup.png (both gitignored; they hold secrets). Needs `qrencode`.
 """
 import argparse
 import json
@@ -51,13 +51,13 @@ def check_url(url):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--in", dest="source", default=ROOT / "oikos-setup.json", type=Path)
-    parser.add_argument("--out", default=ROOT / "oikos-setup", type=Path, help="path without extension")
+    parser.add_argument("--in", dest="source", default=ROOT / "nidoo-setup.json", type=Path)
+    parser.add_argument("--out", default=ROOT / "nidoo-setup", type=Path, help="path without extension")
     parser.add_argument("--gateway-url")
     parser.add_argument("--gateway-key-file")
     parser.add_argument("--broker-host", help="the broker as the gateway sees it (optional)")
     parser.add_argument("--no-gateway", action="store_true", help="remove the gateway section")
-    parser.add_argument("--history-url", help="override the OikosHistory URL (default: http://<broker host>:8090), e.g. http://192.168.1.91:8090")
+    parser.add_argument("--history-url", help="override the history API URL (default: http://<broker host>:8090), e.g. http://192.168.1.91:8090")
     parser.add_argument("--no-history", action="store_true", help="remove the history section")
     parser.add_argument("--frigate-url", help="Frigate's address, e.g. http://192.168.1.91:8971 (login) or http://192.168.1.91:5000")
     parser.add_argument("--frigate-user", help="Frigate username (optional)")

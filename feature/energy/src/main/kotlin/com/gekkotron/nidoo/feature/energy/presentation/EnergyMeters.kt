@@ -1,0 +1,114 @@
+package com.gekkotron.nidoo.feature.energy.presentation
+
+import com.gekkotron.nidoo.model.EnergyRole
+import com.gekkotron.nidoo.model.EnergyUnits
+import com.gekkotron.nidoo.model.Entity
+import com.gekkotron.nidoo.model.PowerUnits
+import com.gekkotron.nidoo.model.VolumeUnits
+
+/** Pairs a power sensor with the lifetime energy counter (kWh) its card shows, and water with its meter index. Pure; no Android types. */
+object EnergyMeters {
+    /** Every entity reporting an energy unit. */
+    fun counters(entities: Collection<Entity>): List<Entity> = entities.filter { EnergyUnits.factor(it.unit) != null }
+
+    /** The counter for [power]: the user's explicit choice, else [auto]. A dangling explicit choice pairs nothing. */
+    fun meterFor(power: Entity, entities: Collection<Entity>): Entity? {
+        val chosen = power.ui.energyMeter ?: return auto(power, entities)
+        return entities.firstOrNull { it.uniqueId == chosen && EnergyUnits.factor(it.unit) != null }
+    }
+
+    /**
+     * What automatic pairing picks, ignoring the override: a counter on the same device whose label is [power]'s with
+     * "power" read as "energy", else one whose unique id is (Z2M names `power_a` and `energy_a` after the device alone,
+     * so only `…_power_a_…` ↔ `…_energy_a_…` tells them apart), else the device's only counter when [power] is also
+     * its only power entity.
+     */
+    fun auto(power: Entity, entities: Collection<Entity>): Entity? {
+        val device = power.deviceId ?: return null
+        val onDevice = entities.filter { it.deviceId == device }
+        val counters = onDevice.filter { EnergyUnits.factor(it.unit) != null }
+        // A clamp on the inverter line counts the production as "produced"; its plain counter is the standby draw.
+        if (power.ui.energyRole == EnergyRole.SOLAR) twin(power, counters, PRODUCED)?.let { return it }
+        val wanted = normalize(labelOf(power)).replace("power", "energy")
+        counters.firstOrNull { normalize(labelOf(it)) == wanted }?.let { return it }
+        twin(power, counters, "energy")?.let { return it }
+        val powers = onDevice.filter { PowerUnits.factor(it.unit) != null }
+        return if (counters.size == 1 && powers.size == 1) counters.single() else null
+    }
+
+    /** Every entity reporting a water volume unit, for the water meter picker. */
+    fun volumes(entities: Collection<Entity>): List<Entity> = entities.filter { VolumeUnits.isVolume(it.unit) }
+
+    /** The meter index for a [water] sensor: the user's explicit choice, else [waterAuto]. A dangling explicit choice pairs nothing. */
+    fun waterMeterFor(water: Entity, entities: Collection<Entity>): Entity? {
+        val chosen = water.ui.energyMeter ?: return waterAuto(water, entities)
+        return entities.firstOrNull { it.uniqueId == chosen && it.uniqueId != water.uniqueId && VolumeUnits.isVolume(it.unit) }
+    }
+
+    /**
+     * What automatic pairing picks for [water]: another sensor on its device in a meter-scale unit (m³, ft³, CCF; Suez's
+     * "Water meter reading"), unless [water] is itself in one, being the meter. Same-unit pairs (L and L, gal and gal)
+     * can't be told apart from a day's usage, so they need the explicit choice.
+     */
+    fun waterAuto(water: Entity, entities: Collection<Entity>): Entity? {
+        val device = water.deviceId ?: return null
+        if (VolumeUnits.isMeterScale(water.unit)) return null
+        return entities.filter { it.deviceId == device && it.uniqueId != water.uniqueId && VolumeUnits.isMeterScale(it.unit) }
+            .minByOrNull { it.uniqueId }
+    }
+
+    /**
+     * The counter of the opposite direction on the same device, subtracted from a derived house: a grid sensor's
+     * export (`…_power_a_…` ↔ `…_energy_produced_a_…`), or the inverter's draw when [meterFor] picked a solar
+     * sensor's production twin (`…_energy_b_…`). Null for any other role or pairing.
+     */
+    fun reverseFor(power: Entity, entities: Collection<Entity>): Entity? {
+        val device = power.deviceId ?: return null
+        val counters = entities.filter { it.deviceId == device && EnergyUnits.factor(it.unit) != null }
+        return when (power.ui.energyRole) {
+            EnergyRole.GRID -> twin(power, counters, PRODUCED)
+            EnergyRole.SOLAR -> twin(power, counters, "energy").takeIf { meterFor(power, entities) == twin(power, counters, PRODUCED) }
+            else -> null
+        }
+    }
+
+    /** A node's lifetime meters: the paired counters of its power [sensors], each counted once. */
+    fun nodeMeters(sensors: List<Entity>, entities: Collection<Entity>): List<Entity> =
+        sensors.filter { it.ui.energyRole?.power == true }.mapNotNull { meterFor(it, entities) }.distinctBy { it.uniqueId }
+
+    /** What a derived house's total adds ([plus]) and subtracts ([minus]), each counted once. */
+    data class HouseMeters(val plus: List<Entity>, val minus: List<Entity>)
+
+    /**
+     * The meters of a house without its own sensor: solar and grid counters, minus grid export and inverter draw,
+     * like its live watts (energy spec §3). Every solar and grid sensor needs a counter, and solar needs an export
+     * counter too (else the export would count as consumption); a battery has no counter pairing yet. Null when the
+     * house has no total.
+     */
+    fun houseMeters(byRole: Map<EnergyRole, List<Entity>>, entities: Collection<Entity>): HouseMeters? {
+        if (byRole[EnergyRole.BATTERY] != null) return null
+        val solar = byRole[EnergyRole.SOLAR].orEmpty()
+        val grid = byRole[EnergyRole.GRID].orEmpty()
+        val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
+        if (solar.isEmpty() && grid.isEmpty()) return null
+        val added = (solar + grid).map { meterFor(it, entities) ?: return null }
+        val exports = grid.mapNotNull { reverseFor(it, entities) } + gridExport.map { meterFor(it, entities) ?: return null }
+        if (solar.isNotEmpty() && exports.isEmpty()) return null
+        val draws = solar.mapNotNull { reverseFor(it, entities) }
+        return HouseMeters(added.distinctBy { it.uniqueId }, (exports + draws).distinctBy { it.uniqueId })
+    }
+
+    private fun twin(power: Entity, counters: List<Entity>, replacement: String): Entity? {
+        val wanted = power.uniqueId.replace(POWER_TOKEN, replacement)
+        return if (wanted == power.uniqueId) null else counters.firstOrNull { it.uniqueId.equals(wanted, ignoreCase = true) }
+    }
+
+    private const val PRODUCED = "energy_produced"
+
+    /** "power" as a word of an id ("_power_a_"), not inside one ("powers/…"). */
+    private val POWER_TOKEN = Regex("(?<![a-z0-9])power(?![a-z])", RegexOption.IGNORE_CASE)
+
+    private fun labelOf(e: Entity) = e.label ?: e.name
+
+    private fun normalize(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+}

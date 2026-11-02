@@ -9,10 +9,10 @@
   .arrow{text-align:center;font-size:12px;opacity:.7}
   .legend{font-size:12px;opacity:.8;text-align:center}
 </style>
-<h2>Oikos: architecture</h2>
+<h2>Nidoo: architecture</h2>
 <p class="subtitle">Green = new · dashed amber = small change to existing · plain = unchanged</p>
 <div class="arch">
-  <div class="lane"><h4>Oikos app (new private repo)</h4>
+  <div class="lane"><h4>Nidoo app (new private repo)</h4>
     <div class="boxes">
       <div class="bx new"><b>:feature:home</b>Rooms + live cards</div>
       <div class="bx new"><b>:feature:energy</b>Live power flow</div>
@@ -21,7 +21,7 @@
     </div>
     <div class="arrow">↑ Flow&lt;EntityState&gt; · EntityRegistry ↑ · commands ↓</div>
     <div class="boxes">
-      <div class="bx new"><b>:core:discovery</b>homeassistant/+/…/config → Entity; merges oikos/ui/* overrides</div>
+      <div class="bx new"><b>:core:discovery</b>homeassistant/+/…/config → Entity; merges nidoo/ui/* overrides</div>
       <div class="bx new"><b>:core:state</b>State topics → values (value_json.key templates), optimistic commands</div>
     </div>
     <div class="arrow">↑ subscribe(filters) / publish ↓</div>
@@ -38,7 +38,7 @@
       <div class="bx chg"><b>HttpMqttEnd2EndEncryption</b>+ multi-topic subscribe, + replay check on subscribe</div>
       <div class="bx"><b>Mosquitto</b>192.168.1.91:1883</div>
       <div class="bx chg"><b>zigbee2mqtt</b>enable homeassistant discovery (config flag)</div>
-      <div class="bx new"><b>oikos-bridge</b>Python: publishes discovery for Jeedom + custom services from one YAML</div>
+      <div class="bx new"><b>nidoo-bridge</b>Python: publishes discovery for Jeedom + custom services from one YAML</div>
       <div class="bx"><b>Jeedom</b>jeedom/data/… + …/set (kept for now)</div>
       <div class="bx"><b>Telegraf → InfluxDB 2</b>unchanged; history phase later</div>
     </div>

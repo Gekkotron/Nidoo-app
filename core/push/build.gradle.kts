@@ -1,10 +1,10 @@
 plugins {
-    id("oikos.android.library")
-    id("oikos.serialization")
+    id("nidoo.android.library")
+    id("nidoo.serialization")
 }
 
 android {
-    namespace = "com.gekkotron.oikos.push"
+    namespace = "com.gekkotron.nidoo.push"
 }
 
 dependencies {

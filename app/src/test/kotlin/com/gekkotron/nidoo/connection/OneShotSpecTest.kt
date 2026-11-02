@@ -1,0 +1,71 @@
+package com.gekkotron.nidoo.connection
+
+import com.gekkotron.nidoo.data.ConnectionProfile
+import com.gekkotron.nidoo.data.GatewayConfig
+import com.gekkotron.nidoo.data.LocalBroker
+import com.gekkotron.nidoo.data.ProfileRepository
+import com.gekkotron.nidoo.data.SecretStore
+import com.gekkotron.nidoo.transport.Route
+import com.gekkotron.nidoo.transport.TransportSpec
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import com.gekkotron.nidoo.data.ProfileState
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
+import org.junit.After
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+
+class OneShotSpecTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val passThrough = object : SecretStore {
+        override fun encrypt(plain: ByteArray) = plain.copyOf()
+        override fun decrypt(cipher: ByteArray) = cipher.copyOf()
+    }
+
+    @After
+    fun tearDown() = scope.cancel()
+
+    /** [ProfileRepository.state] is a snapshot of DataStore that follows a save shortly after, as the app observes it. */
+    private suspend fun ProfileRepository.awaitReady() = withTimeout(5_000) { state.first { it is ProfileState.Ready } }
+
+    private fun repository() = ProfileRepository.create(tmp.newFile().also { it.delete() }, passThrough, scope)
+
+    @Test
+    fun `no profile gives no spec`(): Unit = runBlocking {
+        assertNull(repository().oneShotSpec())
+    }
+
+    @Test
+    fun `a direct profile gets its own client id, never the live one`(): Unit = runBlocking {
+        val profiles = repository()
+        profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
+        profiles.awaitReady()
+        val live = clientIdFor(profiles.installId())
+        val spec = assertIs<TransportSpec.Direct>(profiles.oneShotSpec())
+        assertNotEquals(live, spec.clientId)
+        assertEquals("$live-push", spec.clientId)
+    }
+
+    @Test
+    fun `a routed profile keeps the route and gives the direct leg its own client id`(): Unit = runBlocking {
+        val profiles = repository()
+        profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91"), gateway = GatewayConfig("https://gw.example", ByteArray(32), "192.168.1.91")))
+        profiles.awaitReady()
+        val live = clientIdFor(profiles.installId())
+        val spec = assertIs<TransportSpec.Routed>(profiles.oneShotSpec())
+        assertEquals(Route.AUTO, spec.route)
+        assertNotEquals(live, spec.direct.clientId)
+    }
+}

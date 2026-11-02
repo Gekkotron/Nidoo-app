@@ -1,5 +1,5 @@
 plugins {
-    id("oikos.jvm.library")
+    id("nidoo.jvm.library")
 }
 
 dependencies {

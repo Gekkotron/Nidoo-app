@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
-        android:name=".OikosApplication"
+        android:name=".NidooApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -20,7 +20,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Oikos">
+        android:theme="@style/Theme.Nidoo">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -34,14 +34,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="oikos" android:host="alert" />
+                <data android:scheme="nidoo" android:host="alert" />
             </intent-filter>
             <!-- The home-screen widget's links (widgets spec §2.3); the widget's intents name this package. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="oikos" android:host="history" />
-                <data android:scheme="oikos" android:host="settings" />
+                <data android:scheme="nidoo" android:host="history" />
+                <data android:scheme="nidoo" android:host="settings" />
             </intent-filter>
         </activity>
 
@@ -50,7 +50,7 @@
             android:name=".presence.PresenceTransitionReceiver"
             android:exported="false" />
 
-        <!-- WorkManager starts on demand with PushWorkerFactory (OikosApplication.workManagerConfiguration). -->
+        <!-- WorkManager starts on demand with PushWorkerFactory (NidooApplication.workManagerConfiguration). -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

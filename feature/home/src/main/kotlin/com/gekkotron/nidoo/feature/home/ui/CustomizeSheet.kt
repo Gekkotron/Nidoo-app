@@ -1,0 +1,305 @@
+package com.gekkotron.nidoo.feature.home.ui
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.gekkotron.nidoo.designsystem.NidooDimens
+import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.icons.FavoriteStar
+import com.gekkotron.nidoo.feature.home.R
+import com.gekkotron.nidoo.feature.home.presentation.AreaNames
+import com.gekkotron.nidoo.feature.home.presentation.CardUi
+import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
+import com.gekkotron.nidoo.feature.home.presentation.OverrideDraft
+import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.EnergyRole
+import com.gekkotron.nidoo.model.LightOnPreset
+import com.gekkotron.nidoo.model.PowerUnits
+import com.gekkotron.nidoo.model.Placement
+import com.gekkotron.nidoo.designsystem.R as DsR
+import com.gekkotron.nidoo.model.Kind
+import com.gekkotron.nidoo.model.SwitchType
+import com.gekkotron.nidoo.model.UiOverride
+import kotlin.math.roundToInt
+
+/** Long-press override sheet (spec §5.2): rename, room, favourite, hide, position, card style, energy role. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CustomizeSheet(
+    card: CardUi,
+    rooms: List<Area>,
+    onSave: (List<Area>, UiOverride) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val start = OverrideDraft.from(card)
+    var name by rememberSaveable(card.id) { mutableStateOf(start.name) }
+    var areaId by rememberSaveable(card.id) { mutableStateOf(start.areaId) }
+    var favorite by rememberSaveable(card.id) { mutableStateOf(start.favorite) }
+    var hidden by rememberSaveable(card.id) { mutableStateOf(start.hidden) }
+    var securityHidden by rememberSaveable(card.id) { mutableStateOf(start.securityHidden) }
+    var homePinned by rememberSaveable(card.id) { mutableStateOf(start.homePinned) }
+    var securityAction by rememberSaveable(card.id) { mutableStateOf(start.securityAction) }
+    var securityAsk by rememberSaveable(card.id) { mutableStateOf(start.securityAsk) }
+    var order by rememberSaveable(card.id) { mutableStateOf(start.order) }
+    var cardStyle by rememberSaveable(card.id) { mutableStateOf(start.cardStyle) }
+    var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
+    var energyInvert by rememberSaveable(card.id) { mutableStateOf(start.energyInvert) }
+    var grouped by rememberSaveable(card.id) { mutableStateOf(start.grouped) }
+    var showAs by rememberSaveable(card.id) { mutableStateOf(start.showAs) }
+    var lightOnPreset by rememberSaveable(card.id) { mutableStateOf(start.lightOnPreset) }
+    var lightOnBrightness by rememberSaveable(card.id) { mutableStateOf(start.lightOnBrightness) }
+    var climatePresets by rememberSaveable(card.id) { mutableStateOf(start.climatePresets) }
+    // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
+    // saving never declares a room nobody asked to keep.
+    var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped, showAs = showAs, lightOnPreset = lightOnPreset, lightOnBrightness = lightOnBrightness, climatePresets = climatePresets)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            TitleWithFavorite(stringResource(R.string.customize_title), favorite) { favorite = it }
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.customize_name)) },
+                supportingText = { Text(stringResource(R.string.customize_name_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(stringResource(R.string.customize_room), style = NidooTheme.type.label)
+            val allRooms = rooms + newRooms
+            RoomPicker(
+                allRooms, areaId,
+                onSelect = { areaId = it },
+                onCreate = { typed ->
+                    val resolved = AreaNames.resolve(typed, allRooms) ?: return@RoomPicker null
+                    if (resolved.isNew) newRooms = newRooms + resolved.area
+                    resolved.area.id
+                },
+            )
+            if (card.protocolKind == Kind.SWITCH) {
+                Text(stringResource(R.string.customize_show_as), style = NidooTheme.type.label)
+                ChipRow {
+                    SwitchType.entries.forEach { type ->
+                        FilterChip(
+                            selected = showAs == type.key,
+                            onClick = {
+                                val next = pickType(draft, type)
+                                showAs = next.showAs
+                                securityAction = next.securityAction
+                                securityAsk = next.securityAsk
+                            },
+                            label = { Text(stringResource(switchTypeLabel(type))) },
+                        )
+                    }
+                }
+            }
+            if (card.groupable) {
+                SwitchRow(stringResource(if (card.kind == Kind.COVER) R.string.customize_grouped_cover else R.string.customize_grouped_light), grouped) { grouped = it }
+            }
+            // Energy or Security already shows it, so Home leaves it out unless pinned back.
+            val onSecurity = Placement.onSecurity(card.kind, card.deviceClass, UiOverride(securityHidden = securityHidden, securityAction = securityAction))
+            val elsewhere = energyRole != null || onSecurity
+            if (elsewhere) {
+                SwitchRow(stringResource(R.string.customize_show_on_home), homePinned && !hidden) { homePinned = it; if (it) hidden = false }
+            } else {
+                SwitchRow(stringResource(R.string.customize_hidden), hidden) { hidden = it }
+            }
+            if (Placement.securityKind(card.kind, card.deviceClass)) {
+                SwitchRow(stringResource(R.string.customize_show_on_security), !securityHidden) { securityHidden = !it }
+            }
+            if (Placement.actionKind(card.kind)) {
+                SwitchRow(stringResource(R.string.customize_show_on_security), securityAction) { securityAction = it }
+                // Door opener and Siren ask before acting on Home too; for the others, Ask only matters while Security Action is on.
+                val askByType = showAs == "door" || showAs == "siren"
+                if (securityAction || askByType) SwitchRow(stringResource(R.string.customize_ask_before), securityAsk) { securityAsk = it }
+            }
+            OutlinedTextField(
+                value = order,
+                onValueChange = { order = it },
+                label = { Text(stringResource(R.string.customize_order)) },
+                supportingText = {
+                    Text(stringResource(if (draft.orderValid) R.string.customize_order_hint else R.string.customize_order_error))
+                },
+                isError = !draft.orderValid,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (card.kind == Kind.LIGHT && card.capabilities.colorModes.isNotEmpty()) {
+                Text(stringResource(R.string.customize_light_on_default), style = NidooTheme.type.label)
+                ChipRow {
+                    FilterChip(
+                        selected = lightOnPreset == null,
+                        onClick = { lightOnPreset = null; lightOnBrightness = null },
+                        label = { Text(stringResource(R.string.customize_light_on_resume)) },
+                    )
+                    LightOnPreset.entries.forEach { preset ->
+                        FilterChip(
+                            selected = lightOnPreset == preset.key,
+                            onClick = { lightOnPreset = preset.key },
+                            label = { Text(stringResource(presetLabel(preset))) },
+                        )
+                    }
+                }
+                val activePreset = LightOnPreset.of(lightOnPreset)
+                if (activePreset != null && card.capabilities.brightness) {
+                    val effective = lightOnBrightness ?: activePreset.brightness
+                    var slider by remember(card.id, lightOnPreset) { mutableFloatStateOf(effective.toFloat()) }
+                    Text(stringResource(R.string.customize_light_on_brightness))
+                    Slider(
+                        value = slider,
+                        onValueChange = { slider = it },
+                        valueRange = 1f..255f,
+                        onValueChangeFinished = { lightOnBrightness = slider.roundToInt() },
+                    )
+                }
+            }
+            if (card.kind == Kind.CLIMATE) {
+                OutlinedTextField(
+                    value = climatePresets,
+                    onValueChange = { climatePresets = it },
+                    label = { Text(stringResource(R.string.customize_climate_presets)) },
+                    supportingText = { Text(stringResource(R.string.customize_climate_presets_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (card.kind == Kind.SENSOR) {
+                Text(stringResource(R.string.customize_style), style = NidooTheme.type.label)
+                ChipRow {
+                    FilterChip(selected = cardStyle != HomeUiBuilder.HERO_WEATHER, onClick = { cardStyle = null }, label = { Text(stringResource(R.string.customize_style_standard)) })
+                    FilterChip(selected = cardStyle == HomeUiBuilder.HERO_WEATHER, onClick = { cardStyle = HomeUiBuilder.HERO_WEATHER }, label = { Text(stringResource(R.string.customize_style_hero)) })
+                }
+                Text(stringResource(R.string.customize_energy), style = NidooTheme.type.label)
+                ChipRow {
+                    FilterChip(selected = energyRole == null, onClick = { energyRole = null }, label = { Text(stringResource(R.string.customize_energy_none)) })
+                    EnergyRole.entries.forEach { role ->
+                        FilterChip(selected = energyRole == role, onClick = { energyRole = role }, label = { Text(energyLabel(role)) })
+                    }
+                }
+                val role = energyRole
+                if (role != null && role.power && PowerUnits.factor(card.unit) == null) {
+                    Text(stringResource(R.string.customize_energy_unit_hint), style = NidooTheme.type.label, color = NidooTheme.colors.warning)
+                }
+                if (role?.signed == true) {
+                    SwitchRow(stringResource(R.string.customize_energy_invert), energyInvert) { energyInvert = it }
+                }
+            }
+            Button(
+                onClick = { onSave(newRooms, draft.applyTo(card)); onDismiss() },
+                enabled = draft.orderValid,
+                modifier = Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch),
+            ) { Text(stringResource(R.string.customize_save)) }
+            TextButton(onClick = { onSave(emptyList(), UiOverride()); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.customize_reset))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun TitleWithFavorite(title: String, favorite: Boolean, onChange: (Boolean) -> Unit) {
+    val label = stringResource(R.string.customize_favorite)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = NidooTheme.type.display.copy(fontSize = 22.sp), modifier = Modifier.weight(1f))
+        IconToggleButton(
+            checked = favorite,
+            onCheckedChange = onChange,
+            modifier = Modifier.semantics { contentDescription = label },
+        ) { FavoriteStar(filled = favorite, accent = NidooTheme.colors.warning, modifier = Modifier.size(24.dp)) }
+    }
+}
+
+@Composable
+private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch).toggleable(checked, role = Role.Switch, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = NidooTheme.type.body, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun ChipRow(content: @Composable () -> Unit) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+}
+
+private fun presetLabel(preset: LightOnPreset): Int = when (preset) {
+    LightOnPreset.WHITE -> R.string.customize_light_on_white
+    LightOnPreset.WARM -> R.string.customize_light_on_warm
+    LightOnPreset.RED -> R.string.customize_light_on_red
+    LightOnPreset.GREEN -> R.string.customize_light_on_green
+    LightOnPreset.BLUE -> R.string.customize_light_on_blue
+}
+
+/** The chip row's state transition (device sheet spec §5.1). Pure, so it's covered by a native test. */
+internal fun pickType(draft: OverrideDraft, type: SwitchType): OverrideDraft = when (type) {
+    // Light is not a Security action; keep that in sync so the choice does not linger invisibly.
+    SwitchType.LIGHT -> draft.copy(showAs = "light", securityAction = false)
+    SwitchType.SWITCH -> draft.copy(showAs = null)
+    else -> draft.copy(showAs = type.key)
+}
+
+private fun switchTypeLabel(type: SwitchType): Int = when (type) {
+    SwitchType.SWITCH -> R.string.customize_show_as_switch
+    SwitchType.LIGHT -> R.string.customize_show_as_light
+    SwitchType.DOOR -> R.string.customize_show_as_door
+    SwitchType.SIREN -> R.string.customize_show_as_siren
+    SwitchType.CHIME -> R.string.customize_show_as_chime
+    SwitchType.PLUG -> R.string.customize_show_as_plug
+}
+
+@Composable
+private fun energyLabel(role: EnergyRole): String = stringResource(
+    when (role) {
+        EnergyRole.SOLAR -> DsR.string.energy_solar
+        EnergyRole.GRID -> DsR.string.energy_grid
+        EnergyRole.GRID_EXPORT -> DsR.string.energy_grid_export
+        EnergyRole.BATTERY -> DsR.string.energy_battery
+        EnergyRole.HOUSE -> DsR.string.energy_house
+        EnergyRole.CONSUMER -> DsR.string.energy_consumer
+        EnergyRole.WATER -> DsR.string.energy_water
+    },
+)

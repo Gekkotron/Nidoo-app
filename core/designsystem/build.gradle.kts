@@ -1,10 +1,10 @@
 plugins {
-    id("oikos.android.library")
-    id("oikos.android.compose")
+    id("nidoo.android.library")
+    id("nidoo.android.compose")
 }
 
 android {
-    namespace = "com.gekkotron.oikos.designsystem"
+    namespace = "com.gekkotron.nidoo.designsystem"
 
     testOptions {
         screenshotTests.create("screenshotTest") {

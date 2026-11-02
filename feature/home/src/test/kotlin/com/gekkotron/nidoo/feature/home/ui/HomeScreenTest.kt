@@ -1,0 +1,390 @@
+package com.gekkotron.nidoo.feature.home.ui
+
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsActions
+import com.gekkotron.nidoo.model.UiOverride
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
+import com.gekkotron.nidoo.feature.home.presentation.CardUi
+import com.gekkotron.nidoo.feature.home.presentation.TapAction
+import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
+import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
+import com.gekkotron.nidoo.feature.home.testEntity
+import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.Capabilities
+import com.gekkotron.nidoo.model.Command
+import com.gekkotron.nidoo.model.CoverState
+import com.gekkotron.nidoo.model.EntityState
+import com.gekkotron.nidoo.model.Kind
+import com.gekkotron.nidoo.model.StateValue
+import com.gekkotron.nidoo.transport.LinkState
+import com.gekkotron.nidoo.transport.TransportMode
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.test.performTextInput
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import java.time.LocalTime
+import java.util.Locale
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(qualifiers = "w411dp-h914dp")
+class HomeScreenTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private val entities = listOf(
+        testEntity("lamp", Kind.LIGHT, "Floor lamp", area = "living", capabilities = Capabilities(brightness = true)),
+        testEntity("shutter", Kind.COVER, "Shutter", area = "living", capabilities = Capabilities(position = true)),
+        testEntity(
+            "ac", Kind.CLIMATE, "Air conditioner", area = "living",
+            capabilities = Capabilities(hvacModes = listOf("off", "heat"), minTemp = 16.0, maxTemp = 30.0, tempStep = 0.5),
+        ),
+        testEntity("coffee", Kind.SWITCH, "Coffee machine", area = "kitchen"),
+        testEntity("plug", Kind.SWITCH, "Garage plug", area = "garage"),
+        testEntity("temp", Kind.SENSOR, "Temperature", area = "living", unit = "°C"),
+    ).associateBy { it.uniqueId }
+    private val states = mapOf(
+        "lamp" to EntityState("lamp", StateValue.Light(true, 180)),
+        "shutter" to EntityState("shutter", StateValue.Cover(CoverState.OPEN, 60)),
+        "ac" to EntityState("ac", StateValue.Climate("heat", 21.0, 22.4)),
+        "coffee" to EntityState("coffee", StateValue.OnOff(false)),
+        "plug" to EntityState("plug", StateValue.OnOff(false), available = false),
+    )
+    private val areas = listOf(Area("living", "Living room"), Area("kitchen", "Kitchen"), Area("garage", "Garage"))
+
+    private val taps = mutableListOf<String>()
+    private val sends = mutableListOf<Pair<String, Command>>()
+    private val selects = mutableListOf<RoomFilter>()
+    private val customized = mutableListOf<Pair<String, UiOverride>>()
+    private val histories = mutableListOf<String>()
+
+    private fun state(): HomeUiState =
+        HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
+
+    private fun show(insets: WindowInsets? = null, fontScale: () -> Float = { 1f }) = compose.setContent {
+        val density = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale())) {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = state(),
+                    onSelect = { selects += it },
+                    onTap = { taps += it.id },
+                    onSend = { id, c -> sends += id to c },
+                    onCustomize = { id, _, o -> customized += id to o },
+                    onOpenHistory = { histories += it },
+                    now = LocalTime.NOON,
+                    windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `tapping a light card calls onTap`() {
+        show()
+        compose.onNodeWithTag("card-lamp").performClick()
+        assertEquals(listOf("lamp"), taps)
+    }
+
+    @Test
+    fun `card describes name, state and room`() {
+        show()
+        compose.onNodeWithContentDescription("Floor lamp, 71%, Living room").assertExists()
+        compose.onNodeWithContentDescription("Shutter, 60% open, Living room").assertExists()
+    }
+
+    @Test
+    fun `header shows greeting and demo pill`() {
+        show()
+        compose.onNodeWithText("Good afternoon").assertExists()
+        compose.onNodeWithText("Demo").assertExists()
+    }
+
+    @Test
+    fun `tapping a cover opens its control sheet and Close sends Command_Close`() {
+        show()
+        compose.onNodeWithTag("card-shutter").performClick()
+        compose.onNodeWithText("Close").performClick()
+        assertEquals(listOf<Pair<String, Command>>("shutter" to Command.Close), sends)
+        assertEquals(emptyList(), taps)
+    }
+
+    @Test
+    fun `climate sheet increases the setpoint by one step`() {
+        show()
+        compose.onNodeWithTag("card-ac").performClick()
+        compose.onNodeWithContentDescription("Increase").performClick()
+        // Wait for the debounced LaunchedEffect to resume and send: advanceTimeBy alone doesn't pump
+        // the suspended coroutine, so the send would miss without the condition poll.
+        compose.waitUntil(SETPOINT_DEBOUNCE_MS + 1_000) { sends.isNotEmpty() }
+        assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetTemperature(21.5)), sends)
+    }
+
+    @Test
+    fun `climate sheet shows taps at once and sends one setpoint after the burst`() {
+        show()
+        compose.onNodeWithTag("card-ac").performClick()
+        // Three taps land faster than the debounce window; the draft climbs one step at a time while
+        // the LaunchedEffect keeps restarting, so no SetTemperature is sent yet.
+        repeat(3) { compose.onNodeWithContentDescription("Increase").performClick() }
+        compose.onNodeWithText("22.5°").assertExists()
+        // After the debounce quiets down, exactly one command for the final draft reaches onSend.
+        compose.waitUntil(SETPOINT_DEBOUNCE_MS + 1_000) { sends.isNotEmpty() }
+        assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetTemperature(22.5)), sends)
+    }
+
+    @Test
+    fun `climate card leads with the setpoint`() {
+        show()
+        compose.onNodeWithContentDescription("Air conditioner, 21° · Heat, Living room").assertExists()
+    }
+
+    @Test
+    fun `unavailable card ignores taps and can still be customized`() {
+        show()
+        compose.onNodeWithTag("card-plug").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick)).performClick()
+        compose.onNodeWithContentDescription("Garage plug, Unavailable, Garage").assertExists()
+        assertEquals(emptyList(), taps)
+        compose.onNodeWithTag("card-plug").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithText("Hide from Home").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("plug" to UiOverride(hidden = true)), customized)
+    }
+
+    @Test
+    fun `long-press on a sensor opens the override sheet and saves a rename`() {
+        show()
+        compose.onNodeWithTag("card-temp").performScrollTo().performTouchInput { longClick() }
+        compose.onNode(hasSetTextAction() and hasText("Name")).performTextReplacement("Living temperature")
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("temp" to UiOverride(name = "Living temperature")), customized)
+    }
+
+    @Test
+    fun `long-press on a dimmable light opens its controls, and Customize opens the override sheet`() {
+        show()
+        compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
+        compose.onNodeWithText("Brightness").assertExists()
+        compose.onNodeWithText("Customize…").performScrollTo().performClick()
+        compose.onNodeWithText("Hide from Home").assertExists()
+        compose.onNodeWithText("Brightness").assertDoesNotExist()
+    }
+
+    @Test
+    fun `long-press actions are labelled for accessibility`() {
+        show()
+        assertEquals("Controls", compose.onNodeWithTag("card-lamp").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+        compose.onNodeWithTag("card-temp").performScrollTo()
+        assertEquals("Customize", compose.onNodeWithTag("card-temp").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+    }
+
+    @Test
+    fun `room chip selects its area`() {
+        show()
+        compose.onNodeWithText("Kitchen").performClick()
+        assertEquals(listOf<RoomFilter>(RoomFilter.Area("kitchen")), selects)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h500dp")
+    fun `control sheet scrolls to its last controls at 2x font scale`() {
+        show { 2f }
+        compose.onNodeWithTag("card-ac").performClick()
+        compose.onNodeWithText("Heat").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetHvacMode("heat")), sends)
+    }
+
+    @Test
+    fun `status bar gets a scrim and side insets pad the grid`() {
+        show(insets = WindowInsets(left = 40.dp, top = 30.dp))
+        val scrim = compose.onNodeWithTag("status-scrim").getBoundsInRoot()
+        assertEquals(30.dp, scrim.bottom - scrim.top)
+        assertTrue(compose.onNodeWithTag("card-ac").getBoundsInRoot().left >= 56.dp)
+    }
+
+    /**
+     * Robolectric does not grow text that has a fixed line height, so card height cannot show it (the
+     * old emoji glyph was the only thing that grew). The card is `heightIn(min)` only; what matters is
+     * that its text is laid out with the user's font scale.
+     */
+    @Test
+    fun `card text is laid out with the font scale`() {
+        var scale by mutableFloatStateOf(1f)
+        show { scale }
+        scale = 2f
+        compose.waitForIdle()
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("Coffee machine", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        assertEquals(2f, layouts.single().layoutInput.density.fontScale)
+    }
+
+    @Test
+    fun `hidden chip lists hidden cards, described as hidden`() {
+        val withHidden = entities + ("secret" to testEntity("secret", Kind.SWITCH, "Secret switch", area = "kitchen", ui = UiOverride(hidden = true)))
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(withHidden, states, areas, RoomFilter.Hidden, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = { selects += it }, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithText("Hidden (1)").assertExists()
+        // No state was given for "secret", so its value is "—"; only the name and the hidden suffix matter here.
+        compose.onNodeWithContentDescription("Secret switch, —, Kitchen, hidden").assertExists()
+    }
+
+    @Test
+    fun `long-pressing the header temperature opens its override sheet, so the hero style can be undone`() {
+        val withHero = entities + ("outdoor" to testEntity("outdoor", Kind.SENSOR, "Outdoor", unit = "°C", ui = UiOverride(cardStyle = HomeUiBuilder.HERO_WEATHER)))
+        val customizedHere = mutableListOf<Pair<String, UiOverride>>()
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onCustomize = { id, _, o -> customizedHere += id to o },
+                )
+            }
+        }
+        compose.onNodeWithTag("hero").performTouchInput { longClick() }
+        compose.onNodeWithText("Standard").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("outdoor" to UiOverride()), customizedHere)
+    }
+
+    @Test
+    fun `the header temperature has no click action, only a labelled long-click`() {
+        val withHero = entities + ("outdoor" to testEntity("outdoor", Kind.SENSOR, "Outdoor", unit = "°C", ui = UiOverride(cardStyle = HomeUiBuilder.HERO_WEATHER)))
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("hero").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+        assertEquals("Customize", compose.onNodeWithTag("hero").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+    }
+
+    private fun showSearchable() = compose.setContent {
+        NidooTheme(ThemeChoice.NIGHT_GLASS) {
+            var query by remember { mutableStateOf("") }
+            HomeScreen(
+                state = HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US, query = query),
+                onSelect = {}, onTap = {}, onSend = { _, _ -> },
+                onSearch = { query = it },
+            )
+        }
+    }
+
+    @Test
+    fun `search filters the cards and closing restores the chips`() {
+        showSearchable()
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("coffee")
+        compose.onNodeWithText("Coffee machine").assertExists()
+        compose.onNodeWithText("Floor lamp").assertDoesNotExist()
+        compose.onNodeWithText("Kitchen").assertDoesNotExist() // the chips row is replaced by the field
+        compose.onNodeWithContentDescription("Close search").performClick()
+        compose.onNodeWithText("Floor lamp").assertExists()
+        compose.onNodeWithText("Kitchen").assertExists()
+    }
+
+    @Test
+    fun `typed text stays while the state lags behind`() {
+        // The real ViewModel rebuilds off Main, so state.query trails the keystrokes.
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> },
+                )
+            }
+        }
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("co")
+        compose.onNode(hasSetTextAction()).performTextInput("f")
+        compose.onNodeWithText("cof").assertExists()
+    }
+
+    @Test
+    fun `no match says so`() {
+        showSearchable()
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("zzz")
+        compose.onNodeWithText("No device matches “zzz”").assertExists()
+    }
+
+    @Test
+    fun `a card that opens history calls onOpenHistory instead of onTap`() {
+        val card = state().cards.first { it.id == "temp" }.copy(tap = TapAction.OPEN_HISTORY, hasHistory = true)
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = state().copy(cards = listOf(card)),
+                    onSelect = {},
+                    onTap = { taps += it.id },
+                    onSend = { _, _ -> },
+                    onOpenHistory = { histories += it },
+                    now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("card-temp").performClick()
+        assertEquals(listOf("temp"), histories)
+        assertEquals(emptyList(), taps)
+    }
+
+    @Test
+    fun `the control sheet offers History only when it can open it`() {
+        val card: CardUi = state().card("ac")!!.copy(hasHistory = true)
+        var opened = 0
+        var handler: (() -> Unit)? by mutableStateOf({ opened++ })
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                ControlSheet(card, onSend = { _, _ -> }, onCustomize = {}, onDismiss = {}, onOpenHistory = handler)
+            }
+        }
+        compose.onNodeWithText("History").performClick()
+        assertEquals(1, opened)
+        handler = null
+        compose.waitForIdle()
+        compose.onNodeWithText("History").assertDoesNotExist()
+    }
+}

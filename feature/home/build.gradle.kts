@@ -1,11 +1,11 @@
 plugins {
-    id("oikos.android.library")
-    id("oikos.android.compose")
-    id("oikos.hilt")
+    id("nidoo.android.library")
+    id("nidoo.android.compose")
+    id("nidoo.hilt")
 }
 
 android {
-    namespace = "com.gekkotron.oikos.feature.home"
+    namespace = "com.gekkotron.nidoo.feature.home"
 }
 
 dependencies {

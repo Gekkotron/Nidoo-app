@@ -1,12 +1,12 @@
 <resources>
-    <string name="widget_name">Appareils Oikos</string>
+    <string name="widget_name">Appareils Nidoo</string>
     <string name="widget_description">Vos appareils choisis d’un coup d’œil, pilotables d’un geste.</string>
     <string name="widget_sending">Envoi…</string>
     <string name="widget_updated">Mis à jour %1$s</string>
     <string name="widget_offline">Hors ligne · %1$s</string>
     <string name="widget_offline_never">Hors ligne</string>
     <string name="widget_sign_in_failed">Échec de connexion</string>
-    <string name="widget_set_up">Configurer Oikos</string>
+    <string name="widget_set_up">Configurer Nidoo</string>
     <string name="widget_refresh">Actualiser</string>
     <string name="widget_removed">Supprimé</string>
     <string name="widget_on">Allumé</string>
@@ -28,13 +28,13 @@
     <string name="widget_config_hint">Jusqu’à %1$d. %2$d tiennent à cette taille.</string>
     <string name="widget_config_save">OK</string>
     <string name="widget_config_arm_mode">Mode d’armement pour %1$s</string>
-    <string name="widget_config_offline">Maison injoignable ; voici les appareils vus en dernier par Oikos.</string>
+    <string name="widget_config_offline">Maison injoignable ; voici les appareils vus en dernier par Nidoo.</string>
     <string name="widget_config_search">Rechercher</string>
     <string name="widget_config_selected">Sur le widget</string>
     <string name="widget_config_move_up">Monter</string>
     <string name="widget_config_move_down">Descendre</string>
-    <string name="widget_config_open_app">Ouvrir Oikos</string>
+    <string name="widget_config_open_app">Ouvrir Nidoo</string>
     <string name="widget_voice">Dis une commande</string>
-    <string name="voice_widget_name">Oikos voix</string>
+    <string name="voice_widget_name">Nidoo voix</string>
     <string name="voice_widget_description">Un appui pour dicter une commande à votre maison.</string>
 </resources>

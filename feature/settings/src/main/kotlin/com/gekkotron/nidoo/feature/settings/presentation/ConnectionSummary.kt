@@ -1,0 +1,49 @@
+package com.gekkotron.nidoo.feature.settings.presentation
+
+import com.gekkotron.nidoo.data.ConnectionProfile
+import com.gekkotron.nidoo.data.ProfileState
+import com.gekkotron.nidoo.data.defaultHistoryUrl
+
+/** What Settings shows of the profile (settings spec §5.1). Built field by field so no secret can ride along. */
+sealed interface ConnectionSummary {
+    data object Demo : ConnectionSummary
+
+    data class Direct(
+        val broker: String,
+        val tls: Boolean,
+        val ws: Boolean,
+        val username: String?,
+        val prefix: String,
+        val gatewayUrl: String?,
+        /** The override; null = automatic. */
+        val historyUrl: String?,
+        /** Where history is looked for without an override. */
+        val historyDefault: String,
+        /** Frigate's address; null = not set. The password itself never reaches Settings, only [frigateHasPassword]. */
+        val frigateUrl: String? = null,
+        val frigateUser: String? = null,
+        val frigateHasPassword: Boolean = false,
+    ) : ConnectionSummary
+
+    companion object {
+        fun from(state: ProfileState): ConnectionSummary? = when (state) {
+            is ProfileState.Ready -> when (val p = state.profile) {
+                ConnectionProfile.Demo -> Demo
+                is ConnectionProfile.Direct -> Direct(
+                    broker = "${p.local.host}:${p.local.port}",
+                    tls = p.local.tls,
+                    ws = p.local.ws,
+                    username = p.local.username,
+                    prefix = p.prefix,
+                    gatewayUrl = p.gateway?.url,
+                    historyUrl = p.historyUrl,
+                    historyDefault = defaultHistoryUrl(p.local.host),
+                    frigateUrl = p.frigate?.url,
+                    frigateUser = p.frigate?.username,
+                    frigateHasPassword = !p.frigate?.password.isNullOrEmpty(),
+                )
+            }
+            ProfileState.Loading, ProfileState.None, ProfileState.Locked -> null
+        }
+    }
+}

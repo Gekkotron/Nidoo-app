@@ -2,10 +2,10 @@ import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
-    id("oikos.android.application")
-    id("oikos.android.compose")
-    id("oikos.hilt")
-    id("oikos.serialization")
+    id("nidoo.android.application")
+    id("nidoo.android.compose")
+    id("nidoo.hilt")
+    id("nidoo.serialization")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
     id("com.mikepenz.aboutlibraries.plugin.android")
@@ -30,7 +30,7 @@ val signingProps = Properties().apply {
 val hasSigningConfig = signingPropsFile.canRead()
 
 android {
-    namespace = "com.gekkotron.oikos"
+    namespace = "com.gekkotron.nidoo"
     if (hasSigningConfig) {
         signingConfigs {
             create("release") {
@@ -42,7 +42,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId = "com.gekkotron.oikos"
+        applicationId = "com.gekkotron.nidoo"
         versionCode = appVersionCode
         versionName = "0.$appVersionCode"
     }

@@ -25,5 +25,5 @@ secret_key*.txt
 .DS_Store
 
 
-oikos-setup.json
-oikos-setup.png
+nidoo-setup.json
+nidoo-setup.png

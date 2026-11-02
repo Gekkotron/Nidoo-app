@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Oikos"
+rootProject.name = "Nidoo"
 
 include(":shared")
 include(":core:model")
