@@ -43,6 +43,8 @@ import com.gekkotron.nidoo.feature.home.ui.HomeRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.NotificationsRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.nidoo.feature.settings.licences.LicencesRoute
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
+import com.gekkotron.nidoo.feature.settings.ui.SettingsPageRoute
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderRoute
 import com.gekkotron.nidoo.feature.settings.ui.SettingsRoute
 import com.gekkotron.nidoo.presence.WarnBackgroundDataOnLaunch
@@ -68,6 +70,10 @@ data object AutomationsKey : NavKey
 
 @Serializable
 data object SettingsKey : NavKey
+
+/** A Settings sub-page; [page] is a `SettingsPage` name (settings sub-pages spec). */
+@Serializable
+data class SettingsPageKey(val page: String) : NavKey
 
 @Serializable
 data object RoomOrderKey : NavKey
@@ -218,12 +224,19 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 }
                 entry<SettingsKey> {
                     SettingsRoute(
+                        onOpenPage = { push(backStack, SettingsPageKey(it.name)) },
+                        onOpenRooms = { push(backStack, RoomOrderKey) },
+                        onBack = { pop(backStack, SettingsKey) },
+                    )
+                }
+                entry<SettingsPageKey> { key ->
+                    SettingsPageRoute(
+                        page = SettingsPage.valueOf(key.page),
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         onSetUpAgain = viewModel::setUpAgain,
-                        onOpenRooms = { push(backStack, RoomOrderKey) },
                         onOpenLicences = { push(backStack, LicencesKey) },
-                        onBack = { pop(backStack, SettingsKey) },
+                        onBack = { pop(backStack, key) },
                     )
                 }
                 entry<RoomOrderKey> {

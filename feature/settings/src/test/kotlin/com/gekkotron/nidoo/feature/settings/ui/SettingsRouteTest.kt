@@ -13,6 +13,7 @@ import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.nidoo.transport.Route
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +51,7 @@ class SettingsRouteTest {
     }
 
     @Test
-    fun `the push status is re-read every time the screen resumes`(): Unit {
+    fun `the push status is re-read every time the notifications page resumes`(): Unit {
         val push = FakePushStatusSource()
         val vm = SettingsViewModel(
             ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
@@ -68,7 +69,7 @@ class SettingsRouteTest {
         compose.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm, presenceSection = {})
+                    SettingsPageRoute(SettingsPage.NOTIFICATIONS, Route.AUTO, {}, {}, {}, {}, viewModel = vm, presenceSection = {})
                 }
             }
         }
@@ -102,7 +103,7 @@ class SettingsRouteTest {
         compose.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm, clock = { clock }, presenceSection = {})
+                    SettingsPageRoute(SettingsPage.NOTIFICATIONS, Route.AUTO, {}, {}, {}, {}, viewModel = vm, clock = { clock }, presenceSection = {})
                 }
             }
         }
@@ -111,5 +112,33 @@ class SettingsRouteTest {
         compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
         compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
         compose.onNodeWithText("Registered · 7 min", substring = true).assertExists()
+    }
+
+    @Test
+    fun `the list re-reads the push status on resume`() {
+        val push = FakePushStatusSource()
+        val vm = SettingsViewModel(
+            ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
+            AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
+            push,
+            com.gekkotron.nidoo.feature.settings.FakeEntitySource(),
+            com.gekkotron.nidoo.feature.voice.SpeechAvailability.Status.Ready,
+        )
+        lateinit var registry: LifecycleRegistry
+        val owner = object : LifecycleOwner {
+            override val lifecycle: Lifecycle get() = registry
+        }
+        registry = LifecycleRegistry.createUnsafe(owner)
+        registry.currentState = Lifecycle.State.STARTED
+        compose.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                    SettingsRoute(onOpenPage = {}, onOpenRooms = {}, onBack = {}, viewModel = vm)
+                }
+            }
+        }
+        compose.runOnIdle { assertEquals(0, push.refreshes) }
+        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
+        compose.runOnIdle { assertEquals(1, push.refreshes) }
     }
 }
