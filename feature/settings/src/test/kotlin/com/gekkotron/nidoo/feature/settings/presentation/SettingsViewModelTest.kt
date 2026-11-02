@@ -6,6 +6,10 @@ import com.gekkotron.nidoo.data.FrigateConfig
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.ThemePreference
+import com.gekkotron.nidoo.data.PresenceConfig
+import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.UNASSIGNED_AREA
+import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.feature.settings.FakeEntitySource
 import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
@@ -109,6 +113,22 @@ class SettingsViewModelTest {
         assertEquals(PushStatus.Waiting, vm.state.value.push)
         push.status.value = PushStatus.NotificationsOff
         assertEquals(PushStatus.NotificationsOff, vm.state.first { it.push == PushStatus.NotificationsOff }.push)
+    }
+
+    @Test
+    fun `state carries the link, the room count without Unassigned, and the presence flag`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs-list.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile-list.json"), PassThrough, storage)
+        val source = FakeEntitySource()
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), source, SpeechAvailability.Status.Ready)
+        backgroundScope.launch { vm.state.collect {} }
+        source.link.value = LinkState.Offline(LinkState.Offline.PAUSED)
+        source.areas.value = listOf(Area("kitchen", "Kitchen"), Area("salon", "Salon"), Area(UNASSIGNED_AREA, "Unassigned"))
+        prefs.setPresence(PresenceConfig(enabled = true))
+        val ui = vm.state.first { it.presenceEnabled && it.roomCount == 2 && it.link is LinkState.Offline }
+        assertTrue(ui.link is LinkState.Offline)
+        source.areas.value = listOf(Area(UNASSIGNED_AREA, "Unassigned"))
+        assertEquals(0, vm.state.first { it.roomCount == 0 }.roomCount)
     }
 
     @Test

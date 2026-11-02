@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nidoo: the lit house sits snug in its nest on a branch. The cat is still home. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- warm glow around the nest -->
+    <path android:pathData="M20,60 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="60"
+                android:gradientRadius="34">
+                <item android:offset="0" android:color="#6BFFC457" />
+                <item android:offset="0.55" android:color="#1FFFC457" />
+                <item android:offset="1" android:color="#00FFC457" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- branch the nest rests on; runs off both edges -->
+    <path android:pathData="M0,85 Q28,77 54,79 Q80,81 108,73 L108,78.5 Q80,86.5 54,84.5 Q28,83 0,90.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="76"
+                android:endX="0"
+                android:endY="88">
+                <item android:offset="0" android:color="#FF5E4446" />
+                <item android:offset="1" android:color="#FF2C1F26" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M0,85 Q28,77 54,79 Q80,81 108,73"
+        android:strokeWidth="0.9"
+        android:strokeColor="#99A88474" />
+    <group
+        android:pivotX="54"
+        android:pivotY="58"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
+        <!-- inside of the nest, seen over the front rim -->
+        <path
+            android:fillColor="#FF4A2E1C"
+            android:pathData="M28,66 a26,6 0 1,0 52,0 a26,6 0 1,0 -52,0 Z"
+            android:strokeWidth="1.6"
+            android:strokeColor="#FFB07440" />
+        <!-- the house -->
+        <group
+            android:pivotX="54"
+            android:pivotY="56"
+            android:scaleX="0.86"
+            android:scaleY="0.86"
+            android:translateY="-4">
+            <!-- chimney -->
+            <path android:fillColor="#FFD9573C" android:pathData="M64,36.5 Q64,35 65.5,35 H69.5 Q71,35 71,36.5 V48 H64 Z" />
+            <!-- walls -->
+            <path android:pathData="M35,49 H73 V76 Q73,79 70,79 H38 Q35,79 35,76 Z">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:type="linear"
+                        android:startX="0"
+                        android:startY="48"
+                        android:endX="0"
+                        android:endY="80">
+                        <item android:offset="0" android:color="#FFFFD27A" />
+                        <item android:offset="1" android:color="#FFF3A23E" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <!-- eave shadow -->
+            <path android:fillColor="#59C9702E" android:pathData="M35,49 H73 V53.5 L54,52 L35,53.5 Z" />
+            <!-- roof -->
+            <path
+                android:pathData="M29.5,52.5 L54,32.5 L78.5,52.5"
+                android:strokeWidth="7"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round">
+                <aapt:attr name="android:strokeColor">
+                    <gradient
+                        android:type="linear"
+                        android:startX="30"
+                        android:startY="33"
+                        android:endX="78"
+                        android:endY="53">
+                        <item android:offset="0" android:color="#FFFF9A6A" />
+                        <item android:offset="1" android:color="#FFE2583C" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <!-- lit window -->
+            <path android:pathData="M47.2,56 H60.8 Q63,56 63,58.2 V68.8 Q63,71 60.8,71 H47.2 Q45,71 45,68.8 V58.2 Q45,56 47.2,56 Z">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:type="radial"
+                        android:centerX="54"
+                        android:centerY="62"
+                        android:gradientRadius="13">
+                        <item android:offset="0" android:color="#FFFFFAF0" />
+                        <item android:offset="0.6" android:color="#FFFFE7A8" />
+                        <item android:offset="1" android:color="#FFFFC457" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <!-- the cat, watching the night from the window -->
+            <group
+                android:pivotX="51"
+                android:pivotY="71"
+                android:scaleX="0.78"
+                android:scaleY="0.78">
+                <path android:fillColor="#FF2A1F2E" android:pathData="M48.6,71 C47.6,68.4 47.9,65.8 49.1,64.4 L48.7,61.6 L50.3,63 Q51,62.8 51.7,63 L53.1,61.6 L52.9,64.4 C54,65.7 54.1,68.5 53.3,71 Z" />
+                <path
+                    android:pathData="M53.1,70.6 Q55.6,70.4 55.4,67.6"
+                    android:strokeWidth="0.9"
+                    android:strokeColor="#FF2A1F2E"
+                    android:strokeLineCap="round" />
+            </group>
+            <!-- window frame and bars -->
+            <path
+                android:pathData="M54,56 V71 M45,63.5 H63 M47.2,56 H60.8 Q63,56 63,58.2 V68.8 Q63,71 60.8,71 H47.2 Q45,71 45,68.8 V58.2 Q45,56 47.2,56 Z"
+                android:strokeWidth="1.4"
+                android:strokeColor="#FFC97A2C" />
+            <!-- sill -->
+            <path android:fillColor="#FFE08A36" android:pathData="M44.5,70.6 H63.5 Q64.5,70.6 64.5,71.6 Q64.5,72.6 63.5,72.6 H44.5 Q43.5,72.6 43.5,71.6 Q43.5,70.6 44.5,70.6 Z" />
+        </group>
+        <!-- front of the nest -->
+        <path android:pathData="M28,66 Q54,78 80,66 C82,77 70,85 54,85 C38,85 26,77 28,66 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="66"
+                    android:endX="0"
+                    android:endY="85">
+                    <item android:offset="0" android:color="#FFD89A55" />
+                    <item android:offset="1" android:color="#FF8A5530" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- woven twigs: three tones crossing at odd angles so it reads as a nest, not a basket -->
+        <path
+            android:pathData="M33,78 Q46,73.5 60,80 M54,79.5 Q67,73 77,77.5 M30,72.5 Q37,79 34,83"
+            android:strokeWidth="1.1"
+            android:strokeColor="#FFB0703C"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M29,70 Q46,80 64,78.5 M44,77 Q66,82 80,70.5 M31,76 Q48,86 70,82 M38,83 Q60,88 77,77 M35,71 L42,81 M47,75 L51.5,85 M59,76 L63.5,84.5 M71,73 L72.5,81 M42,84.5 L37.5,88 M67,84.5 L72,87.5"
+            android:strokeWidth="1.2"
+            android:strokeColor="#FF6E4024"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M28.5,68.5 Q42,77 58,76.5 M50,77 Q68,76 80,68 M30,73 Q44,83 62,82 M48,82 Q66,84 78,74 M37,81.5 Q54,88.5 72,83.5"
+            android:strokeWidth="1.4"
+            android:strokeColor="#FFF0C080"
+            android:strokeLineCap="round" />
+        <!-- stray twigs off the rim -->
+        <path
+            android:pathData="M28.5,66.5 L22,63 M79.5,66.5 L86,62.5"
+            android:strokeWidth="1.4"
+            android:strokeColor="#FFF0C080"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M27.5,69.5 L23,71 M80,70 L85.5,71.5"
+            android:strokeWidth="1.2"
+            android:strokeColor="#FF6E4024"
+            android:strokeLineCap="round" />
+        <!-- front rim catches the window light -->
+        <path
+            android:pathData="M28,66 Q54,78 80,66"
+            android:strokeWidth="2"
+            android:strokeColor="#FFF5CF94"
+            android:strokeLineCap="round" />
+    </group>
+</vector>

@@ -90,6 +90,8 @@ import java.time.LocalTime
 @Composable
 fun HomeRoute(
     onOpenSettings: () -> Unit = {},
+    /** The link sheet's "Connection settings": straight to the Connection page. */
+    onOpenConnectionSettings: () -> Unit = onOpenSettings,
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -146,6 +148,7 @@ fun HomeRoute(
         state, viewModel::select, viewModel::tap, { id, c -> viewModel.send(id, c, cardOf(id)) }, snackbar,
         onCustomize = viewModel::customize,
         onOpenSettings = onOpenSettings,
+        onOpenConnectionSettings = onOpenConnectionSettings,
         route = route,
         onRouteChange = onRouteChange,
         windowInsets = windowInsets,
@@ -172,6 +175,7 @@ fun HomeScreen(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     onCustomize: (String, List<Area>, UiOverride) -> Unit = { _, _, _ -> },
     onOpenSettings: () -> Unit = {},
+    onOpenConnectionSettings: () -> Unit = onOpenSettings,
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     onSearch: (String) -> Unit = {},
@@ -348,7 +352,7 @@ fun HomeScreen(
             state.link,
             route = route,
             onRouteChange = onRouteChange,
-            onOpenSettings = { linkSheet = false; onOpenSettings() },
+            onOpenSettings = { linkSheet = false; onOpenConnectionSettings() },
             onDismiss = { linkSheet = false },
         )
     }

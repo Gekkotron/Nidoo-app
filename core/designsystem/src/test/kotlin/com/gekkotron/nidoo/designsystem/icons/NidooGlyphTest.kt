@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 class NidooGlyphTest {
     @Test
     fun `glyphs parse to non empty paths`() {
-        for (glyph in listOf(NidooGlyph.SUN, NidooGlyph.HOUSE, NidooGlyph.PYLON, NidooGlyph.BATTERY, NidooGlyph.SEARCH, NidooGlyph.CLOSE, NidooGlyph.GEAR, NidooGlyph.DRAG_HANDLE, NidooGlyph.STAR)) {
+        for (glyph in listOf(NidooGlyph.SUN, NidooGlyph.HOUSE, NidooGlyph.PYLON, NidooGlyph.BATTERY, NidooGlyph.SEARCH, NidooGlyph.CLOSE, NidooGlyph.GEAR, NidooGlyph.DRAG_HANDLE, NidooGlyph.STAR, NidooGlyph.BELL, NidooGlyph.PIN, NidooGlyph.SUN_MOON, NidooGlyph.BROKER, NidooGlyph.INFO)) {
             assertTrue(glyph.paths.isNotEmpty(), "$glyph has no parts")
             assertTrue(glyph.paths.all { (path, _) -> !path.isEmpty }, "$glyph has an empty path")
         }

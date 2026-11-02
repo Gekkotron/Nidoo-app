@@ -43,6 +43,8 @@ import com.gekkotron.nidoo.feature.home.ui.HomeRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.NotificationsRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.nidoo.feature.settings.licences.LicencesRoute
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
+import com.gekkotron.nidoo.feature.settings.ui.SettingsPageRoute
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderRoute
 import com.gekkotron.nidoo.feature.settings.ui.SettingsRoute
 import com.gekkotron.nidoo.presence.WarnBackgroundDataOnLaunch
@@ -68,6 +70,10 @@ data object AutomationsKey : NavKey
 
 @Serializable
 data object SettingsKey : NavKey
+
+/** A Settings sub-page; [page] is a `SettingsPage` name (settings sub-pages spec). */
+@Serializable
+data class SettingsPageKey(val page: String) : NavKey
 
 @Serializable
 data object RoomOrderKey : NavKey
@@ -102,10 +108,11 @@ internal fun linkAction(root: NavKey, pending: AppLink?): AlertLinkAction = when
     else -> AlertLinkAction.WAIT
 }
 
-internal fun linkDestination(link: AppLink): NavKey = when (link) {
-    is AppLink.Alert -> AlertDetailKey(link.id)
-    is AppLink.History -> HistoryKey(HistoryTarget.Entity(link.entityId).encode())
-    AppLink.Settings -> SettingsKey
+/** The screens a link opens, bottom first: a Settings page sits over the Settings list so back returns to the list. */
+internal fun linkDestinations(link: AppLink): List<NavKey> = when (link) {
+    is AppLink.Alert -> listOf(AlertDetailKey(link.id))
+    is AppLink.History -> listOf(HistoryKey(HistoryTarget.Entity(link.entityId).encode()))
+    is AppLink.Settings -> listOfNotNull(SettingsKey, link.page?.let { SettingsPageKey(it.name) })
 }
 
 /** The main tabs share the bar's bottom inset; every other screen has no bar, so it keeps the full insets. */
@@ -155,7 +162,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
         val link = pendingLink ?: return@LaunchedEffect
         when (linkAction(root, link)) {
             AlertLinkAction.OPEN -> {
-                push(backStack, linkDestination(link))
+                linkDestinations(link).forEach { push(backStack, it) }
                 viewModel.linkOpened()
             }
             AlertLinkAction.DROP -> viewModel.linkOpened()
@@ -209,6 +216,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<HomeKey> {
                     HomeRoute(
                         onOpenSettings = { push(backStack, SettingsKey) },
+                        onOpenConnectionSettings = { linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)).forEach { push(backStack, it) } },
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         windowInsets = tabInsets,
@@ -218,12 +226,19 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 }
                 entry<SettingsKey> {
                     SettingsRoute(
+                        onOpenPage = { push(backStack, SettingsPageKey(it.name)) },
+                        onOpenRooms = { push(backStack, RoomOrderKey) },
+                        onBack = { pop(backStack, SettingsKey) },
+                    )
+                }
+                entry<SettingsPageKey> { key ->
+                    SettingsPageRoute(
+                        page = SettingsPage.valueOf(key.page),
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         onSetUpAgain = viewModel::setUpAgain,
-                        onOpenRooms = { push(backStack, RoomOrderKey) },
                         onOpenLicences = { push(backStack, LicencesKey) },
-                        onBack = { pop(backStack, SettingsKey) },
+                        onBack = { pop(backStack, key) },
                     )
                 }
                 entry<RoomOrderKey> {

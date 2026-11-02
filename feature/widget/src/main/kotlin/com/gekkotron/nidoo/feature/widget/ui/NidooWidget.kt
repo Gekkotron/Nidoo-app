@@ -34,7 +34,11 @@ import kotlinx.coroutines.flow.first
 /** The links the widget opens in the app; `:app` parses them (widgets spec §2.3). */
 object AppLinks {
     const val HISTORY = "nidoo://history/"
-    const val SETTINGS = "nidoo://settings"
+    /** "Sign-in failed": the Connection page. */
+    const val SETTINGS_CONNECTION = "nidoo://settings/connection"
+
+    /** Voice off: the Voice page. */
+    const val SETTINGS_VOICE = "nidoo://settings/voice"
 }
 
 /** Addressed by class name so the widget module does not depend on `:feature:voice`. */
@@ -99,7 +103,7 @@ class NidooWidget : GlanceAppWidget() {
             context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent(Intent.ACTION_MAIN).setPackage(context.packageName),
         )
 
-        override fun openSettings(): Action = actionStartActivity(view(AppLinks.SETTINGS))
+        override fun openSettings(): Action = actionStartActivity(view(AppLinks.SETTINGS_CONNECTION))
 
         override fun openVoice(): Action = actionStartActivity(voiceIntent(context))
 

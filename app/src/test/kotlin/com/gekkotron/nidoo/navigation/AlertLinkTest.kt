@@ -1,5 +1,7 @@
 package com.gekkotron.nidoo.navigation
 
+import androidx.navigation3.runtime.NavKey
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import com.gekkotron.nidoo.AppLink
@@ -39,16 +41,21 @@ class AlertLinkTest {
     @Test
     fun `widget links follow the same rules as alerts`() {
         assertEquals(AlertLinkAction.OPEN, linkAction(HomeKey, AppLink.History("t")))
-        assertEquals(AlertLinkAction.OPEN, linkAction(HomeKey, AppLink.Settings))
-        assertEquals(AlertLinkAction.WAIT, linkAction(RoomsKey, AppLink.Settings))
+        assertEquals(AlertLinkAction.OPEN, linkAction(HomeKey, AppLink.Settings()))
+        assertEquals(AlertLinkAction.WAIT, linkAction(RoomsKey, AppLink.Settings()))
         assertEquals(AlertLinkAction.DROP, linkAction(OnboardingKey, AppLink.History("t")))
         assertEquals(AlertLinkAction.NONE, linkAction(HomeKey, null))
     }
 
     @Test
     fun `each link opens its screen`() {
-        assertEquals(AlertDetailKey("a1"), linkDestination(AppLink.Alert("a1")))
-        assertEquals(HistoryKey("entity:t"), linkDestination(AppLink.History("t")))
-        assertEquals(SettingsKey, linkDestination(AppLink.Settings))
+        assertEquals(listOf<NavKey>(AlertDetailKey("a1")), linkDestinations(AppLink.Alert("a1")))
+        assertEquals(listOf<NavKey>(HistoryKey("entity:t")), linkDestinations(AppLink.History("t")))
+        assertEquals(listOf<NavKey>(SettingsKey), linkDestinations(AppLink.Settings()))
+    }
+
+    @Test
+    fun `a settings link with a page opens the page over the list, so back returns to the list`() {
+        assertEquals(listOf<NavKey>(SettingsKey, SettingsPageKey("CONNECTION")), linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)))
     }
 }

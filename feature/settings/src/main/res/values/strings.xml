@@ -93,4 +93,25 @@
     <string name="settings_energy_view_flux">Flux</string>
     <string name="settings_energy_view_orbite">Orbite</string>
     <string name="settings_energy_view_hint">How the Energy tab draws the live flow on this phone.</string>
+    <string name="settings_group_house">House</string>
+    <string name="settings_group_app">App</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_hint">Theme, energy view</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_hint">Push alerts and channels</string>
+    <string name="settings_presence_hint">Arm the alarm when you leave</string>
+    <string name="settings_voice_hint">Voice commands and shortcuts</string>
+    <string name="settings_connection_hint">Broker, route, history, Frigate</string>
+    <string name="settings_about_hint">Version and licences</string>
+    <string name="settings_on">On</string>
+    <string name="settings_off">Off</string>
+    <string name="settings_voice_status">On · %1$d</string>
+    <string name="settings_push_short_registered">Registered</string>
+    <string name="settings_push_short_waiting">Waiting</string>
+    <string name="settings_push_short_failed">Failed</string>
+    <string name="settings_push_short_off">Off</string>
+    <string name="settings_link_online">Online</string>
+    <string name="settings_link_connecting">Connecting</string>
+    <string name="settings_link_offline">Offline</string>
+    <string name="settings_wordmark" translatable="false">Nidoo.</string>
 </resources>

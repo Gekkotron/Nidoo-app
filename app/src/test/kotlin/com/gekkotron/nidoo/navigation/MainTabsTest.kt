@@ -43,6 +43,15 @@ class MainTabsTest {
     }
 
     @Test
+    fun `a settings page pushes over Settings and pops back to it`() {
+        val stack = mutableListOf<NavKey>(HomeKey, SettingsKey)
+        push(stack, SettingsPageKey("VOICE"))
+        assertEquals(listOf<NavKey>(HomeKey, SettingsKey, SettingsPageKey("VOICE")), stack)
+        pop(stack, SettingsPageKey("VOICE"))
+        assertEquals(listOf<NavKey>(HomeKey, SettingsKey), stack)
+    }
+
+    @Test
     fun `pop never empties the stack`() {
         val stack = mutableListOf<NavKey>(HomeKey)
         pop(stack, HomeKey)

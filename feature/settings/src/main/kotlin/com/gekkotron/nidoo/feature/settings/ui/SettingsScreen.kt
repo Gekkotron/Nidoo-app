@@ -1,38 +1,23 @@
 package com.gekkotron.nidoo.feature.settings.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,42 +29,53 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gekkotron.nidoo.data.DEFAULT_FRIGATE_URL
-import com.gekkotron.nidoo.data.EnergyViewPreference
-import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
-import com.gekkotron.nidoo.designsystem.components.NidooRadioRow
-import com.gekkotron.nidoo.designsystem.components.RoutePicker
 import com.gekkotron.nidoo.designsystem.permissions.openNotificationSettings
 import com.gekkotron.nidoo.feature.settings.R
-import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
-import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.nidoo.feature.settings.presentation.appVersion
 import com.gekkotron.nidoo.transport.Route
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.Instant
 
+/** The Settings list. The push status is re-read on every resume: notification permission may have changed away. */
 @Composable
 fun SettingsRoute(
+    onOpenPage: (SettingsPage) -> Unit,
+    onOpenRooms: () -> Unit,
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val version = remember { appVersion(context) }
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshPush()
+        onPauseOrDispose {}
+    }
+    SettingsListScreen(state, version, onOpenPage, onOpenRooms, onBack)
+}
+
+/** One Settings sub-page, wired to the view-model. */
+@Composable
+fun SettingsPageRoute(
+    page: SettingsPage,
     route: Route?,
     onRouteChange: (Route) -> Unit,
     onSetUpAgain: () -> Unit,
-    onOpenRooms: () -> Unit,
     onOpenLicences: () -> Unit,
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
     clock: () -> Instant = Instant::now,
-    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = { info -> PresenceSettingsSlot(onInfoMessage = info) },
+    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = { info -> PresenceSettingsSlot(onInfoMessage = info, showTitle = false) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -100,132 +96,24 @@ fun SettingsRoute(
         viewModel.refreshPush()
         onPauseOrDispose {}
     }
-    SettingsScreen(
-        state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack,
-        onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
-        onOpenChannels = { openNotificationSettings(context) },
+    SettingsPageScreen(
+        page, state, version, route, now, onBack,
+        onTheme = viewModel::setTheme, onEnergyView = viewModel::setEnergyView,
+        onRegisterAgain = viewModel::registerAgain, onOpenChannels = { openNotificationSettings(context) },
+        onRouteChange = onRouteChange, onSetUpAgain = onSetUpAgain,
+        onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
         onVoiceEnabled = viewModel::setVoiceEnabled, onDeleteShortcut = viewModel::deleteShortcut,
-        presenceSection = presenceSection, onEnergyView = viewModel::setEnergyView,
+        onOpenLicences = onOpenLicences, presenceSection = presenceSection,
     )
 }
 
-@Composable
-fun SettingsScreen(
-    state: SettingsUi,
-    version: String,
-    route: Route?,
-    onTheme: (ThemePreference) -> Unit,
-    onRouteChange: (Route) -> Unit,
-    onSetUpAgain: () -> Unit,
-    onOpenRooms: () -> Unit,
-    onOpenLicences: () -> Unit,
-    onBack: () -> Unit,
-    onRegisterAgain: () -> Unit = {},
-    onOpenChannels: () -> Unit = {},
-    now: Instant = Instant.now(),
-    onSaveHistoryUrl: (String) -> Boolean = { true },
-    onSaveFrigate: (url: String, user: String, password: String) -> Boolean = { _, _, _ -> true },
-    onVoiceEnabled: (Boolean) -> Unit = {},
-    onDeleteShortcut: (String) -> Unit = {},
-    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = {},
-    onEnergyView: (EnergyViewPreference) -> Unit = {},
-) {
-    val context = LocalContext.current
-    val snackbar = remember { SnackbarHostState() }
-    val deniedMessage = stringResource(R.string.voice_permission_denied_snackbar)
-    var micDenied by remember { mutableStateOf(false) }
-    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) onVoiceEnabled(true) else { onVoiceEnabled(false); micDenied = true }
-    }
-    LaunchedEffect(micDenied) {
-        if (micDenied) {
-            snackbar.showSnackbar(deniedMessage)
-            micDenied = false
-        }
-    }
-    val onVoiceToggle: (Boolean) -> Unit = { on ->
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        if (!on || granted) onVoiceEnabled(on) else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
-    }
-    var confirm by rememberSaveable { mutableStateOf(false) }
-    var pushSheet by rememberSaveable { mutableStateOf(false) }
-    var historyDialog by rememberSaveable { mutableStateOf(false) }
-    var frigateDialog by rememberSaveable { mutableStateOf(false) }
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentColor = NidooTheme.colors.content,
-        topBar = { SettingsTopBar(stringResource(R.string.settings_title), onBack) },
-        snackbarHost = { SnackbarHost(snackbar) },
-    ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            Section(stringResource(R.string.settings_theme)) {
-                Column(Modifier.selectableGroup()) {
-                    NidooRadioRow(stringResource(R.string.settings_theme_system), state.theme == ThemePreference.SYSTEM, { onTheme(ThemePreference.SYSTEM) })
-                    NidooRadioRow(stringResource(R.string.settings_theme_night), state.theme == ThemePreference.NIGHT_GLASS, { onTheme(ThemePreference.NIGHT_GLASS) })
-                    NidooRadioRow(stringResource(R.string.settings_theme_ivoire), state.theme == ThemePreference.IVOIRE, { onTheme(ThemePreference.IVOIRE) })
-                }
-            }
-            Section(stringResource(R.string.settings_energy_view)) {
-                EnergyViewSection(state.energyView, onEnergyView)
-            }
-            NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)
-            NavRow(stringResource(R.string.settings_push), pushStatusText(state.push, now), onClick = { pushSheet = true })
-            Section(stringResource(R.string.settings_connection)) {
-                ConnectionRows(state.connection, onEditHistory = { historyDialog = true }, onEditFrigate = { frigateDialog = true })
-                if (route != null) RoutePicker(route, onRouteChange, Modifier.padding(top = 8.dp))
-                OutlinedButton(onClick = { confirm = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Text(stringResource(R.string.settings_set_up_again))
-                }
-            }
-            VoiceSection(state.voice, onVoiceToggle)
-            VoiceShortcutsSection(state.voice.shortcuts, onDeleteShortcut)
-            val scope = androidx.compose.runtime.rememberCoroutineScope()
-            presenceSection { msg -> scope.launch { snackbar.showSnackbar(msg) } }
-            Section(stringResource(R.string.settings_about)) {
-                Text(stringResource(R.string.settings_version, version), style = NidooTheme.type.body)
-                Text(stringResource(R.string.settings_notice), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
-                NavRow(stringResource(R.string.settings_licences), null, onOpenLicences)
-            }
-        }
-    }
-    if (confirm) {
-        AlertDialog(
-            onDismissRequest = { confirm = false },
-            title = { Text(stringResource(R.string.settings_set_up_again_title)) },
-            text = { Text(stringResource(R.string.settings_set_up_again_body)) },
-            confirmButton = { TextButton(onClick = { confirm = false; onSetUpAgain() }) { Text(stringResource(R.string.settings_set_up_again_confirm)) } },
-            dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.settings_cancel)) } },
-        )
-    }
-    if (historyDialog) {
-        val direct = state.connection as? ConnectionSummary.Direct
-        HistoryUrlDialog(direct?.historyUrl.orEmpty(), direct?.historyDefault.orEmpty(), onSave = onSaveHistoryUrl, onDismiss = { historyDialog = false })
-    }
-    if (frigateDialog) {
-        val direct = state.connection as? ConnectionSummary.Direct
-        FrigateDialog(
-            initialUrl = direct?.frigateUrl ?: DEFAULT_FRIGATE_URL,
-            initialUser = direct?.frigateUser.orEmpty(),
-            hasPassword = direct?.frigateHasPassword == true,
-            onSave = onSaveFrigate,
-            onDismiss = { frigateDialog = false },
-        )
-    }
-    if (pushSheet) {
-        PushSheet(state.push, now, onRegisterAgain, onOpenChannels, onDismiss = { pushSheet = false })
-    }
-}
-
-/** Shared by the three Settings screens: a back arrow and a title on the transparent background. */
+/** Shared by the Settings screens: a back arrow and a title on the transparent background. No title on the list, whose header carries it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SettingsTopBar(title: String, onBack: () -> Unit) {
+internal fun SettingsTopBar(title: String?, onBack: () -> Unit) {
     val backLabel = stringResource(R.string.settings_back)
     TopAppBar(
-        title = { Text(title, style = NidooTheme.type.display) },
+        title = { if (title != null) Text(title, style = NidooTheme.type.display) },
         navigationIcon = {
             IconButton(onClick = onBack, modifier = Modifier.semantics { contentDescription = backLabel }) {
                 Text("←", style = NidooTheme.type.cardValue, modifier = Modifier.clearAndSetSemantics {})
@@ -236,7 +124,7 @@ internal fun SettingsTopBar(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+internal fun Section(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, modifier = Modifier.semantics { heading() })
         content()
@@ -244,7 +132,7 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun NavRow(title: String, summary: String?, onClick: () -> Unit) {
+internal fun NavRow(title: String, summary: String?, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch).clickable(role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

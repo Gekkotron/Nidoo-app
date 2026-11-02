@@ -30,7 +30,8 @@ import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import com.gekkotron.nidoo.feature.voice.TtsAvailability
 
 @Composable
-fun VoiceSection(ui: VoiceSettingsUi, onToggle: (Boolean) -> Unit) {
+/** [showTitle] is off on the Voice page, whose top bar already says "Voice". */
+fun VoiceSection(ui: VoiceSettingsUi, onToggle: (Boolean) -> Unit, showTitle: Boolean = true) {
     val ready = ui.availability == SpeechAvailability.Status.Ready
     val reason = when (ui.availability) {
         SpeechAvailability.Status.Ready -> null
@@ -39,12 +40,14 @@ fun VoiceSection(ui: VoiceSettingsUi, onToggle: (Boolean) -> Unit) {
         is SpeechAvailability.Status.LanguagePackMissing -> stringResource(R.string.voice_availability_language_pack_missing, ui.availability.tag)
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            stringResource(R.string.voice_section_title),
-            style = NidooTheme.type.label,
-            color = NidooTheme.colors.contentMuted,
-            modifier = Modifier.semantics { heading() },
-        )
+        if (showTitle) {
+            Text(
+                stringResource(R.string.voice_section_title),
+                style = NidooTheme.type.label,
+                color = NidooTheme.colors.contentMuted,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
         Row(
             Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch)
                 .toggleable(value = ui.enabled && ready, enabled = ready, role = Role.Switch, onValueChange = onToggle)
