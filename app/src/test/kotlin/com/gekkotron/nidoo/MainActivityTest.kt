@@ -70,11 +70,18 @@ class MainActivityTest {
 
     private fun openSettings() {
         compose.onNode(hasContentDescription("Settings")).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Theme"), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasText("Appearance"), timeoutMillis = 10_000)
+    }
+
+    /** Opens a row of the Settings list and waits for its page. */
+    private fun openSettingsPage(row: String, waitFor: String) {
+        compose.onNodeWithText(row).performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText(waitFor), timeoutMillis = 10_000)
     }
 
     private fun setUpAgain() {
         openSettings()
+        openSettingsPage("Connection", "Set up connection again")
         compose.onNodeWithText("Set up connection again").performScrollTo().performClick()
         compose.onNodeWithText("Set up again").performClick()
     }
@@ -211,12 +218,15 @@ class MainActivityTest {
     }
 
     @Test
-    fun `settings opens from the gear, the theme sticks, and back returns Home`() {
+    fun `settings opens from the gear, the theme sticks on its page, and back returns to the list then Home`() {
         openDemo()
         openSettings()
+        openSettingsPage("Appearance", "Theme")
         compose.onNodeWithText("Ivoire").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Ivoire") and isSelected(), timeoutMillis = 10_000) // the store write is async
-        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() } // page → list
+        compose.waitUntilAtLeastOneExists(hasText("Appearance"), timeoutMillis = 10_000)
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() } // list → Home
         compose.waitUntilAtLeastOneExists(hasContentDescription("Air conditioner", substring = true), timeoutMillis = 10_000)
     }
 
@@ -227,7 +237,7 @@ class MainActivityTest {
         gear.performClick()
         // Compose's test clock settles between clicks, so Settings may already have replaced Home and the gear left the tree.
         runCatching { gear.performClick() }
-        compose.waitUntilAtLeastOneExists(hasText("Theme"), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasText("Appearance"), timeoutMillis = 10_000)
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntilAtLeastOneExists(hasContentDescription("Air conditioner", substring = true), timeoutMillis = 10_000)
     }
