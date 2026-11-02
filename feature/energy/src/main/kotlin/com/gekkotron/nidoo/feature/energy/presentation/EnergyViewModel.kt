@@ -2,6 +2,8 @@ package com.gekkotron.nidoo.feature.energy.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.nidoo.data.AppPreferences
+import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.history.EnergyScale
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.history.HistoryRef
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -47,11 +50,16 @@ class EnergyViewModel internal constructor(
     dispatcher: CoroutineDispatcher,
     private val history: HistoryClient = HistoryClient.None,
     refresh: Duration = 5.minutes,
+    energyView: Flow<EnergyViewPreference> = flowOf(EnergyViewPreference.CLASSIC),
     clock: () -> Long,
 ) : ViewModel() {
     @Inject
-    constructor(source: EntitySource, history: HistoryClient) :
-        this(source, Dispatchers.Default, history, clock = System::currentTimeMillis)
+    constructor(source: EntitySource, history: HistoryClient, preferences: AppPreferences) :
+        this(source, Dispatchers.Default, history, energyView = preferences.energyView.filterNotNull(), clock = System::currentTimeMillis)
+
+    /** How this phone draws the live flow, chosen in Settings (energy views spec). */
+    val energyView: StateFlow<EnergyViewPreference> =
+        energyView.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EnergyViewPreference.CLASSIC)
 
     /**
      * Today's kWh by entity id ([EnergyToday.requests]), fetched as soon as entities are known and again every

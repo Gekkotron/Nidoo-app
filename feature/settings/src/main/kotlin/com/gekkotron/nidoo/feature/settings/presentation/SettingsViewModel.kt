@@ -8,6 +8,7 @@ import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.FrigateConfig
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
+import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.data.normalizeFrigateUrl
 import com.gekkotron.nidoo.data.normalizeHistoryUrl
@@ -37,6 +38,7 @@ data class SettingsUi(
     val connection: ConnectionSummary? = null,
     val push: PushStatus = PushStatus.Waiting,
     val voice: VoiceSettingsUi = VoiceSettingsUi(),
+    val energyView: EnergyViewPreference = EnergyViewPreference.CLASSIC,
 )
 
 @HiltViewModel
@@ -77,8 +79,8 @@ class SettingsViewModel internal constructor(
         VoiceSettingsUi(enabled, availability, rows, tts)
     }
 
-    val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state, push.status, voiceUi) { theme, profile, status, voice ->
-        SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), status, voice)
+    val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state, push.status, voiceUi, preferences.energyView) { theme, profile, status, voice, energyView ->
+        SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), status, voice, energyView ?: EnergyViewPreference.CLASSIC)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
@@ -88,6 +90,7 @@ class SettingsViewModel internal constructor(
             ConnectionSummary.from(profiles.state.value),
             push.status.value,
             VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability, ttsAvailability = ttsAvailability.value),
+            preferences.energyView.value ?: EnergyViewPreference.CLASSIC,
         ),
     )
 
@@ -97,6 +100,10 @@ class SettingsViewModel internal constructor(
 
     fun deleteShortcut(id: String) {
         viewModelScope.launch { source.deleteShortcut(id) }
+    }
+
+    fun setEnergyView(view: EnergyViewPreference) {
+        viewModelScope.launch { preferences.setEnergyView(view) }
     }
 
     fun setTheme(theme: ThemePreference) {

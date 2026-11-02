@@ -49,4 +49,9 @@
     <string name="energy_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>
     <string name="energy_today">%1$s today</string>
     <string name="energy_history">History</string>
+    <string name="energy_not_reporting">Not reporting: %1$s</string>
+    <string name="energy_others">Others</string>
+    <string name="energy_unitemised">Unmetered</string>
+    <string name="energy_export">Export</string>
+    <string name="energy_battery_charge">Charging</string>
 </resources>

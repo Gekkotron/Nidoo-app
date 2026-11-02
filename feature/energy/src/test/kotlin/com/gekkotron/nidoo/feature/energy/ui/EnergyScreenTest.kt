@@ -296,4 +296,18 @@ class EnergyScreenTest {
         compose.onNodeWithTag("energy-card-solar").performScrollTo().performClick()
         compose.onNodeWithText("History").assertDoesNotExist()
     }
+
+    @Test
+    fun `screenDrawsFluxWhenChosen`() {
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { EnergyScreen(state(house, houseStates), {}, locale = Locale.US, view = com.gekkotron.nidoo.data.EnergyViewPreference.FLUX) } }
+        compose.onNodeWithTag("energy-flux").assertExists()
+        compose.onNodeWithTag("energy-diagram").assertDoesNotExist()
+    }
+
+    @Test
+    fun `screenDrawsOrbiteWhenChosen`() {
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { EnergyScreen(state(house, houseStates), {}, locale = Locale.US, view = com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE) } }
+        compose.onNodeWithTag("energy-orbite").assertExists()
+        compose.onNodeWithTag("energy-diagram").assertDoesNotExist()
+    }
 }

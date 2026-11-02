@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.datastore.core.Serializer
+import java.io.OutputStream
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -55,5 +58,26 @@ class RegistrationStoreTest {
         val seen = async(Dispatchers.Default) { withTimeout(5.seconds) { store.observe().first { it != null } } }
         store.save(saved.token, saved.topic, saved.at)
         assertEquals(saved, seen.await())
+    }
+
+    /**
+     * The race behind the CI flake: a subscription whose first read lands while a save is still being
+     * written must see that save, not stall on the file as it was. A slow writer widens the window.
+     */
+    @Test
+    fun `a subscriber that starts during a save sees it`(): Unit = runTest {
+        val slow = object : Serializer<StoredRegistration> by RegistrationSerializer {
+            override suspend fun writeTo(t: StoredRegistration, output: OutputStream) {
+                Thread.sleep(300)
+                RegistrationSerializer.writeTo(t, output)
+            }
+        }
+        val store = RegistrationStore.create(tmp.root.resolve("r.json"), backgroundScope, slow)
+        assertNull(store.last())
+        val saving = async(Dispatchers.Default) { store.save(saved.token, saved.topic, saved.at) }
+        Thread.sleep(100)
+        val seen = withContext(Dispatchers.Default) { withTimeoutOrNull(3.seconds) { store.observe().first { it != null } } }
+        saving.await()
+        assertEquals(saved, seen)
     }
 }

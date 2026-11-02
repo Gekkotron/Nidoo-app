@@ -47,6 +47,16 @@ class EnergyViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
+    fun `energyViewFollowsPreference`() = runTest(dispatcher) {
+        val pref = kotlinx.coroutines.flow.MutableStateFlow(com.gekkotron.nidoo.data.EnergyViewPreference.FLUX)
+        val vm = EnergyViewModel(source, dispatcher, energyView = pref) { now }
+        backgroundScope.launch { vm.energyView.collect {} }
+        assertEquals(com.gekkotron.nidoo.data.EnergyViewPreference.FLUX, vm.energyView.value)
+        pref.value = com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE
+        assertEquals(com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE, vm.energyView.value)
+    }
+
+    @Test
     fun `state reflects the source`() = runTest(dispatcher) {
         val vm = EnergyViewModel(source, dispatcher) { now }
         backgroundScope.launch { vm.state.collect {} }

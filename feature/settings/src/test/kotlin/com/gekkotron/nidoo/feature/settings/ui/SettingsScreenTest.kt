@@ -29,7 +29,9 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w411dp-h914dp")
+// Tall enough that the connection rows sit on screen without scrolling: the dialog tests pause the clock, and a
+// scrolled screen behind an open dialog never settles under Robolectric.
+@Config(qualifiers = "w411dp-h1600dp")
 class SettingsScreenTest {
     @get:Rule
     val compose = createComposeRule()

@@ -49,4 +49,9 @@
     <string name="energy_save_failed">Impossible d\'enregistrer vos modifications. Vérifiez la connexion et réessayez.</string>
     <string name="energy_today">%1$s aujourd’hui</string>
     <string name="energy_history">Historique</string>
+    <string name="energy_not_reporting">Sans données : %1$s</string>
+    <string name="energy_others">Autres</string>
+    <string name="energy_unitemised">Non mesuré</string>
+    <string name="energy_export">Injection</string>
+    <string name="energy_battery_charge">Charge</string>
 </resources>

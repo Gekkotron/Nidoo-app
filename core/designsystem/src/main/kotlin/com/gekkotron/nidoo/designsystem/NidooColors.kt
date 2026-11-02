@@ -31,6 +31,14 @@ data class NidooColors(
     val grid: Color,
     val heat: Color,
     val shadow: Color,
+    /** Flux and Orbite consumer colours, by slot (`slot % 5`); the hub's `--energy-c0..c4`. */
+    val energyConsumers: List<Color>,
+    /** The house, "Others" and the rings' track (hub `--energy-muted`). */
+    val energyMuted: Color,
+    /** Stripes of the power no consumer meter accounts for (hub `--energy-hatch`). */
+    val energyHatch: Color,
+    /** The ground under [energyHatch] (hub `--energy-hatch-ground`). */
+    val energyHatchGround: Color,
 )
 
 private val Ink = Color(0xFFE8ECFF)
@@ -67,6 +75,11 @@ val NightGlassColors = NidooColors(
     grid = Color(0xFF8F7BFF),
     heat = Rose,
     shadow = Color.Transparent,
+    // Hub dark tokens; c2..c4 are its color-mix() of the accents, precomputed.
+    energyConsumers = listOf(Color(0xFF58E1FF), Color(0xFFFF7A9A), Color(0xFF71B3FF), Color(0xFFFF9B7C), Color(0xFF62E8E2)),
+    energyMuted = Ink.copy(alpha = 0.35f),
+    energyHatch = Ink.copy(alpha = 0.42f),
+    energyHatchGround = Ink.copy(alpha = 0.10f),
 )
 
 /** Ivoire, ported from the Nidoo web tokens (`tokens.css`, `[data-theme="light"]`). */
@@ -97,4 +110,9 @@ val IvoireColors = NidooColors(
     grid = Color(0xFF6A5ACD),
     heat = Color(0xFFAC512B),
     shadow = Color(0xFF3C3214).copy(alpha = 0.10f),
+    // Hub `:root[data-theme="light"] .energy` values.
+    energyConsumers = listOf(Color(0xFF35B9F0), Color(0xFFFF6F91), Color(0xFF7F9CFF), Color(0xFFFF9A55), Color(0xFF3FD6C6)),
+    energyMuted = Color(0xFFD9D1C3),
+    energyHatch = Color(0xFFC4B8A5),
+    energyHatchGround = Color(0xFFF1ECE2),
 )

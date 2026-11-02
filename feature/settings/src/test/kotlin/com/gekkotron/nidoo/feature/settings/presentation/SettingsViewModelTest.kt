@@ -77,6 +77,17 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `setEnergyViewWritesPreference`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.setEnergyView(com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE)
+        assertEquals(com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE, prefs.energyView.first { it == com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE })
+        assertEquals(com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE, vm.state.first { it.energyView == com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE }.energyView)
+    }
+
+    @Test
     fun `a cleared profile leaves no connection summary`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)

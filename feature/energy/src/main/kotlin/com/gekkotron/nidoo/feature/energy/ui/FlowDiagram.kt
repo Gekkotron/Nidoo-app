@@ -186,7 +186,7 @@ internal fun statusAlpha(status: NodeStatus): Float = when (status) {
 }
 
 @Composable
-private fun animationsEnabled(): Boolean {
+internal fun animationsEnabled(): Boolean {
     val resolver = LocalContext.current.contentResolver
     return remember { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f }
 }
