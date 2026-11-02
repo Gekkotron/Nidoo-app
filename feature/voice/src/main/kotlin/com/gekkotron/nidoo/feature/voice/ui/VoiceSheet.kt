@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,6 +85,7 @@ fun VoiceSheet(
     onPickAction: (VoiceAction, Boolean) -> Unit = { _, _ -> },
     onPickBack: () -> Unit = {},
     onPickFilterChange: (String) -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     val current = state.collectAsStateWithLifecycle().value
     val c = NidooTheme.colors
@@ -118,6 +120,8 @@ fun VoiceSheet(
                 }
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
                 .navigationBarsPadding()
+                // The search field of the "Other" picker opens the keyboard: lift the sheet above it (edge-to-edge window).
+                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -153,6 +157,7 @@ fun VoiceSheet(
                         color = c.content,
                         textAlign = TextAlign.Center,
                     )
+                    if (current.kind == ErrorKind.DISABLED) VoiceRow(stringResource(R.string.voice_open_settings), onOpenSettings)
                     VoiceRow(stringResource(R.string.voice_cancel), onCancel)
                 }
             }
@@ -166,4 +171,5 @@ private fun errorRes(kind: ErrorKind): Int = when (kind) {
     ErrorKind.PERMISSION -> R.string.voice_permission_denied
     ErrorKind.SILENCE -> R.string.voice_silence
     ErrorKind.UNKNOWN -> R.string.voice_unknown_error
+    ErrorKind.DISABLED -> R.string.voice_disabled
 }

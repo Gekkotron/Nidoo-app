@@ -5,6 +5,7 @@ import androidx.work.WorkManager
 import com.gekkotron.nidoo.connection.EntitySourceSession
 import com.gekkotron.nidoo.connection.HeadlessEntities
 import com.gekkotron.nidoo.connection.TransportFactory
+import com.gekkotron.nidoo.connection.VoiceWidgetSync
 import com.gekkotron.nidoo.connection.WidgetMirror
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ConnectionProfile
@@ -20,6 +21,7 @@ import com.gekkotron.nidoo.feature.widget.store.FileWidgetSnapshotStore
 import com.gekkotron.nidoo.feature.widget.store.WidgetConfigStore
 import com.gekkotron.nidoo.feature.widget.store.WidgetSnapshotStore
 import com.gekkotron.nidoo.feature.widget.ui.updateAllNidooWidgets
+import com.gekkotron.nidoo.feature.widget.voice.updateAllVoiceWidgets
 import com.gekkotron.nidoo.feature.widget.work.WidgetScheduler
 import com.gekkotron.nidoo.feature.widget.work.WorkManagerWidgetScheduler
 import com.gekkotron.nidoo.transport.ActiveTransport
@@ -115,6 +117,21 @@ object WidgetModule {
         snapshots = snapshots,
         updater = updater,
         historyEnabled = { (profiles.state.value as? ProfileState.Ready)?.profile is ConnectionProfile.Direct },
+        scope = scope,
+    )
+
+    @Provides
+    @Singleton
+    fun voiceWidgetSync(
+        @ApplicationContext context: Context,
+        preferences: AppPreferences,
+        @ApplicationScope scope: CoroutineScope,
+    ): VoiceWidgetSync = VoiceWidgetSync(
+        voiceEnabled = preferences.voiceEnabled,
+        update = {
+            updateAllNidooWidgets(context)
+            updateAllVoiceWidgets(context)
+        },
         scope = scope,
     )
 }

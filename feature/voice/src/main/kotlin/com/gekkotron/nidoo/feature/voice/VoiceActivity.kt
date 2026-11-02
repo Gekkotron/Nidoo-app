@@ -1,6 +1,7 @@
 package com.gekkotron.nidoo.feature.voice
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
@@ -15,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.gekkotron.nidoo.data.ThemePreference
@@ -39,10 +41,9 @@ class VoiceActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lifecycleScope.launch {
-            if (!awaitVoiceEnabled(viewModel.preferences.voiceEnabled)) {
-                finish()
-                return@launch
-            }
+            // Off: say so (with a way to Settings) rather than closing on a tap that seemed to do nothing.
+            val enabled = awaitVoiceEnabled(viewModel.preferences.voiceEnabled)
+            if (!enabled) viewModel.showDisabled()
             // The user's theme, not the system one, so the sheet matches the app it opens over.
             val theme = viewModel.preferences.theme.filterNotNull().first().toChoice()
             setContent {
@@ -73,16 +74,23 @@ class VoiceActivity : ComponentActivity() {
                             onPickAction = viewModel::onPickAction,
                             onPickBack = viewModel::onPickBack,
                             onPickFilterChange = viewModel::onPickFilterChange,
+                            onOpenSettings = ::openSettings,
                         )
                     }
                 }
             }
+            if (!enabled) return@launch
             if (ContextCompat.checkSelfPermission(this@VoiceActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 startVoice()
             } else {
                 permission.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
+    }
+
+    private fun openSettings() {
+        startActivity(Intent(Intent.ACTION_VIEW, SETTINGS_LINK.toUri()).setPackage(packageName))
+        finish()
     }
 
     private fun startVoice() {
@@ -94,6 +102,9 @@ class VoiceActivity : ComponentActivity() {
         super.onDestroy()
     }
 }
+
+/** Parsed by `:app` (same link the widget's settings action uses). */
+private const val SETTINGS_LINK = "nidoo://settings"
 
 private fun ThemePreference.toChoice(): ThemeChoice = when (this) {
     ThemePreference.SYSTEM -> ThemeChoice.SYSTEM

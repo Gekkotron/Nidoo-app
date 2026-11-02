@@ -37,4 +37,6 @@
     <string name="widget_voice">Say a command</string>
     <string name="voice_widget_name">Nidoo voice</string>
     <string name="voice_widget_description">One tap to say a command to your home.</string>
+    <string name="widget_voice_off">Voice off</string>
+    <string name="widget_voice_off_description">Voice assistant off. Open Settings to turn it on.</string>
 </resources>

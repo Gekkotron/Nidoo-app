@@ -51,7 +51,8 @@ fun autoCloseDelayMs(state: VoiceSessionState): Long = when {
     else -> 0L
 }
 
-enum class ErrorKind { MQTT_DOWN, SPEECH, PERMISSION, SILENCE, UNKNOWN }
+/** [DISABLED]: the opt-in voice assistant is off (e.g. a widget drawn before it was turned off). */
+enum class ErrorKind { MQTT_DOWN, SPEECH, PERMISSION, SILENCE, UNKNOWN, DISABLED }
 
 data class ExecutionResult(
     val intent: VoiceIntent,
@@ -131,11 +132,11 @@ class VoiceSession(
 
     fun pickOther() {
         if (_state.value !is VoiceSessionState.NotUnderstood) return
-        val heard = lastTranscript.orEmpty()
+        // The whole sentence never substring-matches a device name, so seeding the search with it showed "no results".
         _state.value = VoiceSessionState.Picking(
             step = PickStep.Device,
-            heardText = heard,
-            filter = heard,
+            heardText = lastTranscript.orEmpty(),
+            filter = "",
             suggestions = notUnderstoodSuggestions,
         )
     }

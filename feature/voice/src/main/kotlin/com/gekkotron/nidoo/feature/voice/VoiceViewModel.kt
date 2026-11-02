@@ -87,6 +87,9 @@ class VoiceViewModel @Inject constructor(
         s.pickSuggestion(suggestion, learnPhrase = s.lastTranscript.orEmpty())
     }
 
+    /** Shown instead of listening when the voice toggle is off; no session is started. */
+    fun showDisabled() { _state.value = VoiceSessionState.Error(ErrorKind.DISABLED) }
+
     fun onPickOther() { session?.pickOther() }
 
     fun onPickDevice(uniqueId: String) { session?.pickDevice(uniqueId) }

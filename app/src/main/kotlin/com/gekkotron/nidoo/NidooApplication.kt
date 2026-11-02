@@ -12,6 +12,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.gekkotron.nidoo.connection.HistoryWiring
 import com.gekkotron.nidoo.connection.PushWiring
+import com.gekkotron.nidoo.connection.VoiceWidgetSync
 import com.gekkotron.nidoo.connection.WidgetMirror
 import com.gekkotron.nidoo.shared.NidooShared
 import com.gekkotron.nidoo.feature.controls.ControlsComponent
@@ -65,6 +66,9 @@ class NidooApplication : Application(), PushComponentProvider, WidgetComponentPr
     lateinit var widgetMirror: WidgetMirror
 
     @Inject
+    lateinit var voiceWidgetSync: VoiceWidgetSync
+
+    @Inject
     lateinit var controls: ControlsComponent
 
     override fun pushComponent(): PushComponent = component
@@ -92,6 +96,7 @@ class NidooApplication : Application(), PushComponentProvider, WidgetComponentPr
         pushWiring.start()
         historyWiring.start()
         widgetMirror.start()
+        voiceWidgetSync.start()
         presenceGeofenceManager.start()
         // Connected only in the foreground; ActiveTransport closes 30 s after onStop (spec §3.3).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
