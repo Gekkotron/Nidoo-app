@@ -150,15 +150,20 @@ private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpen
     val locale = LocalConfiguration.current.locales[0]
     val points = remember(history.points) { history.points.orEmpty().map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val time = remember(history.range, locale) { timeFormat(history.range, locale) }
+    val value = { v: Double -> listOfNotNull(String.format(locale, "%.1f", v), history.unit).joinToString(" ") }
+    // As on the hub: the day-spanning ranges are buckets, so their min/max spread shades a band.
+    val band = (history.range == WidgetRange.D7 || history.range == WidgetRange.D30) && points.any { it.min < it.max }
+    val bandLine = stringResource(R.string.widget_history_band)
     NidooCard(modifier = modifier.fillMaxWidth().testTag("history-${history.entityId}"), onClick = { onOpenHistory(history.entityId) }) {
         Text(history.title, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         HistoryLineChart(
             points = points,
             color = NidooTheme.colors.water,
-            formatValue = { v -> listOfNotNull(String.format(locale, "%.1f", v), history.unit).joinToString(" ") },
+            formatValue = value,
             formatTime = time,
             contentDescription = history.title,
             modifier = Modifier.padding(top = 8.dp),
+            formatBand = if (band) { lo, hi -> bandLine.format(locale, value(lo), value(hi)) } else null,
         )
     }
 }

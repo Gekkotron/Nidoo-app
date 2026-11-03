@@ -196,6 +196,34 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `1 h and 6 h always show power, like 24 h`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("plug_power"))
+        backgroundScope.launch { vm.state.collect {} }
+        listOf(HistoryRange.H1, HistoryRange.H6).forEach { short ->
+            vm.selectRange(HistoryRange.D7)
+            vm.selectMode(ChartMode.DAILY)
+            vm.selectRange(short)
+            val ui = vm.state.first { it.range == short && it.content is ChartContent.Line }
+            assertEquals(ChartMode.POWER, ui.mode)
+            assertEquals("series plug_power ${short.query}", history.calls.last())
+        }
+    }
+
+    @Test
+    fun `a kWh meter shows its index line on 1 h and 6 h, not daily bars`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("plug_energy"))
+        backgroundScope.launch { vm.state.collect {} }
+        listOf(HistoryRange.H1, HistoryRange.H6).forEach { short ->
+            vm.selectRange(short)
+            val ui = vm.state.first { it.range == short && it.content is ChartContent.Line }
+            assertEquals(ChartMode.POWER, ui.mode)
+            assertEquals("series plug_energy ${short.query}", history.calls.last())
+        }
+    }
+
+    @Test
     fun `a late answer for an older range is dropped`() = runTest(dispatcher) {
         history.gate = CompletableDeferred()
         val vm = vm()

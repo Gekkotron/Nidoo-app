@@ -14,4 +14,10 @@ class HistoryModelsTest {
         assertNull(EnergyScale.of("°C"))
         assertNull(EnergyScale.of(null))
     }
+
+    @Test
+    fun `ranges use the hub's wire names, and only the day-spanning ones are buckets`() {
+        assertEquals(listOf("1h", "6h", "24h", "7d", "30d", "1y"), HistoryRange.entries.map { it.query })
+        assertEquals(listOf(HistoryRange.D7, HistoryRange.D30, HistoryRange.Y1), HistoryRange.entries.filter { it.bucketed })
+    }
 }

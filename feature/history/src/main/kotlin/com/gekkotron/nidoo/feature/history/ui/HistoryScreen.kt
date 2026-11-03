@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +41,7 @@ import com.gekkotron.nidoo.designsystem.charts.ChartBar
 import com.gekkotron.nidoo.designsystem.charts.ChartPoint
 import com.gekkotron.nidoo.designsystem.charts.ChartSkeleton
 import com.gekkotron.nidoo.designsystem.charts.DailyBarsChart
+import com.gekkotron.nidoo.designsystem.charts.HistoryBandKey
 import com.gekkotron.nidoo.designsystem.charts.HistoryLineChart
 import com.gekkotron.nidoo.feature.history.HistoryTarget
 import com.gekkotron.nidoo.feature.history.R
@@ -109,7 +111,7 @@ fun HistoryScreen(
         ) {
             Header(state, locale)
             RangeChips(state.range, onRange)
-            if (state.toggle && state.range != HistoryRange.H24) ModeToggle(state.mode, onMode)
+            if (state.toggle && state.range.bucketed) ModeToggle(state.mode, onMode)
             Body(state, onRetry, zone, locale)
         }
     }
@@ -126,7 +128,8 @@ private fun Header(state: HistoryUi, locale: Locale) {
 
 @Composable
 private fun RangeChips(selected: HistoryRange, onRange: (HistoryRange) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Six chips outgrow a narrow phone (or a large font): the row scrolls rather than wraps.
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         HistoryRange.entries.forEach { range ->
             FilterChip(
                 selected = range == selected,
@@ -203,13 +206,19 @@ private fun LineBody(state: HistoryUi, line: ChartContent.Line, zone: ZoneId, lo
         R.string.history_cd_line, title, stringResource(rangeDescription(state.range)),
         withUnit(line.min, unit, locale), withUnit(line.max, unit, locale),
     )
+    val color = if (state.energy) NidooTheme.colors.solar else NidooTheme.colors.water
+    // As on the hub: the day-spanning ranges are buckets, so their min/max spread is a band; shorter ones are raw samples.
+    val band = state.range.bucketed && points.any { it.min < it.max }
+    val bandLine = stringResource(R.string.history_band)
     HistoryLineChart(
         points = points,
-        color = if (state.energy) NidooTheme.colors.solar else NidooTheme.colors.water,
+        color = color,
         formatValue = { withUnit(it, unit, locale) },
         formatTime = formatTime,
         contentDescription = description,
+        formatBand = if (band) { lo, hi -> bandLine.format(locale, withUnit(lo, unit, locale), withUnit(hi, unit, locale)) } else null,
     )
+    if (band) HistoryBandKey(color, stringResource(R.string.history_key_average), stringResource(R.string.history_key_band))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
         Stat(R.string.history_min, withUnit(line.min, unit, locale))
         Stat(R.string.history_avg, withUnit(line.avg, unit, locale))
@@ -260,6 +269,8 @@ private fun BarsBody(state: HistoryUi, bars: ChartContent.Bars, zone: ZoneId, lo
 }
 
 private fun rangeLabel(range: HistoryRange) = when (range) {
+    HistoryRange.H1 -> R.string.history_range_1h
+    HistoryRange.H6 -> R.string.history_range_6h
     HistoryRange.H24 -> R.string.history_range_24h
     HistoryRange.D7 -> R.string.history_range_7d
     HistoryRange.D30 -> R.string.history_range_30d
@@ -267,16 +278,18 @@ private fun rangeLabel(range: HistoryRange) = when (range) {
 }
 
 private fun rangeDescription(range: HistoryRange) = when (range) {
+    HistoryRange.H1 -> R.string.history_cd_range_1h
+    HistoryRange.H6 -> R.string.history_cd_range_6h
     HistoryRange.H24 -> R.string.history_cd_range_24h
     HistoryRange.D7 -> R.string.history_cd_range_7d
     HistoryRange.D30 -> R.string.history_cd_range_30d
     HistoryRange.Y1 -> R.string.history_cd_range_1y
 }
 
-/** 24 h → `HH:mm`; 7 d → `EEE HH:mm`; 30 d and days → `d MMM`; 1 y → `MMM yy`. */
+/** 1 h, 6 h, 24 h → `HH:mm`; 7 d → `EEE HH:mm`; 30 d and days → `d MMM`; 1 y → `MMM yy`. */
 private fun timeFormatter(range: HistoryRange, zone: ZoneId, locale: Locale): (Long) -> String {
     val pattern = when (range) {
-        HistoryRange.H24 -> "HH:mm"
+        HistoryRange.H1, HistoryRange.H6, HistoryRange.H24 -> "HH:mm"
         HistoryRange.D7 -> "EEE HH:mm"
         HistoryRange.D30 -> "d MMM"
         HistoryRange.Y1 -> "MMM yy"
