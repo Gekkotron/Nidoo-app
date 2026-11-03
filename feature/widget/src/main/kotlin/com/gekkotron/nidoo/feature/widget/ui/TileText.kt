@@ -6,6 +6,10 @@ import com.gekkotron.nidoo.feature.widget.R
 import com.gekkotron.nidoo.feature.widget.model.TileValue
 import com.gekkotron.nidoo.model.CoverState
 import java.text.NumberFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /** [TileValue] → the tile's state line. Same number rules as Home's `CardFormatter`: one decimal, locale separators. */
@@ -20,6 +24,14 @@ object TileText {
         is TileValue.Cover -> cover(context, value)
         is TileValue.Climate -> (value.target ?: value.current)?.let { number(it, locale) + "°" } ?: value.mode ?: "—"
         is TileValue.Alarm -> context.getString(alarmLabel(value.state))
+    }
+
+    /** When a stale value was last live: the time if it was today, else the day ("3 Nov"). */
+    fun since(updatedAt: Long, now: Long, locale: Locale, zone: ZoneId = ZoneId.systemDefault()): String {
+        val at = Instant.ofEpochMilli(updatedAt).atZone(zone)
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val format = if (at.toLocalDate() == today) DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) else DateTimeFormatter.ofPattern("d MMM")
+        return at.format(format.withLocale(locale))
     }
 
     fun number(value: Double, locale: Locale): String = NumberFormat.getNumberInstance(locale).apply {

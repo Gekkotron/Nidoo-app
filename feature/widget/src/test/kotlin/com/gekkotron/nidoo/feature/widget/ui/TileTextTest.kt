@@ -10,6 +10,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
@@ -21,6 +23,14 @@ class TileTextTest {
 
     @Test
     fun french_decimal_comma() = assertEquals("21,4 °C", TileText.of(context, TileValue.Measure(21.44, "°C"), Locale.FRANCE))
+
+    private fun at(day: Int, hour: Int, minute: Int) = LocalDateTime.of(2026, 11, day, hour, minute).toInstant(ZoneOffset.UTC).toEpochMilli()
+
+    @Test
+    fun since_today_is_the_time() = assertEquals("14:32", TileText.since(at(3, 14, 32), at(3, 18, 0), Locale.FRANCE, ZoneOffset.UTC))
+
+    @Test
+    fun since_an_earlier_day_is_the_date() = assertEquals("1 Nov", TileText.since(at(1, 14, 32), at(3, 18, 0), Locale.UK, ZoneOffset.UTC))
 
     @Test
     fun none_is_dash() = assertEquals("—", TileText.of(context, TileValue.None, Locale.US))

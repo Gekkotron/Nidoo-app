@@ -232,7 +232,7 @@ private fun Grid(state: WidgetUiState, actions: WidgetActions, grid: TileGrid) {
             ) {
                 row.forEachIndexed { i, tile ->
                     if (i > 0) Spacer(GlanceModifier.width(GAP))
-                    Tile(tile, state, actions, style, modifier = GlanceModifier.defaultWeight().fillMaxHeight())
+                    Tile(tile, state, actions, style, showTime = grid.singleRow, modifier = GlanceModifier.defaultWeight().fillMaxHeight())
                 }
                 // Keep a short last row the width of a full tile, not stretched across the grid.
                 repeat(grid.columns - row.size) {
@@ -245,7 +245,8 @@ private fun Grid(state: WidgetUiState, actions: WidgetActions, grid: TileGrid) {
 }
 
 @Composable
-private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActions, style: TileStyle, modifier: GlanceModifier) {
+/** [showTime]: there is no footer (one row), so a fresh tile carries the widget's last refresh time itself. */
+private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActions, style: TileStyle, showTime: Boolean, modifier: GlanceModifier) {
     val context = LocalContext.current
     val status = tile?.effectiveStatus(state.now)
     val dim = tile == null || tile.isStale(state.now) || !tile.available
@@ -254,7 +255,14 @@ private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActio
         tile == null -> "—"
         status == TileStatus.REMOVED -> context.getString(R.string.widget_removed)
         status == TileStatus.PENDING -> "…"
-        else -> TileText.of(context, tile.value, context.resources.configuration.locales[0])
+        else -> {
+            val locale = context.resources.configuration.locales[0]
+            val value = TileText.of(context, tile.value, locale)
+            // A stale value says when it was last live, so a cached tile is not read as the current state.
+            val at = if (tile.isStale(state.now)) tile.updatedAt else state.lastFresh?.takeIf { showTime }
+            val since = at?.let { TileText.since(it, state.now, locale) }
+            since?.let { "$value · $it" } ?: value
+        }
     }
     val tap = tile?.let { actions.tap(TileActions.forTap(it, state.armMode)) } ?: actions.openApp()
     val valueColor = when {

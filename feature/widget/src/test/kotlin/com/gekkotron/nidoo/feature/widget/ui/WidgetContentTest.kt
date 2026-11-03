@@ -65,6 +65,15 @@ class WidgetContentTest {
     }
 
     @Test
+    fun single_row_tiles_carry_the_refresh_time() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(180.dp, 60.dp))
+        provideComposable { WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true))), noop) }
+        val since = TileText.since(now - 60_000, now, context.resources.configuration.locales[0])
+        onNode(hasText("On · $since")).assertExists()
+    }
+
+    @Test
     fun cover_buttons_show_on_a_wide_single_tile() = runGlanceAppWidgetUnitTest {
         setContext(context)
         setAppWidgetSize(DpSize(320.dp, 60.dp))
@@ -125,6 +134,19 @@ class WidgetContentTest {
         }
         onNode(hasText("Removed")).assertExists()
         onNode(hasText("Old")).assertExists()
+    }
+
+    @Test
+    fun stale_tile_says_when_it_was_last_updated() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(250.dp, 250.dp))
+        val old = now - TileSnapshot.STALE_MS - 1
+        provideComposable {
+            WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true)), tile("b", "Lamp", Kind.SWITCH, TileValue.OnOff(false)) { it.copy(updatedAt = old) }), noop)
+        }
+        val since = TileText.since(old, now, context.resources.configuration.locales[0])
+        onNode(hasText("Off · $since")).assertExists()
+        onNode(hasText("On")).assertExists()
     }
 
     @Test

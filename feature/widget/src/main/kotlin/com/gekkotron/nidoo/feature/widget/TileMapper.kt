@@ -15,14 +15,18 @@ import kotlin.math.roundToInt
 object TileMapper {
     /**
      * [previous] carries memory across refreshes (last climate mode, last live time). [complete] = discovery settled, so a
-     * missing entity really is gone. Returns null for an id never seen at all.
+     * missing entity may be gone: the cached tile is kept until it has been missing from [TileSnapshot.REMOVED_AFTER_MISSES]
+     * settled refreshes in a row, then shown as removed. Returns null for an id never seen at all.
      */
     fun map(entity: Entity?, state: EntityState?, previous: TileSnapshot?, historyEnabled: Boolean, complete: Boolean): TileSnapshot? {
         if (entity == null) {
-            return when {
-                previous == null -> null
-                complete -> previous.copy(status = TileStatus.REMOVED, pendingSince = null)
-                else -> previous
+            if (previous == null) return null
+            if (!complete || previous.status == TileStatus.REMOVED) return previous
+            val misses = previous.missingCount + 1
+            return if (misses >= TileSnapshot.REMOVED_AFTER_MISSES) {
+                previous.copy(status = TileStatus.REMOVED, pendingSince = null, missingCount = misses)
+            } else {
+                previous.copy(missingCount = misses)
             }
         }
         val liveAt = state?.lastUpdate?.takeIf { !state.stale }

@@ -64,6 +64,11 @@ data class TileSnapshot(
     val pendingSince: Long? = null,
     /** Epoch ms of the last live (non-cached) value; null when only cached values were ever seen. */
     val updatedAt: Long? = null,
+    /**
+     * Settled refreshes in a row that did not list this entity. The tile keeps its cached look meanwhile and only turns
+     * "Removed" at [REMOVED_AFTER_MISSES]: one partial replay (slow gateway, broker restarting) must not flag it.
+     */
+    val missingCount: Int = 0,
 ) {
     /** A pending tile whose worker died is shown as failed (spec §4). */
     fun effectiveStatus(now: Long): TileStatus =
@@ -74,6 +79,9 @@ data class TileSnapshot(
     companion object {
         const val PENDING_LIMIT_MS = 30_000L
         const val STALE_MS = 30 * 60_000L
+
+        /** About 45 minutes at the 15-minute refresh period. */
+        const val REMOVED_AFTER_MISSES = 3
     }
 }
 
