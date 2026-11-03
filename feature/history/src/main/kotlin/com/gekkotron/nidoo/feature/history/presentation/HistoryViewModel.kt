@@ -84,14 +84,14 @@ class HistoryViewModel @Inject constructor(
         base.copy(range = s.range, mode = effectiveMode(s, base.energy && !base.toggle), content = if (base.missing || s.target == null) ChartContent.Loading else chart)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUi())
 
-    /** A kWh meter (no power line) shows its daily bars on 7 d / 30 d whatever was picked. */
+    /** A kWh meter (no power line) shows its daily bars on the day-spanning ranges whatever was picked. */
     private fun effectiveMode(s: Selection, counter: Boolean) =
-        if (counter && s.range != HistoryRange.H24) ChartMode.DAILY else s.mode
+        if (counter && s.range.bucketed) ChartMode.DAILY else s.mode
 
     fun bind(target: HistoryTarget) = selection.update { if (it.target == target) it else it.copy(target = target, attempt = it.attempt + 1) }
 
     fun selectRange(range: HistoryRange) = selection.update {
-        it.copy(range = range, mode = if (range == HistoryRange.H24) ChartMode.POWER else it.mode)
+        it.copy(range = range, mode = if (range.bucketed) it.mode else ChartMode.POWER)
     }
 
     fun selectMode(mode: ChartMode) = selection.update { it.copy(mode = mode) }
@@ -104,7 +104,7 @@ class HistoryViewModel @Inject constructor(
             HistoryRange.Y1 -> 365
             else -> 30
         }
-        val daily = s.mode == ChartMode.DAILY && s.range != HistoryRange.H24
+        val daily = s.mode == ChartMode.DAILY && s.range.bucketed
         return when (val target = s.target) {
             null -> ChartContent.Loading
             HistoryTarget.House -> if (daily) bars(energy.houseDaily(days)) else line(energy.houseSeries(s.range))
@@ -114,7 +114,7 @@ class HistoryViewModel @Inject constructor(
                 val ref = HistoryRefs.of(entity) ?: return ChartContent.Loading
                 val scale = EnergyScale.of(entity.unit)
                 val counter = scale?.kind == EnergyKind.COUNTER
-                if ((daily || counter && s.range != HistoryRange.H24) && scale != null) {
+                if ((daily || counter && s.range.bucketed) && scale != null) {
                     val meter = if (scale.kind == EnergyKind.POWER) meterOf(target.id) else null
                     if (meter != null) bars(history.daily(meter.first, days, meter.second)) else bars(history.daily(ref, days, scale))
                 } else {

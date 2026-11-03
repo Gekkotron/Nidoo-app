@@ -17,6 +17,8 @@ class DemoHistoryClient(private val clock: () -> Long = System::currentTimeMilli
 
     override suspend fun series(ref: HistoryRef, range: HistoryRange): HistoryResult<Series> {
         val window = when (range) {
+            HistoryRange.H1 -> 3_600L
+            HistoryRange.H6 -> 6 * 3_600L
             HistoryRange.H24 -> 86_400L
             HistoryRange.D7 -> 7 * 86_400L
             HistoryRange.D30 -> 30 * 86_400L

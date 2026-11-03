@@ -3,12 +3,19 @@ package com.gekkotron.nidoo.history
 /** The hub's entity id (its `unique_id`), as sent to the `/api/v1/history/...` routes under `entity=`. */
 data class HistoryRef(val id: String)
 
-/** A window of history; [ttlMillis] is how long a cached answer stays fresh. */
-enum class HistoryRange(val query: String, val ttlMillis: Long) {
-    H24("24h", 60_000),
-    D7("7d", 600_000),
-    D30("30d", 600_000),
-    Y1("1y", 600_000),
+/**
+ * A window of history, with the hub's wire names; [ttlMillis] is how long a cached answer stays fresh.
+ *
+ * [bucketed] ranges span days: each point is a mean/min/max bucket (so the chart draws the min/max band),
+ * and a kWh meter can show daily bars. The shorter ones are close to raw samples.
+ */
+enum class HistoryRange(val query: String, val ttlMillis: Long, val bucketed: Boolean) {
+    H1("1h", 60_000, bucketed = false),
+    H6("6h", 60_000, bucketed = false),
+    H24("24h", 60_000, bucketed = false),
+    D7("7d", 600_000, bucketed = true),
+    D30("30d", 600_000, bucketed = true),
+    Y1("1y", 600_000, bucketed = true),
 }
 
 enum class EnergyKind(val query: String) {
