@@ -56,6 +56,13 @@ class AlertLinkTest {
 
     @Test
     fun `a settings link with a page opens the page over the list, so back returns to the list`() {
-        assertEquals(listOf<NavKey>(SettingsKey, SettingsPageKey("CONNECTION")), linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)))
+        assertEquals(listOf<NavKey>(SettingsKey, SettingsPageKey(SettingsPage.CONNECTION)), linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)))
+    }
+
+    @Test
+    fun `a settings page key survives the back stack's save and restore`() {
+        val key = SettingsPageKey(SettingsPage.VOICE)
+        val json = kotlinx.serialization.json.Json.encodeToString(SettingsPageKey.serializer(), key)
+        assertEquals(key, kotlinx.serialization.json.Json.decodeFromString(SettingsPageKey.serializer(), json))
     }
 }

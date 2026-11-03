@@ -71,9 +71,9 @@ data object AutomationsKey : NavKey
 @Serializable
 data object SettingsKey : NavKey
 
-/** A Settings sub-page; [page] is a `SettingsPage` name (settings sub-pages spec). */
+/** A Settings sub-page (settings sub-pages spec). */
 @Serializable
-data class SettingsPageKey(val page: String) : NavKey
+data class SettingsPageKey(val page: SettingsPage) : NavKey
 
 @Serializable
 data object RoomOrderKey : NavKey
@@ -112,7 +112,7 @@ internal fun linkAction(root: NavKey, pending: AppLink?): AlertLinkAction = when
 internal fun linkDestinations(link: AppLink): List<NavKey> = when (link) {
     is AppLink.Alert -> listOf(AlertDetailKey(link.id))
     is AppLink.History -> listOf(HistoryKey(HistoryTarget.Entity(link.entityId).encode()))
-    is AppLink.Settings -> listOfNotNull(SettingsKey, link.page?.let { SettingsPageKey(it.name) })
+    is AppLink.Settings -> listOfNotNull(SettingsKey, link.page?.let(::SettingsPageKey))
 }
 
 /** The main tabs share the bar's bottom inset; every other screen has no bar, so it keeps the full insets. */
@@ -226,14 +226,14 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 }
                 entry<SettingsKey> {
                     SettingsRoute(
-                        onOpenPage = { push(backStack, SettingsPageKey(it.name)) },
+                        onOpenPage = { push(backStack, SettingsPageKey(it)) },
                         onOpenRooms = { push(backStack, RoomOrderKey) },
                         onBack = { pop(backStack, SettingsKey) },
                     )
                 }
                 entry<SettingsPageKey> { key ->
                     SettingsPageRoute(
-                        page = SettingsPage.valueOf(key.page),
+                        page = key.page,
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         onSetUpAgain = viewModel::setUpAgain,
