@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation3.runtime.NavKey
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
@@ -45,9 +46,9 @@ class MainTabsTest {
     @Test
     fun `a settings page pushes over Settings and pops back to it`() {
         val stack = mutableListOf<NavKey>(HomeKey, SettingsKey)
-        push(stack, SettingsPageKey("VOICE"))
-        assertEquals(listOf<NavKey>(HomeKey, SettingsKey, SettingsPageKey("VOICE")), stack)
-        pop(stack, SettingsPageKey("VOICE"))
+        push(stack, SettingsPageKey(SettingsPage.VOICE))
+        assertEquals(listOf<NavKey>(HomeKey, SettingsKey, SettingsPageKey(SettingsPage.VOICE)), stack)
+        pop(stack, SettingsPageKey(SettingsPage.VOICE))
         assertEquals(listOf<NavKey>(HomeKey, SettingsKey), stack)
     }
 

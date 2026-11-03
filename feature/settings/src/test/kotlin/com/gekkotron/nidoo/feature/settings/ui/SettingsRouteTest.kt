@@ -83,6 +83,34 @@ class SettingsRouteTest {
     }
 
     @Test
+    fun `other pages leave the push status alone on resume`() {
+        val push = FakePushStatusSource()
+        val vm = SettingsViewModel(
+            ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
+            AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
+            push,
+            com.gekkotron.nidoo.feature.settings.FakeEntitySource(),
+            com.gekkotron.nidoo.feature.voice.SpeechAvailability.Status.Ready,
+        )
+        lateinit var registry: LifecycleRegistry
+        val owner = object : LifecycleOwner {
+            override val lifecycle: Lifecycle get() = registry
+        }
+        registry = LifecycleRegistry.createUnsafe(owner)
+        registry.currentState = Lifecycle.State.RESUMED
+        compose.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                    SettingsPageRoute(SettingsPage.APPEARANCE, Route.AUTO, {}, {}, {}, {}, viewModel = vm, presenceSection = {})
+                }
+            }
+        }
+        compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
+        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
+        compose.runOnIdle { assertEquals(0, push.refreshes) }
+    }
+
+    @Test
     fun `the registered age moves on at resume without a new status emission`() {
         val at = Instant.parse("2026-10-07T10:00:00Z")
         var clock = at.plusSeconds(120)

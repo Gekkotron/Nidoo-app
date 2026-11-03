@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Copy of app/src/main/res/drawable/ic_launcher_background.xml (the app's resources are out of reach from this module).
+     Change both together. -->
 <!-- Night sky behind the house: moon and a few stars over the nest's branch.
      Kept on the background layer so launchers give it parallax. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"

@@ -34,7 +34,6 @@
     <string name="rooms_assign">Attribuer les pièces</string>
     <string name="licences_title">Licences open source</string>
     <string name="licences_close">Fermer</string>
-    <string name="settings_push">Alertes push</string>
     <string name="settings_push_registered">Enregistré · %1$s</string>
     <string name="settings_push_just_now">à l\'instant</string>
     <string name="settings_push_waiting">En attente de connexion</string>
@@ -111,6 +110,6 @@
     <string name="settings_push_short_failed">Échec</string>
     <string name="settings_push_short_off">Désactivées</string>
     <string name="settings_link_online">En ligne</string>
-    <string name="settings_link_connecting">Connexion…</string>
+    <string name="settings_link_connecting">Connexion</string>
     <string name="settings_link_offline">Hors ligne</string>
 </resources>

@@ -80,21 +80,24 @@ fun SettingsPageRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val version = remember { appVersion(context) }
-    // The "N min ago" text must move on without a new status emission, so the clock is state here.
+    // The "N min ago" text must move on without a new status emission, so the clock is state here. Only the
+    // Notifications page shows the push status, so only it ticks and re-reads it (settings sub-pages spec).
     var now by remember { mutableStateOf(clock()) }
-    val owner = LocalLifecycleOwner.current
-    LaunchedEffect(owner) {
-        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            while (true) {
-                delay(60_000)
-                now = clock()
+    if (page == SettingsPage.NOTIFICATIONS) {
+        val owner = LocalLifecycleOwner.current
+        LaunchedEffect(owner) {
+            owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(60_000)
+                    now = clock()
+                }
             }
         }
-    }
-    LifecycleResumeEffect(viewModel) {
-        now = clock()
-        viewModel.refreshPush()
-        onPauseOrDispose {}
+        LifecycleResumeEffect(viewModel) {
+            now = clock()
+            viewModel.refreshPush()
+            onPauseOrDispose {}
+        }
     }
     SettingsPageScreen(
         page, state, version, route, now, onBack,
