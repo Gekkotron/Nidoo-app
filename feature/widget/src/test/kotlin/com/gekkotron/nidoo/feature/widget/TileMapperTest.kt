@@ -76,9 +76,31 @@ class TileMapperTest {
     }
 
     @Test
-    fun missing_entity_after_complete_discovery_is_removed() {
-        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)
-        assertEquals(TileStatus.REMOVED, TileMapper.map(null, null, prev, false, complete = true)!!.status)
+    fun missing_entity_is_removed_only_after_repeated_complete_discoveries() {
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)!!
+        val once = TileMapper.map(null, null, prev, false, complete = true)!!
+        assertEquals(prev.copy(missingCount = 1), once)
+        val twice = TileMapper.map(null, null, once, false, complete = true)!!
+        assertEquals(TileStatus.OK, twice.status)
+        val thrice = TileMapper.map(null, null, twice, false, complete = true)!!
+        assertEquals(TileStatus.REMOVED, thrice.status)
+        assertEquals(thrice, TileMapper.map(null, null, thrice, false, complete = true))
+    }
+
+    @Test
+    fun seeing_the_entity_again_resets_the_miss_count() {
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)!!
+        val missed = TileMapper.map(null, null, TileMapper.map(null, null, prev, false, complete = true), false, complete = true)!!
+        val back = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), missed, false, true)!!
+        assertEquals(0, back.missingCount)
+        assertEquals(TileStatus.OK, TileMapper.map(null, null, back, false, complete = true)!!.status)
+    }
+
+    @Test
+    fun incomplete_discovery_does_not_count_a_miss() {
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)!!
+        val once = TileMapper.map(null, null, prev, false, complete = true)!!
+        assertEquals(once, TileMapper.map(null, null, once, false, complete = false))
     }
 
     @Test

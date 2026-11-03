@@ -50,7 +50,7 @@ Tapping a tile outside its action area opens the app on Home.
 
 - After a command the tile shows a pending "…" state. It then shows the confirmed state, or after 5 s without confirmation goes back to the previous state with a "!" marker. The marker clears on the next successful refresh.
 - Values whose `updatedAt` is older than 30 min are dimmed, and the footer time says how old they are.
-- An entity never seen shows "—". An entity missing from a complete live discovery shows "Removed", and tapping it opens reconfigure.
+- An entity never seen shows "—". An entity missing from a complete live discovery keeps its cached tile; only after 3 settled refreshes in a row without it (about 45 min) does it show "Removed", and tapping it opens reconfigure.
 
 ## 3. Architecture
 
@@ -81,7 +81,7 @@ New module **`:feature:widget`** (Glance `glance-appwidget` + `glance-material3`
 - **Headless path** (app not connected), under a process-wide `Mutex`:
   1. A private `TransportFactory` builds the transport for the profile's spec, with client id `clientIdFor(installId) + "-widget"`, and the session waits for the link (10 s budget). `Offline(REJECTED | KEY_REJECTED)` → `AuthFailed`; no link in time → `Offline`; no profile → `NotConfigured`. The Demo spec gets the in-process `DemoBroker` the same way.
   2. Build a fresh `MqttDiscoverySource(transport, scope, prefix)` with the profile's prefix; `restore(entityCache.load(key))`; set subscriptions as the foreground session does.
-  3. `refresh`: wait until every requested id has a non-cached (live) state, or 8 s, then up to 6 s more for the source to settle (live traffic, then a 2 s quiet window that each newly replayed topic restarts: about 4 s on a small house). Ids still cached are returned with their cached state and their old `updatedAt`. An id absent from discovery is `REMOVED` only when the source settled.
+  3. `refresh`: wait until every requested id has a non-cached (live) state, or 8 s, then up to 6 s more for the source to settle (live traffic, then a 2 s quiet window that each newly replayed topic restarts: about 4 s on a small house). Ids still cached are returned with their cached state and their old `updatedAt`. An id absent from discovery counts a miss only when the source settled, and is `REMOVED` after 3 misses in a row (`missingCount`, reset when it is seen again).
   4. `send`: wait for the id to be discovered, then for its live state (8 s each). Otherwise the retained state replay, which arrives after the subscription debounce, would "confirm" the old value. Then `send(command)` and wait for the `CommandTracker` result (its 5 s timeout). Confirmed means `pending` cleared **and** `lastUpdate` moved: a timeout reverts the store (keeping `lastUpdate`) before it emits the failure. Confirmed → `OK` snapshot; `CommandFailure` or `Rejected` → `FAILED` with the previous state.
   5. Save the source's journal back with `entityCache.save(key, …)`, but only if the source settled (a partial journal would shrink the app's cold-start house) and the foreground session is still not active. Close the transport in `finally` (`NonCancellable`), as `OneShotPublisher` does.
 - The `CommandTracker` 5 s timeout and the 8 s waits keep a tap well under the 10-minute WorkManager limit and the expedited-work quota.
