@@ -277,4 +277,5 @@
     <string name="widget_energy_grid_now">Grid now</string>
     <string name="widget_energy_solar_now">Solar now</string>
     <string name="widget_energy_self">Self-consumption</string>
+    <string name="widget_history_band">min %1$s · max %2$s</string>
 </resources>

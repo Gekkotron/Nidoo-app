@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import org.junit.Rule
@@ -26,6 +27,19 @@ class HistoryChartsTest {
         }
         compose.onNodeWithContentDescription("line").assertExists()
         compose.onNodeWithContentDescription("bars").assertExists()
+    }
+
+    @Test
+    fun `a banded line chart renders with its key`() {
+        val points = (0 until 30).map { ChartPoint(1_696_000_000L + it * 86_400L, 21.0 + it % 5, 18.0, 24.0) }
+        compose.setContent {
+            NidooTheme {
+                HistoryLineChart(points, Color.Red, { "%.1f".format(it) }, { "$it" }, "banded", formatBand = { lo, hi -> "min $lo · max $hi" })
+                HistoryBandKey(Color.Red, "Average", "Min–max range")
+            }
+        }
+        compose.onNodeWithContentDescription("banded").assertExists()
+        compose.onNodeWithText("Min–max range").assertExists()
     }
 
     @Test
