@@ -49,7 +49,7 @@ Tapping a tile outside its action area opens the app on Home.
 ### 2.4 Feedback and staleness
 
 - After a command the tile shows a pending "…" state. It then shows the confirmed state, or after 5 s without confirmation goes back to the previous state with a "!" marker. The marker clears on the next successful refresh.
-- Values whose `updatedAt` is older than 30 min are dimmed and carry their own last live time after the value ("Off · 14:32", or the day, "3 Nov", if it was not today); the footer time says when the widget last refreshed.
+- Values whose `updatedAt` is older than 30 min are dimmed and carry their own last live time after the value ("Off · 14:32", or the day, "3 Nov", if it was not today); the footer time says when the widget last refreshed. A one-row widget has no footer, so there every fresh tile ends its value with that refresh time instead.
 - An entity never seen shows "—". An entity missing from a complete live discovery keeps its cached tile; only after 3 settled refreshes in a row without it (about 45 min) does it show "Removed", and tapping it opens reconfigure.
 
 ## 3. Architecture
