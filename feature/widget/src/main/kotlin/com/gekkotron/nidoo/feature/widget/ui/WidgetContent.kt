@@ -254,7 +254,13 @@ private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActio
         tile == null -> "—"
         status == TileStatus.REMOVED -> context.getString(R.string.widget_removed)
         status == TileStatus.PENDING -> "…"
-        else -> TileText.of(context, tile.value, context.resources.configuration.locales[0])
+        else -> {
+            val locale = context.resources.configuration.locales[0]
+            val value = TileText.of(context, tile.value, locale)
+            // A stale value says when it was last live, so a cached tile is not read as the current state.
+            val since = tile.updatedAt?.takeIf { tile.isStale(state.now) }?.let { TileText.since(it, state.now, locale) }
+            since?.let { "$value · $it" } ?: value
+        }
     }
     val tap = tile?.let { actions.tap(TileActions.forTap(it, state.armMode)) } ?: actions.openApp()
     val valueColor = when {

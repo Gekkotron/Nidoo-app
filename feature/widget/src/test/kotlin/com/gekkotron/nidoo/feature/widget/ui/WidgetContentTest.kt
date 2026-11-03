@@ -128,6 +128,19 @@ class WidgetContentTest {
     }
 
     @Test
+    fun stale_tile_says_when_it_was_last_updated() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(250.dp, 250.dp))
+        val old = now - TileSnapshot.STALE_MS - 1
+        provideComposable {
+            WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true)), tile("b", "Lamp", Kind.SWITCH, TileValue.OnOff(false)) { it.copy(updatedAt = old) }), noop)
+        }
+        val since = TileText.since(old, now, context.resources.configuration.locales[0])
+        onNode(hasText("Off · $since")).assertExists()
+        onNode(hasText("On")).assertExists()
+    }
+
+    @Test
     fun not_configured_shows_set_up() = runGlanceAppWidgetUnitTest {
         setContext(context)
         setAppWidgetSize(DpSize(250.dp, 110.dp))
