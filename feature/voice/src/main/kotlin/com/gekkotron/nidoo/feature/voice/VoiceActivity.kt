@@ -17,15 +17,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.voice.ui.VoiceSheet
-import com.gekkotron.nidoo.voice.VoiceLang
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.Locale
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -60,20 +57,15 @@ class VoiceActivity : ComponentActivity() {
                 }
                 NidooTheme(theme) {
                     Surface(color = Color.Transparent) {
-                        val catalog = viewModel.catalog.collectAsStateWithLifecycle().value
                         VoiceSheet(
                             state = viewModel.state,
-                            onPick = viewModel::pickSuggestion,
+                            closeRequested = viewModel.closeRequested,
+                            canRepeat = viewModel.canRepeat,
+                            onChoose = viewModel::choose,
                             onConfirm = viewModel::confirm,
-                            onCode = viewModel::provideCode,
+                            onListenAgain = viewModel::listenAgain,
+                            onRepeat = viewModel::repeat,
                             onCancel = { finish() },
-                            catalog = catalog,
-                            onRepeat = viewModel::onRepeatSpoken,
-                            onPickOther = viewModel::onPickOther,
-                            onPickDevice = viewModel::onPickDevice,
-                            onPickAction = viewModel::onPickAction,
-                            onPickBack = viewModel::onPickBack,
-                            onPickFilterChange = viewModel::onPickFilterChange,
                             onOpenSettings = ::openSettings,
                         )
                     }
@@ -94,7 +86,7 @@ class VoiceActivity : ComponentActivity() {
     }
 
     private fun startVoice() {
-        if (!viewModel.started) viewModel.start(VoiceLang.fromAppLocale(Locale.getDefault().toLanguageTag()))
+        if (!viewModel.started) viewModel.start()
     }
 
     override fun onDestroy() {

@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":core:alerts"))
     implementation(project(":core:history"))
     implementation(project(":core:flows"))
+    implementation(project(":core:assist"))
     implementation(project(":core:dashboards"))
     implementation(project(":core:push"))
     implementation(libs.androidx.core.ktx)

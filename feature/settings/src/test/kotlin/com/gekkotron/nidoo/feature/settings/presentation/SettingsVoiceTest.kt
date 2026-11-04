@@ -6,10 +6,6 @@ import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.feature.settings.FakeEntitySource
 import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
-import com.gekkotron.nidoo.voice.VoiceAction
-import com.gekkotron.nidoo.voice.VoiceIntent
-import com.gekkotron.nidoo.voice.VoiceLang
-import com.gekkotron.nidoo.voice.VoiceShortcut
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,9 +55,6 @@ class SettingsVoiceTest {
         Dispatchers.resetMain()
     }
 
-    private fun shortcut(phrase: String, lang: VoiceLang, vararg ids: String) =
-        VoiceShortcut(VoiceShortcut.id(lang, phrase), phrase, lang, VoiceIntent(VoiceAction.TURN_ON, ids.toList()))
-
     private fun kotlinx.coroutines.test.TestScope.vm(source: FakeEntitySource, prefs: AppPreferences): SettingsViewModel {
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
         val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), source, SpeechAvailability.Status.Ready)
@@ -83,38 +76,5 @@ class SettingsVoiceTest {
         vm.setVoiceEnabled(true)
         assertEquals(true, prefs.voiceEnabled.first { it == true })
         assertTrue(vm.state.first { it.voice.enabled }.voice.enabled)
-    }
-
-    @Test
-    fun `a shortcut whose entity is gone is listed as broken`() = runTest(dispatcher) {
-        val source = FakeEntitySource()
-        val sc = shortcut("movie night", VoiceLang.FR, "light.gone")
-        source.shortcuts.value = mapOf(sc.id to sc)
-        val vm = vm(source, AppPreferences.create(tmp.root.resolve("prefs.json"), storage))
-        val rows = vm.state.value.voice.shortcuts
-        assertEquals(1, rows.size)
-        assertTrue(rows.single().broken)
-        assertEquals("movie night", rows.single().phrase)
-    }
-
-    @Test
-    fun `a shortcut in the other language keeps its own lang`() = runTest(dispatcher) {
-        val source = FakeEntitySource()
-        val sc = shortcut("movie night", VoiceLang.EN, "light.gone")
-        source.shortcuts.value = mapOf(sc.id to sc)
-        val vm = vm(source, AppPreferences.create(tmp.root.resolve("prefs.json"), storage))
-        val row = vm.state.value.voice.shortcuts.single()
-        assertEquals(VoiceLang.EN, row.lang)
-        assertTrue(row.label.endsWith("(1)"))
-    }
-
-    @Test
-    fun `deleteShortcut removes the row`() = runTest(dispatcher) {
-        val source = FakeEntitySource()
-        val sc = shortcut("movie night", VoiceLang.FR, "light.gone")
-        source.shortcuts.value = mapOf(sc.id to sc)
-        val vm = vm(source, AppPreferences.create(tmp.root.resolve("prefs.json"), storage))
-        vm.deleteShortcut(sc.id)
-        assertTrue(vm.state.value.voice.shortcuts.isEmpty())
     }
 }

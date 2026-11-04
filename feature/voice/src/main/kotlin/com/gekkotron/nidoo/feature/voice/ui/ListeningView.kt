@@ -40,3 +40,18 @@ internal fun ColumnScope.ListeningView(partial: String) {
         textAlign = TextAlign.Center,
     )
 }
+
+/** The heard sentence greyed out under "Envoi…" while the hub works; [heard] is null after a tap. */
+@Composable
+internal fun ColumnScope.SendingView(heard: String?) {
+    val c = NidooTheme.colors
+    Text(
+        stringResource(R.string.voice_sending),
+        style = NidooTheme.type.display.copy(fontSize = 20.sp),
+        color = c.content,
+        textAlign = TextAlign.Center,
+    )
+    if (!heard.isNullOrBlank()) {
+        Text(heard, style = NidooTheme.type.body, color = c.content.copy(alpha = 0.5f), textAlign = TextAlign.Center)
+    }
+}

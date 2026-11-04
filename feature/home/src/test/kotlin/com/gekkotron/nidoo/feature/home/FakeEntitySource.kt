@@ -20,10 +20,6 @@ class FakeEntitySource : EntitySource {
     override val entities = MutableStateFlow<Map<String, Entity>>(emptyMap())
     override val devices = MutableStateFlow<Map<String, Device>>(emptyMap())
     override val areas = MutableStateFlow<List<Area>>(emptyList())
-    override val shortcuts: kotlinx.coroutines.flow.StateFlow<Map<String, com.gekkotron.nidoo.voice.VoiceShortcut>> =
-        kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
-    override suspend fun saveShortcut(shortcut: com.gekkotron.nidoo.voice.VoiceShortcut) {}
-    override suspend fun deleteShortcut(id: String) {}
     override val commandFailures = MutableSharedFlow<CommandFailure>(extraBufferCapacity = 8)
     val stateMap = MutableStateFlow<Map<String, EntityState>>(emptyMap())
     val sent = mutableListOf<Pair<String, Command>>()

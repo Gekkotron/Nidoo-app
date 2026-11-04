@@ -16,12 +16,10 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
-import com.gekkotron.nidoo.feature.settings.presentation.ShortcutRow
 import com.gekkotron.nidoo.feature.settings.presentation.VoiceSettingsUi
 import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.TransportMode
-import com.gekkotron.nidoo.voice.VoiceLang
 import java.time.Instant
 import org.junit.Rule
 import org.junit.Test
@@ -41,13 +39,11 @@ class SettingsListScreenTest {
 
     private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "nidoo", prefix = "homeassistant", gatewayUrl = null, historyUrl = null, historyDefault = "http://192.168.1.91:8081")
 
-    private fun shortcut(id: String) = ShortcutRow(id, "phrase $id", VoiceLang.EN, "Turn on (1)", broken = false)
-
     private val full = SettingsUi(
         theme = ThemePreference.IVOIRE,
         connection = direct,
         push = PushStatus.Registered(Instant.parse("2026-11-02T10:00:00Z")),
-        voice = VoiceSettingsUi(enabled = true, shortcuts = listOf(shortcut("a"), shortcut("b"), shortcut("c"))),
+        voice = VoiceSettingsUi(enabled = true),
         link = LinkState.Connected(TransportMode.DIRECT),
         roomCount = 6,
         presenceEnabled = true,
@@ -82,9 +78,11 @@ class SettingsListScreenTest {
     @Test
     fun `the statuses follow the state`() {
         show()
-        for (text in listOf("6", "Registered", "On", "On · 3", "Ivoire", "0.12 · debug")) {
+        for (text in listOf("6", "Registered", "Ivoire", "0.12 · debug")) {
             compose.onNodeWithText(text, useUnmergedTree = true).performScrollTo().assertExists()
         }
+        // Presence and Voice are both on.
+        compose.onAllNodesWithText("On", useUnmergedTree = true).assertCountEquals(2)
     }
 
     @Test

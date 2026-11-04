@@ -13,7 +13,6 @@ import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.feature.settings.FakeEntitySource
 import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
-import com.gekkotron.nidoo.feature.voice.TtsAvailability
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.gekkotron.nidoo.push.PushStatus
 import kotlinx.coroutines.CoroutineScope
@@ -188,17 +187,5 @@ class SettingsViewModelTest {
 
         assertTrue(vm.setFrigate("  ", "", ""))
         profiles.state.first { it is ProfileState.Ready && frigateOf(profiles) == null }
-    }
-
-    @Test
-    fun `ttsAvailability flows from TtsSpeaker through to UI state`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
-        val tts = MutableStateFlow(TtsAvailability.Ready)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready, tts)
-        backgroundScope.launch { vm.state.collect {} }
-        assertEquals(TtsAvailability.Ready, vm.state.value.voice.ttsAvailability)
-        tts.value = TtsAvailability.LanguageMissing
-        assertEquals(TtsAvailability.LanguageMissing, vm.state.value.voice.ttsAvailability)
     }
 }

@@ -21,11 +21,6 @@ class FakeEntitySource : EntitySource {
     override val entities = MutableStateFlow<Map<String, Entity>>(emptyMap())
     override val devices = MutableStateFlow<Map<String, Device>>(emptyMap())
     override val areas = MutableStateFlow<List<Area>>(emptyList())
-    override val shortcuts = MutableStateFlow<Map<String, com.gekkotron.nidoo.voice.VoiceShortcut>>(emptyMap())
-    override suspend fun saveShortcut(shortcut: com.gekkotron.nidoo.voice.VoiceShortcut) {}
-    override suspend fun deleteShortcut(id: String) {
-        shortcuts.value = shortcuts.value - id
-    }
     override val commandFailures = MutableSharedFlow<CommandFailure>()
     val published = mutableListOf<List<Area>>()
     var failWrites = false

@@ -15,19 +15,12 @@ import com.gekkotron.nidoo.data.normalizeHistoryUrl
 import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.push.PushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
-import com.gekkotron.nidoo.feature.voice.TtsAvailability
-import com.gekkotron.nidoo.feature.voice.TtsSpeaker
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.source.EntitySource
-import com.gekkotron.nidoo.voice.ShortcutMatcher
-import com.gekkotron.nidoo.voice.VoiceCatalogBuilder
-import com.gekkotron.nidoo.voice.VoiceLang
-import com.gekkotron.nidoo.voice.VoiceLexicon
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -61,7 +54,6 @@ class SettingsViewModel internal constructor(
     private val push: PushStatusSource,
     private val source: EntitySource,
     availability: SpeechAvailability.Status,
-    private val ttsAvailability: StateFlow<TtsAvailability> = MutableStateFlow(TtsAvailability.Unknown),
 ) : ViewModel() {
     @Inject
     constructor(
@@ -70,27 +62,9 @@ class SettingsViewModel internal constructor(
         push: PushStatusSource,
         source: EntitySource,
         @ApplicationContext context: Context,
-        tts: TtsSpeaker,
-    ) : this(profiles, preferences, push, source, SpeechAvailability.check(context), tts.availability)
+    ) : this(profiles, preferences, push, source, SpeechAvailability.check(context))
 
-    private val shortcutRows = combine(source.shortcuts, source.entities, source.areas) { shortcuts, entities, areas ->
-        // Broken-ness is judged against one catalog; labels use each shortcut's own language.
-        val catalog = VoiceCatalogBuilder.build(VoiceLang.FR, entities.values, areas)
-        ShortcutMatcher(catalog, shortcuts.values.toList()).status().map { s ->
-            val sc = s.shortcut
-            ShortcutRow(
-                id = sc.id,
-                phrase = sc.phrase,
-                lang = sc.lang,
-                label = "${VoiceLexicon.actionLabel(sc.lang, sc.intent.action)} (${sc.intent.entityIds.size})",
-                broken = s.broken,
-            )
-        }
-    }
-
-    private val voiceUi = combine(preferences.voiceEnabled.map { it ?: false }, shortcutRows, ttsAvailability) { enabled, rows, tts ->
-        VoiceSettingsUi(enabled, availability, rows, tts)
-    }
+    private val voiceUi = preferences.voiceEnabled.map { VoiceSettingsUi(it ?: false, availability) }
 
     private val listExtras = combine(source.link, source.areas, preferences.presence) { link, areas, presence ->
         ListExtras(link, roomCount(areas), presence?.enabled == true)
@@ -109,7 +83,7 @@ class SettingsViewModel internal constructor(
             preferences.theme.value ?: ThemePreference.SYSTEM,
             ConnectionSummary.from(profiles.state.value),
             push.status.value,
-            VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability, ttsAvailability = ttsAvailability.value),
+            VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability),
             preferences.energyView.value ?: EnergyViewPreference.CLASSIC,
             source.link.value,
             roomCount(source.areas.value),
@@ -119,10 +93,6 @@ class SettingsViewModel internal constructor(
 
     fun setVoiceEnabled(enabled: Boolean) {
         viewModelScope.launch { preferences.setVoiceEnabled(enabled) }
-    }
-
-    fun deleteShortcut(id: String) {
-        viewModelScope.launch { source.deleteShortcut(id) }
     }
 
     fun setEnergyView(view: EnergyViewPreference) {

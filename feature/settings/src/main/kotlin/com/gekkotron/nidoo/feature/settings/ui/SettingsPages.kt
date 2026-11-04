@@ -75,7 +75,6 @@ fun SettingsPageScreen(
     onSaveHistoryUrl: (String) -> Boolean = { true },
     onSaveFrigate: (url: String, user: String, password: String) -> Boolean = { _, _, _ -> true },
     onVoiceEnabled: (Boolean) -> Unit = {},
-    onDeleteShortcut: (String) -> Unit = {},
     onOpenLicences: () -> Unit = {},
     presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = {},
 ) {
@@ -97,7 +96,7 @@ fun SettingsPageScreen(
                     val scope = rememberCoroutineScope()
                     presenceSection { msg -> scope.launch { snackbar.showSnackbar(msg) } }
                 }
-                SettingsPage.VOICE -> VoiceBody(state, snackbar, onVoiceEnabled, onDeleteShortcut)
+                SettingsPage.VOICE -> VoiceBody(state, snackbar, onVoiceEnabled)
                 SettingsPage.CONNECTION -> ConnectionBody(state, route, onRouteChange, onSetUpAgain, onSaveHistoryUrl, onSaveFrigate)
                 SettingsPage.ABOUT -> AboutBody(version, onOpenLicences)
             }
@@ -121,7 +120,7 @@ private fun AppearanceBody(state: SettingsUi, onTheme: (ThemePreference) -> Unit
 
 /** The voice toggle asks for the microphone first; a refusal turns voice off and says why. */
 @Composable
-private fun VoiceBody(state: SettingsUi, snackbar: SnackbarHostState, onVoiceEnabled: (Boolean) -> Unit, onDeleteShortcut: (String) -> Unit) {
+private fun VoiceBody(state: SettingsUi, snackbar: SnackbarHostState, onVoiceEnabled: (Boolean) -> Unit) {
     val context = LocalContext.current
     val deniedMessage = stringResource(R.string.voice_permission_denied_snackbar)
     var micDenied by remember { mutableStateOf(false) }
@@ -139,7 +138,6 @@ private fun VoiceBody(state: SettingsUi, snackbar: SnackbarHostState, onVoiceEna
         if (!on || granted) onVoiceEnabled(on) else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
     }
     VoiceSection(state.voice, onVoiceToggle, showTitle = false)
-    VoiceShortcutsSection(state.voice.shortcuts, onDeleteShortcut)
 }
 
 @Composable

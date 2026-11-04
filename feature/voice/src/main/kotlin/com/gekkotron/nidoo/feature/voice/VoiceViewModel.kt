@@ -4,13 +4,8 @@ import android.content.Context
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.nidoo.assist.AssistClient
 import com.gekkotron.nidoo.data.AppPreferences
-import com.gekkotron.nidoo.source.EntitySource
-import com.gekkotron.nidoo.voice.Suggestion
-import com.gekkotron.nidoo.voice.VoiceAction
-import com.gekkotron.nidoo.voice.VoiceCatalog
-import com.gekkotron.nidoo.voice.VoiceCatalogBuilder
-import com.gekkotron.nidoo.voice.VoiceLang
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,87 +19,55 @@ import javax.inject.Inject
 @HiltViewModel
 class VoiceViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
-    private val source: EntitySource,
     val preferences: AppPreferences,
-    private val commandRunner: CommandRunner,
-    private val tts: TtsSpeaker,
+    private val client: AssistClient,
+    private val player: AudioPlayer,
 ) : ViewModel() {
-    private val _state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening(""))
+    private val _state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening())
     val state: StateFlow<VoiceSessionState> = _state.asStateFlow()
-    private val _catalog = MutableStateFlow<VoiceCatalog?>(null)
-    val catalog: StateFlow<VoiceCatalog?> = _catalog.asStateFlow()
+    private val _closeRequested = MutableStateFlow(false)
+    val closeRequested: StateFlow<Boolean> = _closeRequested.asStateFlow()
+    private val _canRepeat = MutableStateFlow(false)
+    val canRepeat: StateFlow<Boolean> = _canRepeat.asStateFlow()
     private var session: VoiceSession? = null
-    private var starting = false
 
-    val started: Boolean get() = session != null || starting
+    val started: Boolean get() = session != null
 
-    fun start(launcherLang: VoiceLang) {
+    fun start() {
         if (started) return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             _state.value = VoiceSessionState.Error(ErrorKind.SPEECH)
             return
         }
-        starting = true
-        viewModelScope.launch {
-            try {
-                if (!awaitVoiceSourceReady(source)) {
-                    _state.value = VoiceSessionState.Error(ErrorKind.MQTT_DOWN)
-                    return@launch
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) launchSession(launcherLang)
-            } finally {
-                starting = false
-            }
-        }
+        launchSession()
     }
 
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
-    private fun launchSession(launcherLang: VoiceLang) {
-        val catalog = VoiceCatalogBuilder.build(launcherLang, source.entities.value.values, source.areas.value)
-        _catalog.value = catalog
+    private fun launchSession() {
         val speech = try {
-            AndroidSpeechCapture(appContext, if (launcherLang == VoiceLang.FR) "fr-FR" else "en-US")
+            AndroidSpeechCapture(appContext, "fr-FR")
         } catch (e: IllegalStateException) {
             _state.value = VoiceSessionState.Error(ErrorKind.SPEECH)
             return
         }
-        val s = VoiceSession(
-            catalog = catalog,
-            shortcuts = source.shortcuts.value.values.toList(),
-            speech = speech,
-            runner = commandRunner,
-            scope = viewModelScope,
-            onLearn = { source.saveShortcut(it) },
-            tts = tts,
-        )
+        val s = VoiceSession(client, speech, player, viewModelScope)
         session = s
         viewModelScope.launch { s.state.collect { _state.value = it } }
+        viewModelScope.launch { s.closeRequested.collect { _closeRequested.value = it } }
+        viewModelScope.launch { s.canRepeat.collect { _canRepeat.value = it } }
         s.start()
-    }
-
-    fun pickSuggestion(suggestion: Suggestion) {
-        val s = session ?: return
-        s.pickSuggestion(suggestion, learnPhrase = s.lastTranscript.orEmpty())
     }
 
     /** Shown instead of listening when the voice toggle is off; no session is started. */
     fun showDisabled() { _state.value = VoiceSessionState.Error(ErrorKind.DISABLED) }
 
-    fun onPickOther() { session?.pickOther() }
-
-    fun onPickDevice(uniqueId: String) { session?.pickDevice(uniqueId) }
-
-    fun onPickAction(action: VoiceAction, remember: Boolean) { session?.pickAction(action, remember) }
-
-    fun onPickBack() { session?.pickBack() }
-
-    fun onPickFilterChange(filter: String) { session?.pickFilterChange(filter) }
-
-    fun onRepeatSpoken() { session?.repeatSpoken() }
+    fun choose(index: Int) { session?.choose(index) }
 
     fun confirm(yes: Boolean) { session?.confirm(yes) }
 
-    fun provideCode(code: String) { session?.provideCode(code) }
+    fun listenAgain() { session?.listenAgain() }
+
+    fun repeat() { session?.repeat() }
 
     fun cancel() { session?.cancel() }
 

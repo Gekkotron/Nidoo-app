@@ -14,7 +14,6 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":core:transport"))
-            api(project(":core:voice"))
         }
         jvmTest.dependencies {
             implementation(project.dependencies.testFixtures(project(":core:transport")))

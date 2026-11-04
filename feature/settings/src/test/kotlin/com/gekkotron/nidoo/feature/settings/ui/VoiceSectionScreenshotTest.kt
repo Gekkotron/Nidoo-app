@@ -6,7 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.settings.presentation.VoiceSettingsUi
-import com.gekkotron.nidoo.feature.voice.TtsAvailability
+import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,29 +18,22 @@ class VoiceSectionScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun show(tts: TtsAvailability) = compose.setContent {
-        NidooTheme(ThemeChoice.IVOIRE) { VoiceSection(VoiceSettingsUi(ttsAvailability = tts), onToggle = {}) }
+    private fun show(availability: SpeechAvailability.Status) = compose.setContent {
+        NidooTheme(ThemeChoice.IVOIRE) { VoiceSection(VoiceSettingsUi(availability = availability), onToggle = {}, showTitle = false) }
     }
 
     @Test
-    fun voiceSection_tts_ready_light() {
-        show(TtsAvailability.Ready)
-        compose.onNodeWithText("Response voice").assertExists()
-        compose.onNodeWithText("available").assertExists()
-        compose.onNodeWithText("Download").assertDoesNotExist()
+    fun voiceSection_ready_shows_only_the_toggle_light() {
+        show(SpeechAvailability.Status.Ready)
+        compose.onNodeWithText("Voice commands").assertExists()
+        compose.onNodeWithText("Response voice").assertDoesNotExist()
+        compose.onNodeWithText("Voice shortcuts").assertDoesNotExist()
     }
 
     @Test
-    fun voiceSection_tts_language_missing_shows_download_light() {
-        show(TtsAvailability.LanguageMissing)
-        compose.onNodeWithText("language pack missing").assertExists()
-        compose.onNodeWithText("Download").assertExists()
-    }
-
-    @Test
-    fun voiceSection_tts_engine_missing_light() {
-        show(TtsAvailability.EngineMissing)
-        compose.onNodeWithText("engine not installed").assertExists()
-        compose.onNodeWithText("Download").assertDoesNotExist()
+    fun voiceSection_without_on_device_recognizer_shows_the_reason_light() {
+        show(SpeechAvailability.Status.NoOnDevice)
+        compose.onNodeWithText("On-device speech recognition is not available on this phone.").assertExists()
+        compose.onNodeWithText("Response voice").assertDoesNotExist()
     }
 }

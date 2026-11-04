@@ -25,6 +25,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AppPreferencesTest {
     @get:Rule
@@ -46,6 +47,27 @@ class AppPreferencesTest {
     private fun file(name: String = "prefs.json") = tmp.root.resolve(name)
     private fun CoroutineScope.prefs(f: File = file()) = AppPreferences.create(f, this)
     private suspend fun AppPreferences.loaded() = theme.filterNotNull().first()
+
+    @Test
+    fun `assist client id is created once and kept`() {
+        var first = ""
+        realTest {
+            val p = prefs()
+            first = p.assistClientId()
+            assertTrue(first.startsWith("android-"), first)
+            assertEquals(first, p.assistClientId())
+        }
+        // A new instance on the same file (the first one's scope is cancelled by realTest).
+        realTest { assertEquals(first, prefs().assistClientId()) }
+    }
+
+    @Test
+    fun `concurrent first assist client id calls agree`() = realTest {
+        val p = prefs()
+        val a = async { p.assistClientId() }
+        val b = async { p.assistClientId() }
+        assertEquals(a.await(), b.await())
+    }
 
     @Test
     fun `missing file is System`() = realTest {

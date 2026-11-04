@@ -35,7 +35,6 @@ import com.gekkotron.nidoo.transport.MqttMessage
 import com.gekkotron.nidoo.transport.MqttTransport
 import com.gekkotron.nidoo.transport.PublishFailed
 import com.gekkotron.nidoo.transport.isValidPublishTopic
-import com.gekkotron.nidoo.voice.VoiceShortcut
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
@@ -78,7 +77,6 @@ class MqttDiscoverySource(
     private val lock = Any()
     private val discovered = linkedMapOf<String, List<DiscoveredEntity>>() // config topic -> entities
     private val overrides = mutableMapOf<String, UiOverride>()
-    private val voiceShortcuts = mutableMapOf<String, VoiceShortcut>()
     private val hubGroupSpecs = mutableMapOf<String, HubGroup>() // group id -> spec
     private var areasDocument = AreasDocument()
 
@@ -116,14 +114,12 @@ class MqttDiscoverySource(
     override val areas: StateFlow<List<Area>> = _areas.asStateFlow()
     override val commandFailures: SharedFlow<CommandFailure> = tracker.failures
     override val link: StateFlow<LinkState> = transport.link
-    private val _shortcuts = MutableStateFlow<Map<String, VoiceShortcut>>(emptyMap())
-    override val shortcuts: StateFlow<Map<String, VoiceShortcut>> = _shortcuts.asStateFlow()
     private val _hubGroups = MutableStateFlow<Map<String, HubGroup>>(emptyMap())
     override val hubGroups: StateFlow<Map<String, HubGroup>> = _hubGroups.asStateFlow()
 
     // The hub publishes HA-discovery under its own `nidoo/` prefix (alarm panel, groups, virtual
     // entities, …), beside whatever prefix a legacy controller like Jeedom publishes under; the app
-    // reads both. `nidoo/#` subsumes `nidoo/ui/#` and `nidoo/voice/shortcut/#` so they drop out.
+    // reads both. `nidoo/#` subsumes `nidoo/ui/#` so it drops out.
     private val prefixes: Set<String> = linkedSetOf(prefix, HUB_PREFIX)
     private val baseFilters = prefixes.map { "$it/#" }.toSet()
     private val stateTopics = MutableStateFlow<Set<String>>(emptySet())
@@ -247,9 +243,8 @@ class MqttDiscoverySource(
             when {
                 topic.endsWith("/config") && prefixes.any { topic.startsWith("$it/") } -> 0
                 topic.startsWith(UI_PREFIX) -> 1
-                topic.startsWith(VOICE_PREFIX) -> 2
-                topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) -> 3
-                else -> 4
+                topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) -> 2
+                else -> 3
             }
         }
         for ((topic, payload) in ordered) handle(MqttMessage(topic, payload.encodeToByteArray(), retained = true), restored = true)
@@ -260,7 +255,6 @@ class MqttDiscoverySource(
         val keep = buildSet {
             addAll(discovered.keys)
             overrides.keys.forEach { add(UI_PREFIX + it) }
-            voiceShortcuts.keys.forEach { add(VOICE_PREFIX + it) }
             hubGroupSpecs.keys.forEach { add(HUB_GROUP_PREFIX + it + HUB_GROUP_DEFINITION_SUFFIX) }
             if (areasDocument.areas.isNotEmpty()) add(AREAS_TOPIC)
             addAll(store.subscriptionTopics())
@@ -307,13 +301,11 @@ class MqttDiscoverySource(
                         overrides.remove(it)
                         confirmedOverrides.remove(it)
                     }
-                    topic.startsWith(VOICE_PREFIX) -> voiceShortcuts.remove(topic.removePrefix(VOICE_PREFIX))
                     topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) ->
                         hubGroupSpecs.remove(hubGroupIdOf(topic))
                     else -> discovered.remove(topic)
                 }
             }
-            _shortcuts.value = voiceShortcuts.toMap()
             _hubGroups.value = hubGroupSpecs.toMap()
             restoredOnly.clear()
         }
@@ -336,6 +328,8 @@ class MqttDiscoverySource(
             val flowId = flowIdOf(topic)
             val dashboardId = dashboardIdOf(topic)
             val ignoredDocument = flowId == null && dashboardId == null && isIgnoredUiDocument(topic)
+            // The phone no longer owns voice shortcuts; retained ones still match `nidoo/#` and are dropped untouched.
+            if (topic.startsWith(RETIRED_VOICE_SHORTCUT_PREFIX)) return
             // flows and dashboards are never cached; the broker's retained replay is the truth
             if ((flowId != null || dashboardId != null) && restored) return
             if (ignoredDocument) {
@@ -356,7 +350,6 @@ class MqttDiscoverySource(
                 topic == AREAS_TOPIC -> onAreas(payload)
                 dashboardId != null -> dashboardsSink?.onRetained(dashboardId, payload.ifEmpty { null })
                 topic.startsWith(UI_PREFIX) -> onOverride(topic.removePrefix(UI_PREFIX), payload)
-                topic.startsWith(VOICE_PREFIX) -> onShortcut(topic.removePrefix(VOICE_PREFIX), payload)
                 topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) ->
                     onHubGroupDefinition(hubGroupIdOf(topic), payload)
                 else -> when (val r = parseDiscovery(topic, payload)) {
@@ -403,39 +396,6 @@ class MqttDiscoverySource(
             }
             _hubGroups.value = hubGroupSpecs.toMap()
         }
-    }
-
-    private fun onShortcut(id: String, payload: String) {
-        synchronized(lock) {
-            if (payload.isEmpty()) {
-                voiceShortcuts.remove(id)
-            } else {
-                val shortcut = VoiceShortcutDocument.decode(payload)?.toShortcut(id = id)
-                if (shortcut != null) voiceShortcuts[id] = shortcut else report("$VOICE_PREFIX$id: invalid shortcut")
-            }
-            _shortcuts.value = voiceShortcuts.toMap()
-        }
-    }
-
-    override suspend fun saveShortcut(shortcut: VoiceShortcut) {
-        val topic = VOICE_PREFIX + shortcut.id
-        require(isValidPublishTopic(topic)) { "shortcut id '${shortcut.id}' is not a valid topic segment" }
-        val payload = VoiceShortcutDocument.encode(
-            VoiceShortcutDocument(
-                phrase = shortcut.phrase,
-                lang = shortcut.lang.name.lowercase(),
-                action = shortcut.intent.action.name,
-                entityIds = shortcut.intent.entityIds,
-                value = shortcut.intent.value,
-            ),
-        )
-        transport.publish(topic, payload.encodeToByteArray(), qos = 1, retain = true)
-    }
-
-    override suspend fun deleteShortcut(id: String) {
-        val topic = VOICE_PREFIX + id
-        require(isValidPublishTopic(topic)) { "shortcut id '$id' is not a valid topic segment" }
-        transport.publish(topic, ByteArray(0), qos = 1, retain = true)
     }
 
     private fun onOverride(uniqueId: String, payload: String) {
@@ -540,7 +500,7 @@ class MqttDiscoverySource(
         const val DEFAULT_PREFIX = "homeassistant"
         const val HUB_PREFIX = "nidoo"
         const val UI_PREFIX = "nidoo/ui/"
-        const val VOICE_PREFIX = "nidoo/voice/shortcut/"
+        const val RETIRED_VOICE_SHORTCUT_PREFIX = "nidoo/voice/shortcut/"
         const val FLOW_PREFIX = "$HUB_PREFIX/automation/"
         const val HUB_GROUP_PREFIX = "nidoo/group/"
         const val HUB_GROUP_DEFINITION_SUFFIX = "/definition"

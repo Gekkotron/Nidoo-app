@@ -16,10 +16,6 @@ import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.MqttMessage
 import com.gekkotron.nidoo.transport.PublishFailed
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
-import com.gekkotron.nidoo.voice.VoiceAction
-import com.gekkotron.nidoo.voice.VoiceIntent
-import com.gekkotron.nidoo.voice.VoiceLang
-import com.gekkotron.nidoo.voice.VoiceShortcut
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -533,42 +529,19 @@ class MqttDiscoverySourceTest {
     }
 
     @Test
-    fun `an incoming shortcut appears in the shortcuts flow`() = runTest {
+    fun `retained voice shortcut topics are ignored silently`() = runTest {
         val h = start()
         h.transport.deliver(
             "nidoo/voice/shortcut/abc1234567890abc1234567890abc123",
             """{"v":1,"phrase":"il fait sombre","lang":"fr","action":"TURN_ON","entityIds":["lampe"]}""",
         )
+        h.transport.deliver("nidoo/voice/shortcut/fr_abc", "not json at all {")
         runCurrent()
-        val map = h.source.shortcuts.first { it.isNotEmpty() }
-        assertEquals(1, map.size)
-        assertEquals("il fait sombre", map.values.first().phrase)
-    }
-
-    @Test
-    fun `saveShortcut publishes a retained payload under the id topic`() = runTest {
-        val h = start()
-        val sc = VoiceShortcut(
-            id = "abc1234567890abc1234567890abc123",
-            phrase = "test",
-            lang = VoiceLang.FR,
-            intent = VoiceIntent(VoiceAction.TURN_ON, listOf("lampe")),
-        )
-        h.source.saveShortcut(sc)
-        val last = h.transport.published.last()
-        assertEquals("nidoo/voice/shortcut/${sc.id}", last.topic)
-        assertEquals(true, last.retained)
-        assertTrue(last.payloadString().contains("\"phrase\":\"test\""))
-    }
-
-    @Test
-    fun `deleteShortcut publishes an empty retained payload`() = runTest {
-        val h = start()
-        h.source.deleteShortcut("abc1234567890abc1234567890abc123")
-        val last = h.transport.published.last()
-        assertEquals("nidoo/voice/shortcut/abc1234567890abc1234567890abc123", last.topic)
-        assertEquals(0, last.payload.size)
-        assertEquals(true, last.retained)
+        settle()
+        assertTrue(h.source.entities.value.isEmpty(), "got ${h.source.entities.value}")
+        assertTrue(h.diagnostics.isEmpty(), "got ${h.diagnostics}")
+        assertTrue(h.source.states().first().isEmpty())
+        assertTrue(h.source.journal().isEmpty(), "got ${h.source.journal()}")
     }
 
     @Test

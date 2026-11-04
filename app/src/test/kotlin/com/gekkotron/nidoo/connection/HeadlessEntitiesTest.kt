@@ -292,10 +292,6 @@ class HeadlessEntitiesTest {
         override val entities: StateFlow<Map<String, Entity>> = MutableStateFlow(mapOf(entity.uniqueId to entity))
         override val devices: StateFlow<Map<String, Device>> = MutableStateFlow(emptyMap())
         override val areas: StateFlow<List<Area>> = MutableStateFlow(areaList)
-        override val shortcuts: kotlinx.coroutines.flow.StateFlow<Map<String, com.gekkotron.nidoo.voice.VoiceShortcut>> =
-            kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
-        override suspend fun saveShortcut(shortcut: com.gekkotron.nidoo.voice.VoiceShortcut) {}
-        override suspend fun deleteShortcut(id: String) {}
         override val commandFailures: SharedFlow<CommandFailure> = MutableSharedFlow()
         private val states = mapOf(entity.uniqueId to EntityState(entity.uniqueId, StateValue.OnOff(true), lastUpdate = Instant.EPOCH))
         override fun states(): Flow<Map<String, EntityState>> = flowOf(states)

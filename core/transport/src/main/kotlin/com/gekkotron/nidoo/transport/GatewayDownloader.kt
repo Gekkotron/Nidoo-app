@@ -7,6 +7,7 @@ import io.github.gekkotron.athena.gateway.client.GatewayResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import okhttp3.OkHttpClient
 import java.io.IOException
 
@@ -22,8 +23,8 @@ interface GatewayDownloader {
 /** [status] may be an upstream error (404...): the caller decides what that means. */
 class RawDownload(val status: Int, val bytes: ByteArray, val contentType: String?)
 
-/** [headers]: lower-case names, repeated headers joined with `\n`. */
-class RawPost(val status: Int, val headers: Map<String, String>)
+/** [headers]: lower-case names, repeated headers joined with `\n`. [body]: the response text, empty when there is none. */
+class RawPost(val status: Int, val headers: Map<String, String>, val body: String = "")
 
 /** "destination not allowed for this secret": the user has to add the host to the key's rules (spec §10 step 2). */
 class DownloadNotAllowed(val reason: String) : Exception(reason)
@@ -48,7 +49,7 @@ class AthenaGatewayDownloader internal constructor(
         guarded { fetch(url, timeoutSeconds, headers).let { RawDownload(it.status, it.bytes, it.contentType) } }
 
     override suspend fun post(url: String, json: String, timeoutSeconds: Int): RawPost =
-        guarded { send(url, Json.parseToJsonElement(json), timeoutSeconds).let { RawPost(it.status, it.headers) } }
+        guarded { send(url, Json.parseToJsonElement(json), timeoutSeconds).let { RawPost(it.status, it.headers, if (it.body is JsonNull) "" else it.body.toString()) } }
 
     private inline fun <T> guarded(block: () -> T): T = try {
         block()

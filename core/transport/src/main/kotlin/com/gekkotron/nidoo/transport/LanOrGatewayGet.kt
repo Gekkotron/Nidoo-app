@@ -18,6 +18,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -40,8 +44,8 @@ sealed interface HttpGetResult {
 }
 
 sealed interface HttpPostResult {
-    /** Any HTTP answer, with its headers (lower-case names, repeated ones joined with `\n`). */
-    class Response(val status: Int, val headers: Map<String, String>) : HttpPostResult
+    /** Any HTTP answer, with its headers (lower-case names, repeated ones joined with `\n`) and its body text (empty when over [MAX_POST_BODY]). */
+    class Response(val status: Int, val headers: Map<String, String>, val body: String = "") : HttpPostResult
     data object NotAllowed : HttpPostResult
     data class Unavailable(val reason: String) : HttpPostResult
 }
@@ -60,6 +64,8 @@ class LanOrGatewayGet(
         .followRedirects(false) // a LAN host must not bounce the request to another (cleartext) host
         .followSslRedirects(false)
         .build()
+    /** OkHttp silently resends a POST whose connection dropped after the request; a no-resend POST must not. */
+    private val lanOnce: OkHttpClient = lan.newBuilder().retryOnConnectionFailure(false).build()
     private val warnedHosts = ConcurrentHashMap.newKeySet<String>()
 
     private sealed interface Lan {
@@ -88,26 +94,32 @@ class LanOrGatewayGet(
         return fromGateway(gateway, url, host, maxBytes, headers)
     }
 
-    /** A JSON POST, e.g. a login: direct when the LAN is reachable, the gateway's `http` call otherwise. */
-    suspend fun post(url: String, json: String): HttpPostResult {
+    /**
+     * A JSON POST, e.g. a login: direct when the LAN is reachable, the gateway's `http` call otherwise.
+     * [resendViaGateway] false: a LAN failure after the connection was made (the hub may already have acted) is
+     * [HttpPostResult.Unavailable] instead of a second POST through the gateway; only a failure to connect falls back.
+     */
+    suspend fun post(url: String, json: String, resendViaGateway: Boolean = true): HttpPostResult {
         val host = url.toHttpUrlOrNull()?.host ?: return HttpPostResult.Unavailable("not an http url")
         val route = routes.current()
         var lanReason: String? = null
         val probe = route.local
         if (probe != null && isLanHost(host) && probe.reachable()) {
             try {
-                lan.newCall(Request.Builder().url(url).post(json.toRequestBody(JSON)).build()).await().use { response ->
-                    return HttpPostResult.Response(response.code, response.headers.lowerCaseMap())
+                val client = if (resendViaGateway) lan else lanOnce
+                client.newCall(Request.Builder().url(url).post(json.toRequestBody(JSON)).build()).await().use { response ->
+                    return HttpPostResult.Response(response.code, response.headers.lowerCaseMap(), readPostBody(response))
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
                 lanReason = e.message ?: e.javaClass.simpleName
+                if (!resendViaGateway && !e.isConnectFailure()) return HttpPostResult.Unavailable(lanReason)
             }
         }
         val gateway = route.gateway ?: return HttpPostResult.Unavailable(lanReason ?: "no route")
         return try {
-            gateway.post(url, json, GATEWAY_TIMEOUT_SECONDS).let { HttpPostResult.Response(it.status, it.headers) }
+            gateway.post(url, json, GATEWAY_TIMEOUT_SECONDS).let { HttpPostResult.Response(it.status, it.headers, it.body) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: DownloadNotAllowed) {
@@ -116,6 +128,22 @@ class LanOrGatewayGet(
         } catch (e: Exception) {
             HttpPostResult.Unavailable(e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    private suspend fun readPostBody(response: Response): String = withContext(io) {
+        val source = response.body?.source() ?: return@withContext ""
+        val out = ByteArrayOutputStream()
+        val chunk = ByteArray(CHUNK)
+        var read = 0L
+        while (true) {
+            ensureActive()
+            val n = source.read(chunk)
+            if (n < 0) break
+            read += n
+            if (read > MAX_POST_BODY) return@withContext ""
+            out.write(chunk, 0, n)
+        }
+        out.toString(Charsets.UTF_8)
     }
 
     private suspend fun fromGateway(gateway: GatewayDownloader, url: String, host: String, maxBytes: Long, headers: Map<String, String>): HttpGetResult = try {
@@ -168,7 +196,15 @@ class LanOrGatewayGet(
         const val GATEWAY_TIMEOUT_SECONDS = 30
         const val INITIAL_BUFFER = 64 * 1024
         const val CHUNK = 16 * 1024
+        const val MAX_POST_BODY = 256 * 1024
     }
+}
+
+/** The request never left the phone: no route, unknown host, refused or timed-out connect. */
+private fun IOException.isConnectFailure(): Boolean = when (this) {
+    is ConnectException, is NoRouteToHostException, is UnknownHostException -> true
+    is SocketTimeoutException -> message?.contains("connect", ignoreCase = true) == true
+    else -> false
 }
 
 /** Cancelling the coroutine cancels the call. */

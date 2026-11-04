@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,30 +25,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.voice.ErrorKind
-import com.gekkotron.nidoo.feature.voice.PickStep
 import com.gekkotron.nidoo.feature.voice.R
 import com.gekkotron.nidoo.feature.voice.VoiceSessionState
-import com.gekkotron.nidoo.feature.voice.autoCloseDelayMs
-import com.gekkotron.nidoo.feature.voice.autoCloses
-import com.gekkotron.nidoo.voice.Suggestion
-import com.gekkotron.nidoo.voice.VoiceAction
-import com.gekkotron.nidoo.voice.VoiceCatalog
-import com.gekkotron.nidoo.voice.VoiceLang
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-
-@Composable
-internal fun rememberVoiceLang(): VoiceLang {
-    val tag = LocalConfiguration.current.locales[0].toLanguageTag()
-    return remember(tag) { VoiceLang.fromAppLocale(tag) }
-}
 
 /** Tappable pill used for every action in the sheet. */
 @Composable
@@ -73,29 +58,28 @@ internal fun VoiceRow(text: String, onClick: () -> Unit, modifier: Modifier = Mo
 @Composable
 fun VoiceSheet(
     state: StateFlow<VoiceSessionState>,
-    onPick: (Suggestion) -> Unit,
+    closeRequested: StateFlow<Boolean>,
+    canRepeat: StateFlow<Boolean>,
+    onChoose: (Int) -> Unit,
     onConfirm: (Boolean) -> Unit,
-    onCode: (String) -> Unit,
+    onListenAgain: () -> Unit,
+    onRepeat: () -> Unit,
     onCancel: () -> Unit,
-    catalog: VoiceCatalog? = null,
-    stateHints: Map<String, String> = emptyMap(),
-    onRepeat: () -> Unit = {},
-    onPickOther: () -> Unit = {},
-    onPickDevice: (String) -> Unit = {},
-    onPickAction: (VoiceAction, Boolean) -> Unit = { _, _ -> },
-    onPickBack: () -> Unit = {},
-    onPickFilterChange: (String) -> Unit = {},
     onOpenSettings: () -> Unit = {},
 ) {
     val current = state.collectAsStateWithLifecycle().value
     val c = NidooTheme.colors
-    // Any touch on the sheet keeps it open ("unless touched"), including taps on its buttons.
-    var touched by remember { mutableStateOf(false) }
-    if (autoCloses(current) && !touched) {
-        LaunchedEffect(current) {
-            delay(autoCloseDelayMs(current))
-            onCancel()
-        }
+    // A touch keeps the sheet open ("unless touched"), but only for what was on screen when it happened: the tap that
+    // answered a question must not keep the turn it leads to from closing.
+    val shown: Any = when (current) {
+        is VoiceSessionState.Turn -> current.turn.id
+        else -> current::class
+    }
+    var touched by remember(shown) { mutableStateOf(false) }
+    val closeNow = closeRequested.collectAsStateWithLifecycle().value
+    val repeatable = canRepeat.collectAsStateWithLifecycle().value
+    if (closeNow && !touched) {
+        LaunchedEffect(Unit) { onCancel() }
     }
     Box(
         Modifier.fillMaxSize().clickable(
@@ -120,36 +104,16 @@ fun VoiceSheet(
                 }
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
                 .navigationBarsPadding()
-                // The search field of the "Other" picker opens the keyboard: lift the sheet above it (edge-to-edge window).
-                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             when (current) {
                 is VoiceSessionState.Listening -> ListeningView(current.partial)
-                is VoiceSessionState.Executing -> UnderstoodView(executing = current, done = null, onWrong = onCancel)
-                is VoiceSessionState.Done -> UnderstoodView(executing = null, done = current, onWrong = onCancel)
-                is VoiceSessionState.NotUnderstood -> NotUnderstoodView(current.suggestions, onPick, onPickOther, onCancel)
-                is VoiceSessionState.ConfirmNeeded -> ConfirmView(current, onConfirm, onCode, onCancel)
-                is VoiceSessionState.Spoken -> SpokenView(current.text, current.speakable, onRepeat)
-                is VoiceSessionState.Picking -> when (current.step) {
-                    PickStep.Device -> if (catalog != null) {
-                        DevicePickerView(current, catalog, stateHints, onPickDevice, onPickFilterChange, onPickBack)
-                    }
-                    PickStep.Action -> {
-                        val entity = current.pickedId?.let { catalog?.entity(it) }
-                        if (entity != null) {
-                            ActionPickerView(
-                                entity,
-                                catalog?.area(entity.areaId)?.displayName.orEmpty(),
-                                current.heardText,
-                                onPickAction,
-                                onPickBack,
-                            )
-                        }
-                    }
-                }
+                is VoiceSessionState.Sending -> SendingView(current.heard)
+                is VoiceSessionState.Turn -> TurnView(
+                    current.turn, current.expired, repeatable, onChoose, onConfirm, onListenAgain, onRepeat,
+                )
                 is VoiceSessionState.Error -> {
                     Text(
                         stringResource(errorRes(current.kind)),
@@ -157,7 +121,12 @@ fun VoiceSheet(
                         color = c.content,
                         textAlign = TextAlign.Center,
                     )
-                    if (current.kind == ErrorKind.DISABLED) VoiceRow(stringResource(R.string.voice_open_settings), onOpenSettings)
+                    when (current.kind) {
+                        ErrorKind.DISABLED -> VoiceRow(stringResource(R.string.voice_open_settings), onOpenSettings)
+                        // Listening again cannot fix a missing hub or a gateway rule.
+                        ErrorKind.NO_HUB, ErrorKind.GATEWAY_REFUSED -> Unit
+                        else -> VoiceRow(stringResource(R.string.voice_retry), onListenAgain)
+                    }
                     VoiceRow(stringResource(R.string.voice_cancel), onCancel)
                 }
             }
@@ -166,10 +135,12 @@ fun VoiceSheet(
 }
 
 private fun errorRes(kind: ErrorKind): Int = when (kind) {
-    ErrorKind.MQTT_DOWN -> R.string.voice_mqtt_down
+    ErrorKind.NO_HUB -> R.string.voice_no_hub
+    ErrorKind.HUB_UNREACHABLE -> R.string.voice_hub_unreachable
+    ErrorKind.GATEWAY_REFUSED -> R.string.voice_gateway_refused
+    ErrorKind.HUB_FAILED -> R.string.voice_hub_failed
     ErrorKind.SPEECH -> R.string.voice_speech_error
     ErrorKind.PERMISSION -> R.string.voice_permission_denied
     ErrorKind.SILENCE -> R.string.voice_silence
-    ErrorKind.UNKNOWN -> R.string.voice_unknown_error
     ErrorKind.DISABLED -> R.string.voice_disabled
 }
