@@ -26,8 +26,8 @@ import org.robolectric.annotation.Config
 class VoiceSheetDispatchTest {
     @get:Rule val rule = createComposeRule()
 
-    private fun turn(outcome: AssistOutcome, reply: String, question: AssistQuestion? = null) =
-        AssistTurn("t1", "allume", outcome, reply, question)
+    private fun turn(outcome: AssistOutcome, reply: String, question: AssistQuestion? = null, id: String = "t1") =
+        AssistTurn(id, "allume", outcome, reply, question)
 
     private val choice = AssistQuestion("p1", QuestionKind.CHOICE, listOf("Chambre Léa", "Chambre parentale"))
     private val confirm = AssistQuestion("p2", QuestionKind.CONFIRM, emptyList())
@@ -126,7 +126,7 @@ class VoiceSheetDispatchTest {
         assertTrue(repeated)
     }
 
-    @Test fun `each error kind shows its text and Try again except DISABLED which shows Open Settings`() {
+    @Test fun `each error kind shows its text and the right action`() {
         val texts = mapOf(
             ErrorKind.NO_HUB to "L'assistant a besoin du hub.",
             ErrorKind.HUB_UNREACHABLE to "Hub injoignable.",
@@ -146,6 +146,9 @@ class VoiceSheetDispatchTest {
             if (kind == ErrorKind.DISABLED) {
                 rule.onNodeWithText("Ouvrir les Réglages").assertExists()
                 rule.onNodeWithText("Réessayer").assertDoesNotExist()
+            } else if (kind == ErrorKind.NO_HUB || kind == ErrorKind.GATEWAY_REFUSED) {
+                rule.onNodeWithText("Réessayer").assertDoesNotExist()
+                rule.onNodeWithText("Ouvrir les Réglages").assertDoesNotExist()
             } else {
                 rule.onNodeWithText("Réessayer").assertExists()
                 rule.onNodeWithText("Ouvrir les Réglages").assertDoesNotExist()
@@ -187,5 +190,24 @@ class VoiceSheetDispatchTest {
         closeRequested.value = true
         rule.waitForIdle()
         assertFalse(closed > afterTouch)
+    }
+
+    @Test fun `the tap that answered a question does not keep the next turn open`() {
+        val state = MutableStateFlow<VoiceSessionState>(
+            VoiceSessionState.Turn(turn(AssistOutcome.ASKED, "Dans quelle pièce ?", choice, id = "t1")),
+        )
+        val closeRequested = MutableStateFlow(false)
+        var closed = 0
+        rule.setContent {
+            NidooTheme(ThemeChoice.IVOIRE) { sheet(state, closeRequested = closeRequested, onCancel = { closed++ }) }
+        }
+        rule.onNodeWithText("Chambre Léa").performClick()
+        state.value = VoiceSessionState.Sending(null)
+        rule.waitForIdle()
+        state.value = VoiceSessionState.Turn(turn(AssistOutcome.ACTED, "Chambre Léa éteinte.", id = "t2"))
+        rule.waitForIdle()
+        closeRequested.value = true
+        rule.waitForIdle()
+        assertEquals(1, closed)
     }
 }

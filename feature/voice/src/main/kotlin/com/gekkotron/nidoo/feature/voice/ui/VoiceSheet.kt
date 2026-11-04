@@ -69,8 +69,13 @@ fun VoiceSheet(
 ) {
     val current = state.collectAsStateWithLifecycle().value
     val c = NidooTheme.colors
-    // Any touch on the sheet keeps it open ("unless touched"), including taps on its buttons.
-    var touched by remember { mutableStateOf(false) }
+    // A touch keeps the sheet open ("unless touched"), but only for what was on screen when it happened: the tap that
+    // answered a question must not keep the turn it leads to from closing.
+    val shown: Any = when (current) {
+        is VoiceSessionState.Turn -> current.turn.id
+        else -> current::class
+    }
+    var touched by remember(shown) { mutableStateOf(false) }
     val closeNow = closeRequested.collectAsStateWithLifecycle().value
     val repeatable = canRepeat.collectAsStateWithLifecycle().value
     if (closeNow && !touched) {
@@ -116,10 +121,11 @@ fun VoiceSheet(
                         color = c.content,
                         textAlign = TextAlign.Center,
                     )
-                    if (current.kind == ErrorKind.DISABLED) {
-                        VoiceRow(stringResource(R.string.voice_open_settings), onOpenSettings)
-                    } else {
-                        VoiceRow(stringResource(R.string.voice_retry), onListenAgain)
+                    when (current.kind) {
+                        ErrorKind.DISABLED -> VoiceRow(stringResource(R.string.voice_open_settings), onOpenSettings)
+                        // Listening again cannot fix a missing hub or a gateway rule.
+                        ErrorKind.NO_HUB, ErrorKind.GATEWAY_REFUSED -> Unit
+                        else -> VoiceRow(stringResource(R.string.voice_retry), onListenAgain)
                     }
                     VoiceRow(stringResource(R.string.voice_cancel), onCancel)
                 }
