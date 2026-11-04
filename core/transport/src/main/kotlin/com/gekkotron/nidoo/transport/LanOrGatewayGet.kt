@@ -40,8 +40,8 @@ sealed interface HttpGetResult {
 }
 
 sealed interface HttpPostResult {
-    /** Any HTTP answer, with its headers (lower-case names, repeated ones joined with `\n`). */
-    class Response(val status: Int, val headers: Map<String, String>) : HttpPostResult
+    /** Any HTTP answer, with its headers (lower-case names, repeated ones joined with `\n`) and its body text (empty when over [MAX_POST_BODY]). */
+    class Response(val status: Int, val headers: Map<String, String>, val body: String = "") : HttpPostResult
     data object NotAllowed : HttpPostResult
     data class Unavailable(val reason: String) : HttpPostResult
 }
@@ -97,7 +97,7 @@ class LanOrGatewayGet(
         if (probe != null && isLanHost(host) && probe.reachable()) {
             try {
                 lan.newCall(Request.Builder().url(url).post(json.toRequestBody(JSON)).build()).await().use { response ->
-                    return HttpPostResult.Response(response.code, response.headers.lowerCaseMap())
+                    return HttpPostResult.Response(response.code, response.headers.lowerCaseMap(), readPostBody(response))
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -107,7 +107,7 @@ class LanOrGatewayGet(
         }
         val gateway = route.gateway ?: return HttpPostResult.Unavailable(lanReason ?: "no route")
         return try {
-            gateway.post(url, json, GATEWAY_TIMEOUT_SECONDS).let { HttpPostResult.Response(it.status, it.headers) }
+            gateway.post(url, json, GATEWAY_TIMEOUT_SECONDS).let { HttpPostResult.Response(it.status, it.headers, it.body) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: DownloadNotAllowed) {
@@ -116,6 +116,22 @@ class LanOrGatewayGet(
         } catch (e: Exception) {
             HttpPostResult.Unavailable(e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    private suspend fun readPostBody(response: Response): String = withContext(io) {
+        val source = response.body?.source() ?: return@withContext ""
+        val out = ByteArrayOutputStream()
+        val chunk = ByteArray(CHUNK)
+        var read = 0L
+        while (true) {
+            ensureActive()
+            val n = source.read(chunk)
+            if (n < 0) break
+            read += n
+            if (read > MAX_POST_BODY) return@withContext ""
+            out.write(chunk, 0, n)
+        }
+        out.toString(Charsets.UTF_8)
     }
 
     private suspend fun fromGateway(gateway: GatewayDownloader, url: String, host: String, maxBytes: Long, headers: Map<String, String>): HttpGetResult = try {
@@ -168,6 +184,7 @@ class LanOrGatewayGet(
         const val GATEWAY_TIMEOUT_SECONDS = 30
         const val INITIAL_BUFFER = 64 * 1024
         const val CHUNK = 16 * 1024
+        const val MAX_POST_BODY = 256 * 1024
     }
 }
 

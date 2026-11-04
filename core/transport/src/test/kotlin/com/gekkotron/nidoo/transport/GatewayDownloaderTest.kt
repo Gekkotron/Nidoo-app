@@ -7,7 +7,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -97,6 +100,14 @@ class GatewayDownloaderTest {
         assertEquals(30, seen!!.third)
         assertEquals(200, r.status)
         assertEquals("frigate_token=t", r.headers["set-cookie"])
+    }
+
+    @Test
+    fun `post maps the gateway body to text`(): Unit = runBlocking {
+        val obj = downloader(send = { _, _, _ -> GatewayResponse(200, buildJsonObject { put("a", 1) }, emptyMap()) }).post("http://h/x", "{}", 30)
+        assertEquals("""{"a":1}""", obj.body)
+        val none = downloader(send = { _, _, _ -> GatewayResponse(200, JsonNull, emptyMap()) }).post("http://h/x", "{}", 30)
+        assertEquals("", none.body)
     }
 
     @Test
