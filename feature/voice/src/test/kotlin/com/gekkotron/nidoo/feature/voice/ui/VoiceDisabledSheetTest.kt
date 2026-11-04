@@ -24,9 +24,8 @@ class VoiceDisabledSheetTest {
         var opened = false
         rule.setContent {
             NidooTheme(ThemeChoice.IVOIRE) {
-                VoiceSheet(
+                sheet(
                     state = MutableStateFlow(VoiceSessionState.Error(ErrorKind.DISABLED)),
-                    onPick = {}, onConfirm = {}, onCode = {}, onCancel = {},
                     onOpenSettings = { opened = true },
                 )
             }
@@ -39,7 +38,7 @@ class VoiceDisabledSheetTest {
     @Test fun `other errors have no Settings button`() {
         rule.setContent {
             NidooTheme(ThemeChoice.IVOIRE) {
-                VoiceSheet(state = MutableStateFlow(VoiceSessionState.Error(ErrorKind.SILENCE)), onPick = {}, onConfirm = {}, onCode = {}, onCancel = {})
+                sheet(state = MutableStateFlow(VoiceSessionState.Error(ErrorKind.SILENCE)))
             }
         }
         rule.onNodeWithText("Ouvrir les Réglages").assertDoesNotExist()

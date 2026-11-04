@@ -1,34 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="voice_sheet_title">Vocal</string>
     <string name="voice_listening">Écoute…</string>
-    <string name="voice_not_understood">Tu voulais dire… ?</string>
-    <string name="voice_other">Autre…</string>
-    <string name="voice_ignore">Ignorer</string>
-    <string name="voice_wrong">✗ Faux</string>
-    <string name="voice_mqtt_down">Pas de connexion à la maison</string>
     <string name="voice_silence">Je n\'ai rien entendu</string>
     <string name="voice_speech_error">Reconnaissance vocale indisponible</string>
     <string name="voice_permission_denied">Permission micro requise</string>
-    <string name="voice_unknown_error">Une erreur est survenue</string>
-    <string name="voice_confirm_disarm">Désarmer l\'alarme ?</string>
-    <string name="voice_confirm_arm_away">Armer l\'alarme (absent) ?</string>
-    <string name="voice_confirm_arm_home">Armer l\'alarme (présent) ?</string>
-    <string name="voice_confirm_siren">Déclencher la sirène ?</string>
     <string name="voice_yes">Oui</string>
     <string name="voice_no">Non</string>
     <string name="voice_cancel">Annuler</string>
     <string name="voice_mic_cd">Dis une commande</string>
-    <string name="voice_disarm">Désarmer</string>
-    <string name="voice_arm_away">Armer (absent)</string>
-    <string name="voice_arm_home">Armer (présent)</string>
-    <string name="voice_picker_search_hint">Rechercher…</string>
-    <string name="voice_picker_empty">Aucun résultat</string>
-    <string name="voice_picker_back">Retour</string>
-    <string name="voice_picker_remember_phrase">Mémoriser cette phrase</string>
-    <string name="voice_picker_read_value">Lire la valeur</string>
-    <string name="voice_picker_read_state">Lire l\'état</string>
     <string name="voice_repeat">Répéter</string>
     <string name="voice_disabled">L\'assistant vocal est désactivé. Activez-le dans les Réglages.</string>
     <string name="voice_open_settings">Ouvrir les Réglages</string>
+    <string name="voice_sending">Envoi…</string>
+    <string name="voice_retry">Réessayer</string>
+    <string name="voice_answer_by_voice">Répondre</string>
+    <string name="voice_question_expired">La question a expiré.</string>
+    <string name="voice_no_hub">L\'assistant a besoin du hub.</string>
+    <string name="voice_hub_unreachable">Hub injoignable.</string>
+    <string name="voice_gateway_refused">La passerelle n\'autorise pas le hub : ajoutez son adresse aux règles de la clé.</string>
+    <string name="voice_hub_failed">Le hub n\'a pas pu répondre.</string>
 </resources>

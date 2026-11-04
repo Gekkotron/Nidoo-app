@@ -2,12 +2,7 @@ package com.gekkotron.nidoo.feature.voice.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import com.gekkotron.nidoo.feature.voice.ExecutionResult
 import com.gekkotron.nidoo.feature.voice.VoiceSessionState
-import com.gekkotron.nidoo.voice.VoiceAction
-import com.gekkotron.nidoo.voice.VoiceIntent
-import com.gekkotron.nidoo.voice.VoiceSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -22,37 +17,14 @@ class VoiceSheetScreenshotTest {
 
     @Test fun `listening shows the pulsing mic and the partial text`() {
         val state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening("ouvre les vo"))
-        rule.setContent { VoiceSheet(state = state, onPick = {}, onConfirm = {}, onCode = {}, onCancel = {}) }
+        rule.setContent { sheet(state) }
         rule.onNodeWithText("ouvre les vo").assertExists()
     }
 
-    @Test fun `understood shows the Faux button`() {
-        val state = MutableStateFlow<VoiceSessionState>(
-            VoiceSessionState.Done(
-                ExecutionResult(
-                    intent = VoiceIntent(VoiceAction.OPEN, listOf("x")),
-                    source = VoiceSource.RULES,
-                    succeeded = listOf("x"),
-                    failed = emptyList(),
-                )
-            )
-        )
-        rule.setContent { VoiceSheet(state = state, onPick = {}, onConfirm = {}, onCode = {}, onCancel = {}) }
-        rule.onNodeWithText("✗ Faux").assertExists()
-    }
-
-    @Test fun `confirm shows Disarm question for an alarm`() {
-        val state = MutableStateFlow<VoiceSessionState>(
-            VoiceSessionState.ConfirmNeeded(
-                intent = VoiceIntent(VoiceAction.DISARM, listOf("alarm")),
-                source = VoiceSource.RULES,
-                codeFormat = null,
-            )
-        )
-        var confirmed = false
-        rule.setContent { VoiceSheet(state = state, onPick = {}, onConfirm = { confirmed = it }, onCode = {}, onCancel = {}) }
-        rule.onNodeWithText("Désarmer l'alarme ?").assertExists()
-        rule.onNodeWithText("Désarmer").performClick()
-        assert(confirmed)
+    @Test fun `sending shows Envoi and the heard text`() {
+        val state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Sending("allume le salon"))
+        rule.setContent { sheet(state) }
+        rule.onNodeWithText("Envoi…").assertExists()
+        rule.onNodeWithText("allume le salon").assertExists()
     }
 }
