@@ -106,11 +106,8 @@ fun VoiceSheet(
             when (current) {
                 is VoiceSessionState.Listening -> ListeningView(current.partial)
                 is VoiceSessionState.Sending -> SendingView(current.heard)
-                is VoiceSessionState.Turn -> Text(
-                    current.turn.reply,
-                    style = NidooTheme.type.body,
-                    color = c.content,
-                    textAlign = TextAlign.Center,
+                is VoiceSessionState.Turn -> TurnView(
+                    current.turn, current.expired, repeatable, onChoose, onConfirm, onListenAgain, onRepeat,
                 )
                 is VoiceSessionState.Error -> {
                     Text(
