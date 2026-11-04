@@ -8,6 +8,7 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import com.gekkotron.nidoo.assist.WavParser
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /** Plays the hub's WAV. [play] suspends until the audio ends; false means it was not playable. */
@@ -16,6 +17,8 @@ interface AudioPlayer {
 
     fun stop()
 }
+
+private const val END_MARKER_GRACE_MS = 2_000L
 
 class AndroidAudioPlayer(context: Context) : AudioPlayer {
     private val audioManager = context.getSystemService(AudioManager::class.java)
@@ -71,7 +74,9 @@ class AndroidAudioPlayer(context: Context) : AudioPlayer {
         try {
             audioTrack.write(parsed.pcm, 0, frames * frameBytes)
             audioManager.requestAudioFocus(focus)
-            suspendCancellableCoroutine { cont ->
+            // A device that never reports the end marker must not hold the sheet open: wait at most the audio's length + 2 s.
+            val durationMs = frames * 1000L / parsed.sampleRate
+            withTimeoutOrNull(durationMs + END_MARKER_GRACE_MS) { suspendCancellableCoroutine { cont ->
                 synchronized(lock) {
                     track = audioTrack
                     finished = { if (cont.isActive) cont.resume(Unit) }
@@ -82,7 +87,7 @@ class AndroidAudioPlayer(context: Context) : AudioPlayer {
                 })
                 audioTrack.setNotificationMarkerPosition(frames)
                 audioTrack.play()
-            }
+            } }
             return true
         } finally {
             synchronized(lock) {
