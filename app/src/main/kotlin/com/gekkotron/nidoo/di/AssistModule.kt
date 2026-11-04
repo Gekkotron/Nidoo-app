@@ -36,7 +36,8 @@ object AssistModule {
                 (ready?.profile as? ConnectionProfile.Direct)?.effectiveHistoryUrl()
             },
             clientId = preferences::assistClientId,
-            post = { url, json -> lanOrGateway.post(url, json) },
+            // A sentence or a tap must reach the hub once: never resend through the gateway after the LAN may have delivered it.
+            post = { url, json -> lanOrGateway.post(url, json, resendViaGateway = false) },
             get = { url, maxBytes -> lanOrGateway.get(url, maxBytes) },
         )
     }

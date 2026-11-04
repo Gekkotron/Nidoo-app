@@ -161,6 +161,23 @@ class LanOrGatewayGetTest {
     }
 
     @Test
+    fun `a post that may have reached the hub is not resent through the gateway`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
+        val gateway = FakeGateway()
+        assertIs<HttpPostResult.Unavailable>(get(local = true, gateway = gateway).post(url("/api/v1/assist"), "{}", resendViaGateway = false))
+        assertTrue(gateway.posts.isEmpty())
+    }
+
+    @Test
+    fun `a post that never reached the hub still goes through the gateway`(): Unit = runBlocking {
+        val gone = url("/api/v1/assist")
+        server.shutdown() // connection refused: the request never left the phone
+        val gateway = FakeGateway()
+        assertIs<HttpPostResult.Response>(get(local = true, gateway = gateway).post(gone, "{}", resendViaGateway = false))
+        assertEquals(listOf(gone to "{}"), gateway.posts)
+    }
+
+    @Test
     fun `a post falls back to the gateway when the LAN is down`(): Unit = runBlocking {
         val gateway = FakeGateway()
         val r = assertIs<HttpPostResult.Response>(get(local = false, gateway = gateway).post(url("/api/login"), "{}"))
