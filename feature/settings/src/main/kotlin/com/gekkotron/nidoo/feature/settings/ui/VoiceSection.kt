@@ -1,10 +1,5 @@
 package com.gekkotron.nidoo.feature.settings.ui
 
-import android.content.Intent
-import android.speech.tts.TextToSpeech
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,7 +22,6 @@ import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.settings.R
 import com.gekkotron.nidoo.feature.settings.presentation.VoiceSettingsUi
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
-import com.gekkotron.nidoo.feature.voice.TtsAvailability
 
 @Composable
 /** [showTitle] is off on the Voice page, whose top bar already says "Voice". */
@@ -58,31 +52,5 @@ fun VoiceSection(ui: VoiceSettingsUi, onToggle: (Boolean) -> Unit, showTitle: Bo
             Switch(checked = ui.enabled && ready, onCheckedChange = null, enabled = ready)
         }
         if (reason != null) Text(reason, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
-        TtsLine(ui.ttsAvailability)
-    }
-}
-
-@Composable
-private fun TtsLine(availability: TtsAvailability) {
-    val status = when (availability) {
-        TtsAvailability.Unknown, TtsAvailability.Ready -> R.string.settings_voice_tts_ready
-        TtsAvailability.LanguageMissing -> R.string.settings_voice_tts_language_missing
-        TtsAvailability.EngineMissing -> R.string.settings_voice_tts_engine_missing
-    }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
-    Column {
-        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.settings_voice_tts_label), style = NidooTheme.type.body, modifier = Modifier.weight(1f))
-            Text(stringResource(status), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
-        }
-        if (availability == TtsAvailability.LanguageMissing) {
-            Text(
-                stringResource(R.string.settings_voice_tts_download_action),
-                style = NidooTheme.type.body,
-                modifier = Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch)
-                    .clickable(role = Role.Button) { launcher.launch(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)) }
-                    .padding(vertical = 12.dp),
-            )
-        }
     }
 }

@@ -10,7 +10,6 @@ import com.gekkotron.nidoo.model.EntityState
 import com.gekkotron.nidoo.model.HubGroup
 import com.gekkotron.nidoo.model.UiOverride
 import com.gekkotron.nidoo.transport.LinkState
-import com.gekkotron.nidoo.voice.VoiceShortcut
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -43,16 +42,9 @@ interface EntitySource {
 
     suspend fun setAreas(areas: List<Area>)
 
-    /** Voice shortcuts (tap-to-teach phrases) keyed by [VoiceShortcut.id]. */
-    val shortcuts: StateFlow<Map<String, VoiceShortcut>>
-
     /** Hub-owned group definitions (hub cover groups spec §2.2), keyed by group id. */
     val hubGroups: StateFlow<Map<String, HubGroup>>
         get() = emptyHubGroups
-
-    suspend fun saveShortcut(shortcut: VoiceShortcut)
-
-    suspend fun deleteShortcut(id: String)
 
     /** Replays cached messages (topic → payload) as if they had arrived retained; live data wins (entity cache spec §3.1). */
     suspend fun restore(messages: Map<String, String>) {}

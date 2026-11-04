@@ -125,7 +125,7 @@ fun SettingsListScreen(
         Entry(SettingsPage.VOICE, R.string.voice_section_title, R.string.settings_voice_hint, NidooGlyph.MIC, Tone.VIOLET) {
             // Same rule as the page's toggle: on only when the phone can actually listen.
             val on = state.voice.enabled && state.voice.availability == SpeechAvailability.Status.Ready
-            if (on) stringResource(R.string.settings_voice_status, state.voice.shortcuts.size) else stringResource(R.string.settings_off)
+            if (on) stringResource(R.string.settings_on) else stringResource(R.string.settings_off)
         },
     )
     val app = listOf(

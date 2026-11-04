@@ -105,7 +105,7 @@ fun SettingsPageRoute(
         onRegisterAgain = viewModel::registerAgain, onOpenChannels = { openNotificationSettings(context) },
         onRouteChange = onRouteChange, onSetUpAgain = onSetUpAgain,
         onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
-        onVoiceEnabled = viewModel::setVoiceEnabled, onDeleteShortcut = viewModel::deleteShortcut,
+        onVoiceEnabled = viewModel::setVoiceEnabled,
         onOpenLicences = onOpenLicences, presenceSection = presenceSection,
     )
 }

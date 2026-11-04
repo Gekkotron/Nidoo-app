@@ -11,13 +11,11 @@ import com.gekkotron.nidoo.feature.settings.distinctColors
 import com.gekkotron.nidoo.feature.settings.luminanceAt
 import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
-import com.gekkotron.nidoo.feature.settings.presentation.ShortcutRow
 import com.gekkotron.nidoo.feature.settings.presentation.VoiceSettingsUi
 import com.gekkotron.nidoo.feature.settings.renderPng
 import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.TransportMode
-import com.gekkotron.nidoo.voice.VoiceLang
 import java.time.Instant
 import org.junit.Rule
 import org.junit.Test
@@ -38,7 +36,7 @@ class SettingsListScreenshotTest {
         theme = ThemePreference.NIGHT_GLASS,
         connection = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "nidoo", prefix = "homeassistant", gatewayUrl = null, historyUrl = null, historyDefault = "http://192.168.1.91:8081"),
         push = PushStatus.Registered(Instant.parse("2026-11-02T10:00:00Z")),
-        voice = VoiceSettingsUi(enabled = true, shortcuts = List(3) { ShortcutRow("$it", "p$it", VoiceLang.EN, "Turn on (1)", broken = false) }),
+        voice = VoiceSettingsUi(enabled = true),
         link = LinkState.Connected(TransportMode.DIRECT),
         roomCount = 6,
         presenceEnabled = true,
