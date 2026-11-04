@@ -22,6 +22,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.UUID
 
 /** The theme the user picked on this phone (settings spec §3). Mirrors `ThemeChoice` without depending on the design system. */
 enum class ThemePreference { SYSTEM, NIGHT_GLASS, IVOIRE }
@@ -66,6 +67,8 @@ internal data class StoredPreferences(
     val dashboardId: String = "house",
     val dashboardName: String? = null,
     val energyView: String = EnergyViewPreference.CLASSIC.name,
+    /** This phone's id for the hub's assistant (one pending question per client); created on first use. */
+    val assistClientId: String? = null,
 )
 
 /**
@@ -135,6 +138,15 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
     /** Writes the choice only while the stored id is still [expectedId], so a tap that raced a rename or reset is never overwritten. */
     suspend fun replaceSelectedDashboard(expectedId: String, id: String, name: String?) =
         update { if (it.dashboardId == expectedId) it.copy(dashboardId = id, dashboardName = name) else it }
+
+    /** This phone's stable `client` id for the hub's assistant, `android-<uuid>`, created and stored on the first call. */
+    suspend fun assistClientId(): String = writes.withLock {
+        withContext(NonCancellable) {
+            val stored = store.updateData { if (it.assistClientId == null) it.copy(assistClientId = "android-${UUID.randomUUID()}") else it }
+            publish(stored)
+            checkNotNull(stored.assistClientId)
+        }
+    }
 
     /** The flows show the write as soon as this returns. */
     private suspend fun update(transform: (StoredPreferences) -> StoredPreferences) {
