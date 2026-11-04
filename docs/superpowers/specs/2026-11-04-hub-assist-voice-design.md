@@ -124,6 +124,7 @@ A stable per-install id, generated once (random UUID) and stored in `AppPreferen
   same path that carries Frigate snapshots and clips over 4G. A streamed WAV ends when the hub finishes synthesis, well
   inside the 30 s gateway timeout for a one-line reply. **First plan task is a spike on the device away from home**
   (POST speech + GET wav through the gateway); if it fails, away use is text-only and the rest of the design stands.
+- **Gateway spike 2026-11-04: OK** (from the Mac through the real gateway, `simulate: true`): assist `200` in 335 ms, speech `201` in 34 ms, WAV `200 audio/wav` 126 764 bytes starting `RIFF` in 714 ms. Note: the SDK clock argument is in seconds.
 - The speech `text` is `turn.reply` as is; a reply over 500 characters is not sent for speech (text only). *(My call.)*
 - After each turn with a non-blank `reply`: `POST /api/v1/assist/speech {text: reply}` (no `language`: the house
   language, French; no `voice`: the language's chosen voice), then GET the returned `url` resolved against the hub
