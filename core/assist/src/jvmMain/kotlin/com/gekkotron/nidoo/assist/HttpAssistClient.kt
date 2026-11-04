@@ -5,6 +5,7 @@ import com.gekkotron.nidoo.transport.HttpPostResult
 import kotlinx.coroutines.CancellationException
 
 private const val UNPROCESSABLE = 422
+private val SPEECH_PATH = Regex("""^/api/v1/assist/speech/[A-Za-z0-9_-]+\.wav$""")
 
 /** Over the hub's `POST /api/v1/assist` and `/api/v1/assist/speech` routes. */
 class HttpAssistClient(
@@ -23,9 +24,9 @@ class HttpAssistClient(
         return try {
             val posted = post("$base/api/v1/assist/speech", AssistJson.speechRequest(text))
             if (posted !is HttpPostResult.Response || posted.status != 201 && posted.status != 200) return null
-            val path = AssistJson.speechUrl(posted.body) ?: return null
-            val url = if (path.startsWith("http://") || path.startsWith("https://")) path else base + "/" + path.trimStart('/')
-            val downloaded = get(url, MAX_WAV_BYTES)
+            // Only the hub's own speech route: the answer never sends the phone to another host or route.
+            val path = AssistJson.speechUrl(posted.body)?.takeIf { SPEECH_PATH.matches(it) } ?: return null
+            val downloaded = get(base + path, MAX_WAV_BYTES)
             if (downloaded is HttpGetResult.Response && downloaded.status in 200..299) downloaded.bytes else null
         } catch (e: CancellationException) {
             throw e

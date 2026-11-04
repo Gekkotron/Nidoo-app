@@ -105,6 +105,15 @@ class HttpAssistClientTest {
     }
 
     @Test
+    fun `speech only downloads the hub's own speech path`(): Unit = runBlocking {
+        for (url in listOf("http://evil.example/x.wav", "//evil.example/x.wav", "/api/v1/entities", "/api/v1/assist/speech/../../x")) {
+            postAnswer = response(201, """{"id":"s1","url":"$url"}""")
+            assertNull(client().speech("a"))
+        }
+        assertTrue(gets.isEmpty())
+    }
+
+    @Test
     fun `speech never posts a blank or too long text`(): Unit = runBlocking {
         assertNull(client().speech("  "))
         assertNull(client().speech("a".repeat(MAX_SPEECH_CHARS + 1)))
