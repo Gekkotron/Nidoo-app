@@ -20,6 +20,15 @@ interface AudioPlayer {
 
 private const val END_MARKER_GRACE_MS = 2_000L
 
+/**
+ * Media usage, so the voice follows the media volume the user sets with the volume keys. USAGE_ASSISTANT goes to a
+ * separate assistant stream that some phones (Samsung) keep at zero, which played the reply in silence.
+ */
+private val SPEECH: AudioAttributes = AudioAttributes.Builder()
+    .setUsage(AudioAttributes.USAGE_MEDIA)
+    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+    .build()
+
 class AndroidAudioPlayer(context: Context) : AudioPlayer {
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private val lock = Any()
@@ -38,12 +47,7 @@ class AndroidAudioPlayer(context: Context) : AudioPlayer {
         if (parsed.bitsPerSample != 16 || frames == 0) return false
         val audioTrack = try {
             AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ASSISTANT)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build(),
-                )
+                .setAudioAttributes(SPEECH)
                 .setAudioFormat(
                     AudioFormat.Builder()
                         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -59,20 +63,18 @@ class AndroidAudioPlayer(context: Context) : AudioPlayer {
         } catch (e: UnsupportedOperationException) {
             return false
         }
-        if (audioTrack.state != AudioTrack.STATE_INITIALIZED) {
+        // A static track waits in STATE_NO_STATIC_DATA until its samples are written; it is ready only after the write.
+        val ready = audioTrack.state != AudioTrack.STATE_UNINITIALIZED &&
+            audioTrack.write(parsed.pcm, 0, frames * frameBytes) == frames * frameBytes &&
+            audioTrack.state == AudioTrack.STATE_INITIALIZED
+        if (!ready) {
             audioTrack.release()
             return false
         }
         val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build(),
-            )
+            .setAudioAttributes(SPEECH)
             .build()
         try {
-            audioTrack.write(parsed.pcm, 0, frames * frameBytes)
             audioManager.requestAudioFocus(focus)
             // A device that never reports the end marker must not hold the sheet open: wait at most the audio's length + 2 s.
             val durationMs = frames * 1000L / parsed.sampleRate
