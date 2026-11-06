@@ -66,8 +66,9 @@ fun NidooCard(
     /** Dense lists (Security tiles) go lower; still a minimum, so large font scales grow the card. */
     minHeight: Dp = NidooDimens.cardMinHeight,
     /**
-     * A dark colour (a media cover's) that replaces the card's look: a vertical gradient from it towards the card
-     * colour, a lighter border of the same hue and white content. Wins over [on] and [accent].
+     * A dark colour (a media cover's) that replaces the card's look: a vertical gradient from it to a darker shade,
+     * a lighter border of the same hue and white content. Wins over [on] and [accent]. The gradient ignores the theme,
+     * so the card stays dark with readable white text on Ivoire too.
      */
     tint: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
@@ -75,7 +76,7 @@ fun NidooCard(
     val c = NidooTheme.colors
     val shape = RoundedCornerShape(NidooDimens.cardRadius)
     val background = when {
-        tint != null -> Brush.verticalGradient(listOf(tint, lerp(tint, c.card, 0.45f)))
+        tint != null -> Brush.verticalGradient(listOf(tint, lerp(tint, Color.Black, 0.35f)))
         on -> Brush.linearGradient(listOf(c.cardOnStart, c.cardOnEnd))
         else -> SolidColor(c.card)
     }

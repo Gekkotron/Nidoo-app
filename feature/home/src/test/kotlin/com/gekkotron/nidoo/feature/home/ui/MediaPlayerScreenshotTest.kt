@@ -8,6 +8,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.compositeOver
+import kotlin.test.assertEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -105,6 +110,68 @@ class MediaPlayerScreenshotTest {
                 }
             }
         }
+    }
+
+    /** White text needs 4.5:1, so the tint's bottom, where the title and artist sit, must stay dark in both themes. */
+    private fun assertTintedCardStaysDark(theme: ThemeChoice) {
+        compose.setContent {
+            NidooTheme(theme) {
+                NidooBackground {
+                    Column(Modifier.padding(16.dp)) { EntityCard(card(playing), onClick = {}, onLongClick = {}) }
+                }
+            }
+        }
+        val bounds = compose.onNodeWithTag("card-m").fetchSemanticsNode().boundsInRoot
+        val bitmap = compose.renderPng("media_player_tint_${theme.name.lowercase()}")
+        // Bottom right, inside the border and away from the text.
+        val pixel = bitmap.getPixel((bounds.left + bounds.width * 0.85f).toInt(), (bounds.bottom - 8f).toInt())
+        val luminance = Color(pixel).luminance()
+        assertTrue(luminance <= 0.18f, "bottom of the tinted card is too light for white text: luminance $luminance")
+    }
+
+    @Test
+    fun `the tinted card stays dark in Ivoire`() = assertTintedCardStaysDark(ThemeChoice.IVOIRE)
+
+    @Test
+    fun `the tinted card stays dark in Night Glass`() = assertTintedCardStaysDark(ThemeChoice.NIGHT_GLASS)
+
+    /** The sheet's own buttons (History, Customize) and drag handle use the theme's primary and onSurfaceVariant. */
+    @Test
+    fun `the tinted sheet keeps its buttons readable in Ivoire`() {
+        val tint = parseTint(playing.color)!!
+        var primary = Color.Unspecified
+        var handle = Color.Unspecified
+        compose.setContent {
+            NidooTheme(ThemeChoice.IVOIRE) {
+                TintedSheetColors(tint) {
+                    primary = MaterialTheme.colorScheme.primary
+                    handle = MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            }
+        }
+        compose.waitForIdle()
+        assertTrue(contrast(primary, tint) >= 4.5, "primary on tint: ${contrast(primary, tint)}")
+        assertTrue(contrast(handle, tint) >= 3.0, "drag handle on tint: ${contrast(handle, tint)}")
+    }
+
+    @Test
+    fun `an untinted sheet keeps the theme`() {
+        var primary = Color.Unspecified
+        var themed = Color.Unspecified
+        compose.setContent {
+            NidooTheme(ThemeChoice.IVOIRE) {
+                themed = MaterialTheme.colorScheme.primary
+                TintedSheetColors(null) { primary = MaterialTheme.colorScheme.primary }
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(themed, primary)
+    }
+
+    private fun contrast(fg: Color, bg: Color): Double {
+        val a = fg.compositeOver(bg).luminance() + 0.05
+        val b = bg.luminance() + 0.05
+        return maxOf(a, b) / minOf(a, b).toDouble()
     }
 
     @Test

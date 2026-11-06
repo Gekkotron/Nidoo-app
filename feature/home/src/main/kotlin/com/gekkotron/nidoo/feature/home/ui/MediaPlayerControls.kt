@@ -9,6 +9,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -95,6 +97,20 @@ internal fun MediaPlayerControls(card: CardUi, onSend: (Command) -> Unit) {
             if ("next" in features) MediaSkipButton("next", card.available, onSend)
         }
     }
+}
+
+/**
+ * On a tinted sheet the theme's own colours (History and Customize take `primary`, the drag handle `onSurfaceVariant`)
+ * can vanish on the cover colour, Ivoire's near-black worst of all: they turn white like the rest of the sheet.
+ */
+@Composable
+internal fun TintedSheetColors(tint: Color?, content: @Composable () -> Unit) {
+    if (tint == null) return content()
+    val scheme = MaterialTheme.colorScheme
+    MaterialTheme(
+        colorScheme = scheme.copy(primary = Color.White, onSurface = Color.White, onSurfaceVariant = Color.White.copy(alpha = 0.7f)),
+        content = content,
+    )
 }
 
 /** The song's progress, re-read every second while playing; nothing without a duration. */

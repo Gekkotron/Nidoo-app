@@ -82,7 +82,7 @@ internal fun ControlSheet(
     // A playing media player's sheet takes its cover's colour, like its card (media player spec, Android).
     val tint = (card.value as? CardValue.MediaPlayer)?.takeIf { card.available && it.state != "idle" }?.let { parseTint(it.color) }
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
-    ModalBottomSheet(
+    TintedSheetColors(tint) { ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = tint ?: BottomSheetDefaults.ContainerColor,
@@ -123,7 +123,7 @@ internal fun ControlSheet(
                 Text(stringResource(if (card.isGroup) R.string.sheet_customize_group else R.string.sheet_customize))
             }
         }
-    }
+    } }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

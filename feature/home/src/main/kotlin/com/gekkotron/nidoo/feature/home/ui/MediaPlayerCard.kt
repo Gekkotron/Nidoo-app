@@ -22,7 +22,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil3.PlatformContext
+import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
 import com.gekkotron.nidoo.designsystem.icons.StaticIcon
@@ -49,7 +53,7 @@ internal fun MediaCover(imageUrl: String?, size: Dp, modifier: Modifier = Modifi
             note()
         } else {
             SubcomposeAsyncImage(
-                model = imageUrl,
+                model = coverRequest(LocalPlatformContext.current, imageUrl),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -59,6 +63,12 @@ internal fun MediaCover(imageUrl: String?, size: Dp, modifier: Modifier = Modifi
         }
     }
 }
+
+/**
+ * Covers stay in memory only: the app's one disk cache holds alert pictures, and a cover per song would evict them.
+ */
+internal fun coverRequest(context: PlatformContext, url: String): ImageRequest =
+    ImageRequest.Builder(context).data(url).diskCachePolicy(CachePolicy.DISABLED).build()
 
 /** Play or pause, as the player allows: [action] is "play" or "pause". */
 @Composable
