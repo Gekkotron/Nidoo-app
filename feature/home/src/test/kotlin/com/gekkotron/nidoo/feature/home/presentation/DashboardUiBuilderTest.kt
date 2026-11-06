@@ -251,4 +251,15 @@ class DashboardUiBuilderTest {
         assertEquals("l2", ui.card("l2")?.id)
         assertNull(ui.card("zzz"))
     }
+
+    @Test
+    fun `a media player widget shows the media card`() {
+        val ui = build(
+            dash(w("m", WidgetKind.MEDIA_PLAYER, WidgetSpan.S2X2, WidgetConfig(entityId = "music"))),
+            house(testEntity("music", Kind.MEDIA_PLAYER, name = "Music")),
+        )
+        val card = (ui.tiles.single().content as TileContent.Entity).card
+        assertEquals(Kind.MEDIA_PLAYER, card.kind)
+        assertEquals(2, ui.tiles.single().rows)
+    }
 }

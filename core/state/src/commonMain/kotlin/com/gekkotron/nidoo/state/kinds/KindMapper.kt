@@ -59,5 +59,6 @@ object KindMappers {
         Kind.BUTTON -> ButtonMapper
         Kind.VACUUM -> VacuumMapper
         Kind.WATER_HEATER -> WaterHeaterMapper
+        Kind.MEDIA_PLAYER -> MediaPlayerMapper
     }
 }

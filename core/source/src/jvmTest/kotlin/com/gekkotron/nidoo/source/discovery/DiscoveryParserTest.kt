@@ -261,6 +261,19 @@ class DiscoveryParserTest {
     }
 
     @Test
+    fun `media player discovers with its features`() {
+        for (topic in listOf("homeassistant/media_player/n/player/config", "homeassistant/media_player/player/config")) {
+            val player = single(
+                topic,
+                """{"name":"Music","uniq_id":"n_player","stat_t":"m/player/state","cmd_t":"m/player/set",
+                   "sup_feat":["play_media","play","pause"]}""",
+            ).entity
+            assertEquals(Kind.MEDIA_PLAYER, player.kind)
+            assertEquals(listOf("play", "pause", "play_media"), player.capabilities.mediaFeatures)
+        }
+    }
+
+    @Test
     fun `diagnostic entities are hidden like Home Assistant`() {
         val r = reason("homeassistant/sensor/x/config", """{"stat_t":"s","entity_category":"diagnostic"}""")
         assertTrue("diagnostic" in r)

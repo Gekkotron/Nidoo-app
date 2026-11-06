@@ -58,4 +58,21 @@ class CardFormatterTest {
         assertEquals(CardValue.Vacuum("docked", 100), CardFormatter.format(entity, StateValue.Vacuum("docked", 100, "Turbo"), Locale.ENGLISH))
         assertEquals(CardValue.Vacuum(null, null), CardFormatter.format(entity, StateValue.Vacuum(null, null, null), Locale.ENGLISH))
     }
+
+    @Test
+    fun `media player shows title and artist`() {
+        val player = testEntity("m", Kind.MEDIA_PLAYER)
+        val playing = StateValue.MediaPlayer("playing", "Song", "Band", "Album", null, "#3d2466", 200.0, 10.0, 1L)
+        assertEquals(
+            CardValue.MediaPlayer("playing", "Song", "Band", "Album", null, "#3d2466", 200.0, 10.0, 1L),
+            CardFormatter.format(player, playing, Locale.US),
+        )
+    }
+
+    @Test
+    fun `an idle media player shows nothing playing`() {
+        val player = testEntity("m", Kind.MEDIA_PLAYER)
+        val idle = StateValue.MediaPlayer("idle", null, null, null, null, null, null, null, null)
+        assertEquals(CardValue.MediaPlayer("idle", null, null, null, null, null, null, null, null), CardFormatter.format(player, idle, Locale.US))
+    }
 }

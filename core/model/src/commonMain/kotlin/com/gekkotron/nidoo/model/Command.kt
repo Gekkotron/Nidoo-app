@@ -34,6 +34,10 @@ sealed interface Command {
     /** [action] is one of start, pause, stop, return_to_base, locate. */
     data class VacuumAction(val action: String) : Command
     data class SetFanSpeed(val speed: String) : Command
+    /** A media player's play, pause, next or previous; play on an idle player plays something. */
+    data class MediaAction(val action: String) : Command
+    /** Plays what the words name, as heard. */
+    data class PlayMedia(val query: String) : Command
 }
 
 sealed interface CommandResult {

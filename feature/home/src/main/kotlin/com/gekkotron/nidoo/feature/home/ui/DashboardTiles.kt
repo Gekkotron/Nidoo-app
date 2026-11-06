@@ -56,6 +56,7 @@ internal fun LazyGridScope.dashboardTiles(
     onEntityLongClick: (CardUi) -> Unit,
     onSendGroup: (String, Command) -> Unit,
     onForce: (CardUi) -> Unit,
+    onSend: (String, Command) -> Unit,
     onRunFlow: (String) -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenHistory: (String) -> Unit,
@@ -72,10 +73,10 @@ internal fun LazyGridScope.dashboardTiles(
         }
         when (val content = tile.content) {
             is TileContent.Entity ->
-                TileCard(content.card, modifier, onEntityClick, onEntityLongClick, onSendGroup, onForce)
+                TileCard(content.card, modifier, onEntityClick, onEntityLongClick, onSendGroup, onForce, onSend)
             is TileContent.Room -> Column(modifier, verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap)) {
                 Text(content.title, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, modifier = Modifier.semantics { heading() })
-                content.cards.forEach { TileCard(it, Modifier, onEntityClick, onEntityLongClick, onSendGroup, onForce) }
+                content.cards.forEach { TileCard(it, Modifier, onEntityClick, onEntityLongClick, onSendGroup, onForce, onSend) }
             }
             is TileContent.FlowButton -> FlowTile(content, content.flowId in running, modifier, onRunFlow)
             is TileContent.EnergyStat -> EnergyTile(content, modifier, onOpenEnergy)
@@ -95,11 +96,19 @@ private fun TileCard(
     onLongClick: (CardUi) -> Unit,
     onSendGroup: (String, Command) -> Unit,
     onForce: (CardUi) -> Unit,
+    onSend: (String, Command) -> Unit,
 ) {
     if (card.isGroup) {
         GroupCard(card, onClick = { onClick(card) }, onLongClick = { onLongClick(card) }, onSendGroup = onSendGroup, modifier = modifier)
     } else {
-        EntityCard(card, onClick = { onClick(card) }, onLongClick = { onLongClick(card) }, onForce = { onForce(card) }, modifier = modifier)
+        EntityCard(
+            card,
+            onClick = { onClick(card) },
+            onLongClick = { onLongClick(card) },
+            onForce = { onForce(card) },
+            modifier = modifier,
+            onSend = { onSend(card.id, it) },
+        )
     }
 }
 

@@ -106,4 +106,8 @@ class TileActionsTest {
         assertEquals(Command.Disarm("1234"), WidgetCommand.Disarm.toCommand("1234"))
         assertEquals(null, WidgetCommand.decode("{garbage"))
     }
+
+    @Test
+    fun media_tile_tap_opens_home() =
+        assertEquals(TileAction.OpenHome, TileActions.forTap(tile(Kind.MEDIA_PLAYER, TileValue.Media("Song", playing = true)), null))
 }

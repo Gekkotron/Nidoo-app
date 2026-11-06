@@ -1,6 +1,8 @@
 package com.gekkotron.nidoo.designsystem
 
 import com.gekkotron.nidoo.designsystem.components.cardBorderColor
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -118,5 +120,14 @@ class NidooCardTest {
         val c = NightGlassColors
         assertEquals(c.heat.copy(alpha = 0.35f), cardBorderColor(c, on = false, accent = true, accentColor = c.heat))
         assertEquals(c.cardBorder, cardBorderColor(c, on = false, accent = false, accentColor = c.heat))
+    }
+
+    @Test
+    fun `a tint wins over on and accent, with a lighter border`() {
+        val c = NightGlassColors
+        val tint = Color(0xFF3D2466)
+        val expected = lerp(tint, Color.White, 0.4f)
+        assertEquals(expected, cardBorderColor(c, on = false, accent = false, tint = tint))
+        assertEquals(expected, cardBorderColor(c, on = true, accent = true, tint = tint))
     }
 }

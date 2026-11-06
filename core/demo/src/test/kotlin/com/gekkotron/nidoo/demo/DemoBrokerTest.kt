@@ -40,7 +40,7 @@ class DemoBrokerTest {
         "demo_alarm", "demo_alarm_intrusion", "demo_water_heater", "demo_water_heater_tank", "demo_water_heater_inlet",
         "demo_water_heater_triac_0", "demo_water_heater_triac_1", "demo_water_heater_triac_2", "demo_vacuum_mode", "demo_vacuum_start",
         "demo_bedroom_strip", "demo_bedroom_strip_effect_speed", "demo_bedroom_strip_effect_intensity",
-        "demo_living_shutter_side", "demo_living_door_shutter", "demo_living_ceiling", "demo_living_spot",
+        "demo_living_shutter_side", "demo_living_door_shutter", "demo_living_ceiling", "demo_living_spot", "demo_living_music",
     )
 
     private class Harness(val broker: DemoBroker, val source: MqttDiscoverySource, val diagnostics: List<Diagnostic>)
@@ -221,5 +221,21 @@ class DemoBrokerTest {
         val h = start()
         assertEquals(LinkState.Connected(TransportMode.DEMO), h.source.link.value)
         assertFailsWith<PublishFailed> { h.broker.publish("demo/+/set", "x".encodeToByteArray()) }
+    }
+
+    @Test
+    fun `the demo music player pauses and skips`() = runTest {
+        val h = start()
+        val playing = assertIs<StateValue.MediaPlayer>(h.value("demo_living_music"))
+        assertEquals("playing", playing.state)
+        assertEquals("#3d2466", playing.color)
+        h.source.send("demo_living_music", Command.MediaAction("pause"))
+        settle()
+        assertEquals("paused", assertIs<StateValue.MediaPlayer>(h.value("demo_living_music")).state)
+        h.source.send("demo_living_music", Command.MediaAction("next"))
+        settle()
+        val next = assertIs<StateValue.MediaPlayer>(h.value("demo_living_music"))
+        assertEquals("playing", next.state)
+        assertNotEquals(playing.title, next.title)
     }
 }

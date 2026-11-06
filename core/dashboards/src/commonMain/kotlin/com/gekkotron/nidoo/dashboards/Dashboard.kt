@@ -43,6 +43,8 @@ enum class WidgetKind(val wire: String?) {
     HISTORY_CHART("history_chart"),
     CAMERA("camera"),
     WATER_HEATER("water_heater"),
+    /** The hub's media player card; spans 2x1 or 2x2. */
+    MEDIA_PLAYER("media_player"),
     UNKNOWN(null),
 }
 
