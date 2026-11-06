@@ -69,8 +69,8 @@ object TileMapper {
         is StateValue.Climate -> TileValue.Climate(value.mode, value.current, value.target)
         is StateValue.Alarm -> TileValue.Alarm(value.state)
         is StateValue.Vacuum -> value.state?.let { TileValue.Text(it) } ?: TileValue.None
-        // Task 3 gives it its title.
-        is StateValue.MediaPlayer -> TileValue.None
+        is StateValue.MediaPlayer ->
+            if (value.state == "idle") TileValue.None else TileValue.Media(value.title, playing = value.state == "playing")
     }
 
     private fun iconOf(entity: Entity): TileIcon = when (entity.kind) {
@@ -81,6 +81,7 @@ object TileMapper {
         Kind.ALARM_PANEL -> TileIcon.ALARM
         Kind.BUTTON -> TileIcon.BUTTON
         Kind.SENSOR -> if (entity.deviceClass == "temperature") TileIcon.TEMPERATURE else TileIcon.SENSOR
-        Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT, Kind.VACUUM, Kind.WATER_HEATER, Kind.MEDIA_PLAYER -> TileIcon.SENSOR
+        Kind.MEDIA_PLAYER -> TileIcon.MEDIA
+        Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT, Kind.VACUUM, Kind.WATER_HEATER -> TileIcon.SENSOR
     }
 }

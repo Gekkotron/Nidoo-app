@@ -194,6 +194,7 @@ internal fun TileSnapshot.isOn(now: Long): Boolean {
             (v.state == CoverState.STOPPED && v.position != 0)
         is TileValue.Climate -> v.mode != null && v.mode != "off"
         is TileValue.Alarm -> v.state != AlarmState.DISARMED && v.state != AlarmState.DISARMING
+        is TileValue.Media -> v.playing
         else -> false
     }
 }
@@ -400,5 +401,6 @@ private fun iconRes(icon: TileIcon?): Int = when (icon) {
     TileIcon.TEMPERATURE -> R.drawable.ic_widget_temperature
     TileIcon.ALARM -> R.drawable.ic_widget_alarm
     TileIcon.BUTTON -> R.drawable.ic_widget_button
+    TileIcon.MEDIA -> R.drawable.ic_widget_media
     TileIcon.SENSOR, null -> R.drawable.ic_widget_sensor
 }

@@ -153,4 +153,28 @@ class TileMapperTest {
         val settled = TileMapper.map(cachedOnly, state, prev, false, complete = true)!!
         assertEquals(false, settled.codeDisarmRequired)
     }
+
+    private val player = entity("m", Kind.MEDIA_PLAYER, name = "Music", caps = Capabilities(mediaFeatures = listOf("play", "pause")))
+
+    private fun media(state: String, title: String?) =
+        StateValue.MediaPlayer(state, title, "Band", null, null, "#3d2466", 200.0, 10.0, null)
+
+    @Test
+    fun media_player_tile_shows_the_title_and_whether_it_plays() {
+        val playing = TileMapper.map(player, EntityState("m", media("playing", "Song"), lastUpdate = t0), null, false, true)!!
+        assertEquals(TileValue.Media("Song", playing = true), playing.value)
+        val paused = TileMapper.map(player, EntityState("m", media("paused", "Song"), lastUpdate = t0), null, false, true)!!
+        assertEquals(TileValue.Media("Song", playing = false), paused.value)
+    }
+
+    @Test
+    fun idle_media_tile_shows_nothing() {
+        val idle = StateValue.MediaPlayer("idle", null, null, null, null, null, null, null, null)
+        assertEquals(TileValue.None, TileMapper.map(player, EntityState("m", idle, lastUpdate = t0), null, false, true)!!.value)
+    }
+
+    @Test
+    fun media_tile_icon_is_media() {
+        assertEquals(TileIcon.MEDIA, TileMapper.map(player, EntityState("m", media("playing", "Song")), null, false, true)!!.icon)
+    }
 }
