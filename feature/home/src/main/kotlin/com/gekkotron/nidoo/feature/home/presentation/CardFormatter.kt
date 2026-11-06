@@ -23,8 +23,10 @@ object CardFormatter {
             CardValue.Climate(value.current?.let { number(it, locale) }, value.target?.let { number(it, locale) }, value.mode)
         is StateValue.Alarm -> CardValue.Alarm(value.state)
         is StateValue.Vacuum -> CardValue.Vacuum(value.state, value.battery)
-        // Task 2 gives it its own card value.
-        is StateValue.MediaPlayer -> value.title?.let { CardValue.Text(it) } ?: CardValue.None
+        is StateValue.MediaPlayer -> CardValue.MediaPlayer(
+            value.state, value.title, value.artist, value.album, value.imageUrl, value.color,
+            value.durationS, value.positionS, value.positionAtMs,
+        )
     }
 
     /** 0..255 → 0..100. */

@@ -261,7 +261,7 @@ fun HomeScreen(
                             dashboardTiles(
                                 view.ui.tiles, dashboard.runningFlows,
                                 onEntityClick = cardClick, onEntityLongClick = cardLongClick,
-                                onSendGroup = onSendGroup, onForce = cardForce,
+                                onSendGroup = onSendGroup, onForce = cardForce, onSend = onSend,
                                 onRunFlow = onRunFlow, onOpenEnergy = onOpenEnergy, onOpenHistory = onOpenHistory,
                             )
                         }
@@ -294,6 +294,7 @@ fun HomeScreen(
                             onClick = onClick,
                             onLongClick = { cardLongClick(card) },
                             onForce = { cardForce(card) },
+                            onSend = { onSend(card.id, it) },
                         )
                     }
                 }

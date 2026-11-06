@@ -268,6 +268,7 @@ object HomeUiBuilder {
             // Stopped midway is open (as in Home Assistant), also for a shutter that reports no position.
             (v.state == CoverState.STOPPED && v.position != 0)
         is StateValue.Climate -> v.mode != null && v.mode != "off"
+        is StateValue.MediaPlayer -> v.state == "playing"
         else -> false
     }
 }

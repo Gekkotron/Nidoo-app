@@ -119,4 +119,11 @@ class IconSpecTest {
         ).cards.single { it.isGroup }
         assertEquals(IconSpec.Shutter(0.5f, CoverState.CLOSING), iconSpec(moving))
     }
+
+    @Test
+    fun `a media player wears the note, lit while playing`() {
+        val playing = StateValue.MediaPlayer("playing", "Song", null, null, null, null, null, null, null)
+        assertEquals(IconSpec.Static(NidooGlyph.MUSIC, on = true), spec(Kind.MEDIA_PLAYER, playing))
+        assertEquals(IconSpec.Static(NidooGlyph.MUSIC, on = false), spec(Kind.MEDIA_PLAYER, playing.copy(state = "paused")))
+    }
 }
