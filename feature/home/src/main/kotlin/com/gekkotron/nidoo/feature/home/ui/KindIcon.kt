@@ -79,6 +79,8 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.VACUUM -> (card.state as? StateValue.Vacuum).let { s ->
         IconSpec.Vacuum(motion = vacuumMotion(s?.state), fanSpeed = s?.fanSpeed)
     }
+    // Task 2 draws its own note glyph.
+    Kind.MEDIA_PLAYER -> IconSpec.Static(NidooGlyph.PLAY, card.on)
 }
 
 /** Device sheet spec §5.3: a Z2M switch wears the glyph of its presentation type. */

@@ -18,6 +18,8 @@ data class Capabilities(
     val vacuumActions: List<String> = emptyList(),
     /** The vacuum's `fan_speed_list`; empty when it cannot set a fan speed. */
     val fanSpeeds: List<String> = emptyList(),
+    /** The media player's commands (play, pause, next, previous, play_media), in that order. */
+    val mediaFeatures: List<String> = emptyList(),
     val minTemp: Double? = null,
     val maxTemp: Double? = null,
     val tempStep: Double? = null,
