@@ -54,4 +54,11 @@
     <string name="energy_unitemised">Non mesuré</string>
     <string name="energy_export">Injection</string>
     <string name="energy_battery_charge">Charge</string>
+    <string name="energy_orbite_in">Entrant</string>
+    <string name="energy_orbite_out">Sortant</string>
+    <string name="energy_orbite_production">production</string>
+    <string name="energy_orbite_import">import</string>
+    <string name="energy_orbite_export">export</string>
+    <string name="energy_orbite_charging">charge</string>
+    <string name="energy_orbite_discharging">décharge</string>
 </resources>
