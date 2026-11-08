@@ -36,6 +36,7 @@ jobs:
               :core:flows:jvmTest
               :core:assist:jvmTest
               :core:dashboards:jvmTest
+              :core:climate:jvmTest
               :core:push:test
               :core:demo:test
               :core:designsystem:test
@@ -50,6 +51,7 @@ jobs:
               :core:flows:koverXmlReport
               :core:assist:koverXmlReport
               :core:dashboards:koverXmlReport
+              :core:climate:koverXmlReport
               :core:push:koverXmlReport
               :core:demo:koverXmlReport
               :core:designsystem:koverXmlReport
