@@ -112,6 +112,39 @@ class HomeScreenTest {
         }
     }
 
+    private val climat = com.gekkotron.nidoo.feature.home.presentation.ClimatBannerUi(
+        zone = "living", reading = 19.4, target = 20.0,
+        why = com.gekkotron.nidoo.feature.home.presentation.ClimatWhy.SCHEDULE, reason = "",
+        boost = null, holdUntil = null, canBoost = true, min = 16.0, max = 30.0,
+    )
+
+    private fun showClimat(state: HomeUiState, boosts: MutableList<Triple<String, Double, Int>>) = compose.setContent {
+        NidooTheme(ThemeChoice.NIGHT_GLASS) {
+            HomeScreen(
+                state = state,
+                onSelect = {}, onTap = {}, onSend = { _, _ -> },
+                now = LocalTime.NOON,
+                onStartBoost = { z, t, m -> boosts += Triple(z, t, m) },
+            )
+        }
+    }
+
+    @Test
+    fun `the climat banner shows only when the room has one, and opens the boost sheet`() {
+        val boosts = mutableListOf<Triple<String, Double, Int>>()
+        showClimat(state().copy(selected = RoomFilter.Area("living"), climat = climat), boosts)
+        compose.onNodeWithTag("climat-banner").assertExists()
+        compose.onNodeWithText("Boost").performClick()
+        compose.onNodeWithText("Start boost").performClick()
+        assertEquals(listOf(Triple("living", 20.0, 60)), boosts)
+    }
+
+    @Test
+    fun `no climat banner without a zone`() {
+        showClimat(state().copy(selected = RoomFilter.Area("living")), mutableListOf())
+        compose.onNodeWithTag("climat-banner").assertDoesNotExist()
+    }
+
     @Test
     fun `tapping a light card calls onTap`() {
         show()

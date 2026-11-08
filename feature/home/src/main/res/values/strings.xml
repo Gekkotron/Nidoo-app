@@ -278,4 +278,27 @@
     <string name="widget_energy_solar_now">Solar now</string>
     <string name="widget_energy_self">Self-consumption</string>
     <string name="widget_history_band">min %1$s · max %2$s</string>
+    <!-- Climat banner and boost sheet (room view) -->
+    <string name="climat_title">Climat</string>
+    <string name="climat_boost">Boost</string>
+    <string name="climat_cancel">Cancel</string>
+    <string name="climat_start">Start boost</string>
+    <string name="climat_update">Update</string>
+    <string name="climat_boost_until">Boost %1$s° until %2$s</string>
+    <string name="climat_hold_until">Hold until %1$s</string>
+    <string name="climat_sheet_line">Room at %1$s° until %2$s · ends if you leave</string>
+    <string name="climat_duration_60">1 h</string>
+    <string name="climat_duration_90">1 h 30</string>
+    <string name="climat_duration_120">2 h</string>
+    <string name="climat_error">Climat didn\'t take the boost</string>
+    <string name="climat_why_schedule">Schedule</string>
+    <string name="climat_why_boost">Boost</string>
+    <string name="climat_why_hold">Hold</string>
+    <string name="climat_why_eco">Eco</string>
+    <string name="climat_why_away">Away</string>
+    <string name="climat_why_holiday">Holiday</string>
+    <string name="climat_why_empty">Room empty</string>
+    <string name="climat_why_safety">Safety</string>
+    <string name="climat_why_idle">Idle</string>
+    <string name="climat_why_other">—</string>
 </resources>

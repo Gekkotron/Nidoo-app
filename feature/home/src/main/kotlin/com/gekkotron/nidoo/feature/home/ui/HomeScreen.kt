@@ -161,6 +161,9 @@ fun HomeRoute(
         onSelectDashboard = dashboardViewModel::select,
         onRunFlow = dashboardViewModel::runFlow,
         onOpenEnergy = onOpenEnergy,
+        onStartBoost = viewModel::startBoost,
+        onCancelBoost = viewModel::cancelBoost,
+        onDismissClimatError = viewModel::dismissClimatError,
     )
 }
 
@@ -187,6 +190,9 @@ fun HomeScreen(
     onSelectDashboard: (String) -> Unit = {},
     onRunFlow: (String) -> Unit = {},
     onOpenEnergy: () -> Unit = {},
+    onStartBoost: (zone: String, setpoint: Double, minutes: Int) -> Unit = { _, _, _ -> },
+    onCancelBoost: (zone: String) -> Unit = {},
+    onDismissClimatError: () -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -196,6 +202,22 @@ fun HomeScreen(
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     var picker by rememberSaveable { mutableStateOf(false) }
+    var boostSheet by rememberSaveable { mutableStateOf(false) }
+    // The boost sheet closes once the hub took what it sent; a refused cancel from the banner is a snackbar.
+    var awaitingClimat by remember { mutableStateOf(false) }
+    val climatError = stringResource(R.string.climat_error)
+    LaunchedEffect(state.climatSending, state.climatError) {
+        if (state.climatSending) {
+            awaitingClimat = true
+        } else if (awaitingClimat) {
+            awaitingClimat = false
+            if (!state.climatError) boostSheet = false
+        }
+        if (state.climatError && !boostSheet) {
+            onDismissClimatError()
+            snackbarHostState.showSnackbar(climatError)
+        }
+    }
     // Searching always looks through House, even from a dashboard.
     val onDashboard = dashboard.switcherVisible && dashboard.view !is DashboardView.House && !searching
     val shownDashboard = (dashboard.view as? DashboardView.Shown)?.ui
@@ -246,6 +268,12 @@ fun HomeScreen(
                             // On a dashboard a room chip goes back to House, filtered.
                             HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
                         }
+                    }
+                }
+                val climat = state.climat
+                if (climat != null && !onDashboard && !searching) {
+                    item(key = "climat-banner", span = { GridItemSpan(maxLineSpan) }) {
+                        ClimatBanner(climat, onBoost = { boostSheet = true }, onCancel = { onCancelBoost(climat.zone) })
                     }
                 }
                 if (onDashboard) {
@@ -307,6 +335,17 @@ fun HomeScreen(
                     .testTag("status-scrim"),
             )
         }
+    }
+    val climatUi = state.climat
+    if (boostSheet && climatUi != null) {
+        BoostSheet(
+            climatUi,
+            sending = state.climatSending,
+            error = state.climatError,
+            onStart = { target, minutes -> onStartBoost(climatUi.zone, target, minutes) },
+            onCancel = { onCancelBoost(climatUi.zone) },
+            onDismiss = { boostSheet = false; onDismissClimatError() },
+        )
     }
     val sheetCard = sheetId?.let { state.card(it) ?: dashboard.card(it) }
     if (sheetCard != null) {
