@@ -130,7 +130,12 @@ class MqttDiscoverySource(
     private class Snapshot(val entities: Map<String, Entity>, val devices: Map<String, Device>, val areas: List<Area>)
 
     init {
-        climateSink?.clear()
+        if (climateSink != null) {
+            climateSink.clear()
+            scope.launch {
+                link.map { it is LinkState.Connected }.distinctUntilChanged().filter { it }.collect { climateSink.markLinkUp() }
+            }
+        }
         if (dashboardsSink != null) {
             dashboardsSink.clear()
             scope.launch {

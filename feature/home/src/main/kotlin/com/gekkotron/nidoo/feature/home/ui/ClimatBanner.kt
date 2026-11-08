@@ -95,7 +95,8 @@ internal fun ClimatBanner(ui: ClimatBannerUi, onBoost: () -> Unit, onCancel: () 
             val status = when {
                 ui.boost != null -> stringResource(R.string.climat_boost_until, CardFormatter.number(ui.boost.target, locale), clock(ui.boost.until))
                 ui.holdUntil != null -> stringResource(R.string.climat_hold_until, clock(ui.holdUntil))
-                ui.why == ClimatWhy.SCHEDULE && ui.reason.isNotBlank() -> whyText(ui.why) + " · " + ui.reason
+                // Safety says why it acts (spec §6.3); the schedule says which block it follows.
+                ui.why in setOf(ClimatWhy.SCHEDULE, ClimatWhy.SAFETY) && ui.reason.isNotBlank() -> whyText(ui.why) + " · " + ui.reason
                 else -> whyText(ui.why)
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

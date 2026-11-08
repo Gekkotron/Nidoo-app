@@ -8,6 +8,9 @@ import com.gekkotron.nidoo.model.Entity
 /** Why Climat holds the room where it is, from the decision's `source`. */
 enum class ClimatWhy { SCHEDULE, BOOST, HOLD, ECO, AWAY, HOLIDAY, EMPTY, SAFETY, IDLE, OTHER }
 
+/** What the hub did with a boost or cancel: sent once per command (the sheet closes, or a snackbar says no). */
+enum class ClimatResult { CONFIRMED, REFUSED }
+
 /** A live boost: the room target and when it ends (Unix seconds). */
 data class ClimatBoostUi(val target: Double, val until: Long)
 

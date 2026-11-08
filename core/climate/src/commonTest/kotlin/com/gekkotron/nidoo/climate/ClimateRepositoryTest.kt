@@ -1,10 +1,15 @@
 package com.gekkotron.nidoo.climate
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ClimateRepositoryTest {
 
     private val settings = """{"state":"active","entities":["ac"],"sensor":null}"""
@@ -78,5 +83,51 @@ class ClimateRepositoryTest {
         r.onRetained("living", ClimateDoc.SETTINGS, settings)
         r.clear()
         assertTrue(r.zones.value.isEmpty())
+    }
+
+    @Test
+    fun linkUpDropsDocsTheBrokerNoLongerHolds() = runTest {
+        val r = ClimateRepository(scope = backgroundScope)
+        r.onRetained("living", ClimateDoc.SETTINGS, settings)
+        r.onRetained("living", ClimateDoc.DECISION, decision)
+        r.onRetained("living", ClimateDoc.OVERRIDE, boost)
+        r.onRetained("bed", ClimateDoc.SETTINGS, settings)
+        // Offline: the boost ended (the hub deleted the retained override) and the bed zone went away.
+        r.markLinkUp()
+        r.onRetained("living", ClimateDoc.SETTINGS, settings)
+        r.onRetained("living", ClimateDoc.DECISION, decision)
+        advanceTimeBy(4_000)
+        runCurrent()
+        assertEquals(1, r.zones.value.getValue("living").overrides.size, "kept during the replay window")
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertTrue(r.zones.value.getValue("living").overrides.isEmpty())
+        assertEquals(setOf("living"), r.zones.value.keys)
+        assertEquals(ClimateSetpoint.Temp(20.0), r.zones.value.getValue("living").decision?.setpoint)
+    }
+
+    @Test
+    fun replayedDocsSurviveLinkUp() = runTest {
+        val r = ClimateRepository(scope = backgroundScope)
+        r.onRetained("living", ClimateDoc.SETTINGS, settings)
+        r.onRetained("living", ClimateDoc.OVERRIDE, boost)
+        r.markLinkUp()
+        r.onRetained("living", ClimateDoc.SETTINGS, settings)
+        r.onRetained("living", ClimateDoc.OVERRIDE, boost)
+        advanceTimeBy(6_000)
+        runCurrent()
+        assertEquals(1, r.zones.value.getValue("living").overrides.size)
+    }
+
+    @Test
+    fun aDecisionNotReplayedIsCleared() = runTest {
+        val r = ClimateRepository(scope = backgroundScope)
+        r.onRetained("living", ClimateDoc.SETTINGS, settings)
+        r.onRetained("living", ClimateDoc.DECISION, decision)
+        r.markLinkUp()
+        r.onRetained("living", ClimateDoc.SETTINGS, settings)
+        advanceTimeBy(6_000)
+        runCurrent()
+        assertNull(r.zones.value.getValue("living").decision)
     }
 }

@@ -564,6 +564,20 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `each climat command reports its result once`() = runTest(dispatcher) {
+        val repo = climate()
+        val vm = climatVm(repo, FakeMqttTransport())
+        val results = mutableListOf<ClimatResult>()
+        backgroundScope.launch { vm.climatResults.collect { results += it } }
+        vm.startBoost("living", 22.0, 60)
+        repo.onRetained("living", ClimateDoc.OVERRIDE, boostOverride)
+        assertEquals(listOf(ClimatResult.CONFIRMED), results)
+        vm.cancelBoost("living")
+        advanceTimeBy(5_100)
+        assertEquals(listOf(ClimatResult.CONFIRMED, ClimatResult.REFUSED), results)
+    }
+
+    @Test
     fun `a failed publish is an error at once`() = runTest(dispatcher) {
         val transport = FakeMqttTransport().apply { failPublishes = true }
         val vm = climatVm(climate(), transport)

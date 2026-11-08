@@ -6,6 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
 import javax.inject.Singleton
 
 @Module
@@ -14,5 +15,6 @@ object ClimateModule {
     /** The hub's Climat zones, fed by the main session's MQTT source (retained `nidoo/climate/zone/<zone>/<doc>`). */
     @Provides
     @Singleton
-    fun climateRepository(): ClimateRepository = ClimateRepository(log = { Log.w("NidooClimate", it) })
+    fun climateRepository(@ApplicationScope scope: CoroutineScope): ClimateRepository =
+        ClimateRepository(scope, log = { Log.w("NidooClimate", it) })
 }

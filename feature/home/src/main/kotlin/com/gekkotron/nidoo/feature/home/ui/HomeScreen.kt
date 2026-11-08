@@ -1,5 +1,10 @@
 package com.gekkotron.nidoo.feature.home.ui
 
+import com.gekkotron.nidoo.feature.home.presentation.ClimatResult
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.Flow
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
@@ -164,6 +169,7 @@ fun HomeRoute(
         onStartBoost = viewModel::startBoost,
         onCancelBoost = viewModel::cancelBoost,
         onDismissClimatError = viewModel::dismissClimatError,
+        climatResults = viewModel.climatResults,
     )
 }
 
@@ -193,6 +199,7 @@ fun HomeScreen(
     onStartBoost: (zone: String, setpoint: Double, minutes: Int) -> Unit = { _, _, _ -> },
     onCancelBoost: (zone: String) -> Unit = {},
     onDismissClimatError: () -> Unit = {},
+    climatResults: Flow<ClimatResult> = emptyFlow(),
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -203,19 +210,21 @@ fun HomeScreen(
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     var picker by rememberSaveable { mutableStateOf(false) }
     var boostSheet by rememberSaveable { mutableStateOf(false) }
-    // The boost sheet closes once the hub took what it sent; a refused cancel from the banner is a snackbar.
-    var awaitingClimat by remember { mutableStateOf(false) }
+    // The boost sheet closes once the hub took what it sent; a refused command from the banner (sheet
+    // closed) is a snackbar. One-shot results, collected under a stable key, so neither is lost.
     val climatError = stringResource(R.string.climat_error)
-    LaunchedEffect(state.climatSending, state.climatError) {
-        if (state.climatSending) {
-            awaitingClimat = true
-        } else if (awaitingClimat) {
-            awaitingClimat = false
-            if (!state.climatError) boostSheet = false
-        }
-        if (state.climatError && !boostSheet) {
-            onDismissClimatError()
-            snackbarHostState.showSnackbar(climatError)
+    val dismissClimatError by rememberUpdatedState(onDismissClimatError)
+    LaunchedEffect(climatResults, snackbarHostState) {
+        climatResults.collect { result ->
+            when (result) {
+                ClimatResult.CONFIRMED -> boostSheet = false
+                ClimatResult.REFUSED -> if (!boostSheet) {
+                    launch {
+                        dismissClimatError()
+                        snackbarHostState.showSnackbar(climatError)
+                    }
+                }
+            }
         }
     }
     // Searching always looks through House, even from a dashboard.

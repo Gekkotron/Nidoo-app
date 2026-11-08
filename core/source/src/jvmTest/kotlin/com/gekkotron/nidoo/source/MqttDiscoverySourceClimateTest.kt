@@ -2,6 +2,8 @@ package com.gekkotron.nidoo.source
 
 import com.gekkotron.nidoo.climate.ClimateDoc
 import com.gekkotron.nidoo.climate.ClimateSink
+import com.gekkotron.nidoo.transport.LinkState
+import com.gekkotron.nidoo.transport.TransportMode
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -16,6 +18,8 @@ class MqttDiscoverySourceClimateTest {
     private class RecordingClimate : ClimateSink {
         val retained = mutableListOf<Triple<String, ClimateDoc, String?>>()
         var clears = 0
+        var linkUps = 0
+        override fun markLinkUp() { linkUps++ }
         override fun onRetained(zone: String, doc: ClimateDoc, payload: String?) { retained += Triple(zone, doc, payload) }
         override fun clear() { clears++ }
     }
@@ -53,6 +57,15 @@ class MqttDiscoverySourceClimateTest {
         val sink = RecordingClimate()
         start(sink)
         assertEquals(1, sink.clears)
+    }
+
+    @Test
+    fun linkUpReachesTheSink() = runTest {
+        val sink = RecordingClimate()
+        val h = start(sink)
+        h.transport.setLink(LinkState.Connected(TransportMode.DIRECT))
+        runCurrent()
+        assertEquals(1, sink.linkUps)
     }
 
     @Test

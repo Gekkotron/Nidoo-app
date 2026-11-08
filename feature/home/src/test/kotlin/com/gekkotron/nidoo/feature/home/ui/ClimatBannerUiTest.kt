@@ -81,8 +81,8 @@ class ClimatBannerUiTest {
 
     @Test
     fun bannerSafetyHasNoBoostButton() {
-        banner(ui.copy(why = ClimatWhy.SAFETY, canBoost = false))
-        compose.onNodeWithText("Safety").assertExists()
+        banner(ui.copy(why = ClimatWhy.SAFETY, canBoost = false, reason = "No temperature reading for 30 min"))
+        compose.onNodeWithText("Safety · No temperature reading for 30 min").assertExists()
         compose.onNodeWithText("Boost").assertDoesNotExist()
     }
 

@@ -140,6 +140,48 @@ class HomeScreenTest {
     }
 
     @Test
+    fun `a refused climat command from the banner shows a snackbar that stays`() {
+        val results = kotlinx.coroutines.flow.MutableSharedFlow<com.gekkotron.nidoo.feature.home.presentation.ClimatResult>(extraBufferCapacity = 4)
+        var ui by mutableStateOf(state().copy(selected = RoomFilter.Area("living"), climat = climat.copy(holdUntil = 4_000_000_000L)))
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = ui, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    climatResults = results,
+                    onCancelBoost = { ui = ui.copy(climatSending = true) },
+                    onDismissClimatError = { ui = ui.copy(climatError = false) },
+                )
+            }
+        }
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle {
+            ui = ui.copy(climatSending = false, climatError = true)
+            results.tryEmit(com.gekkotron.nidoo.feature.home.presentation.ClimatResult.REFUSED)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("Climat didn't take the boost").assertExists()
+    }
+
+    @Test
+    fun `the boost sheet closes when the hub confirms`() {
+        val results = kotlinx.coroutines.flow.MutableSharedFlow<com.gekkotron.nidoo.feature.home.presentation.ClimatResult>(extraBufferCapacity = 4)
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = state().copy(selected = RoomFilter.Area("living"), climat = climat),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    climatResults = results,
+                )
+            }
+        }
+        compose.onNodeWithText("Boost").performClick()
+        compose.onNodeWithText("Start boost").performClick()
+        compose.runOnIdle { results.tryEmit(com.gekkotron.nidoo.feature.home.presentation.ClimatResult.CONFIRMED) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Start boost").assertDoesNotExist()
+    }
+
+    @Test
     fun `no climat banner without a zone`() {
         showClimat(state().copy(selected = RoomFilter.Area("living")), mutableListOf())
         compose.onNodeWithTag("climat-banner").assertDoesNotExist()

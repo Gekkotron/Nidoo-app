@@ -99,6 +99,10 @@ class HomeViewModel @Inject constructor(
     private data class ClimatSend(val sending: Boolean = false, val error: Boolean = false)
 
     private val climatSend = MutableStateFlow(ClimatSend())
+    private val _climatResults = Channel<ClimatResult>(Channel.BUFFERED)
+
+    /** One result per boost or cancel; the screen acts on it once (state edges can be conflated away). */
+    val climatResults: Flow<ClimatResult> = _climatResults.receiveAsFlow()
     private var climatJob: Job? = null
 
     val state: StateFlow<HomeUiState> = combine(home, source.entities, climate.zones, climatClock, climatSend) { ui, entities, zones, now, send ->
@@ -186,10 +190,12 @@ class HomeViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 climatSend.value = ClimatSend(error = true)
+                _climatResults.send(ClimatResult.REFUSED)
                 return@launch
             }
             val answered = withTimeoutOrNull(BOOST_CONFIRM_MS) { climate.zones.first { it[zone]?.overrides != before } }
             climatSend.value = ClimatSend(error = answered == null)
+            _climatResults.send(if (answered == null) ClimatResult.REFUSED else ClimatResult.CONFIRMED)
         }
     }
 
