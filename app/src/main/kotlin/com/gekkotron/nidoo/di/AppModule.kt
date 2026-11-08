@@ -13,6 +13,7 @@ import com.gekkotron.nidoo.connection.toSpec
 import com.gekkotron.nidoo.data.EntityCache
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
+import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.dashboards.DashboardsRepository
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.feature.home.presentation.DefaultDispatcher
@@ -95,9 +96,18 @@ object AppModule {
         cache: EntityCache,
         flows: FlowsRepository,
         dashboards: DashboardsRepository,
+        climate: ClimateRepository,
         @ApplicationScope scope: CoroutineScope,
     ): EntitySourceSession =
-        EntitySourceSession(transport, scope, diagnostics = { Log.w("Nidoo", "${it.source}: ${it.message}") }, cache = cache, flowsSink = flows, dashboardsSink = dashboards)
+        EntitySourceSession(
+            transport,
+            scope,
+            diagnostics = { Log.w("Nidoo", "${it.source}: ${it.message}") },
+            cache = cache,
+            flowsSink = flows,
+            dashboardsSink = dashboards,
+            climateSink = climate,
+        )
 
     /** Unscoped: each new Home gets the source for the current profile (spec §2). Home only exists while Ready. */
     @Provides
