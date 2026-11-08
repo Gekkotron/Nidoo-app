@@ -3,7 +3,10 @@ package com.gekkotron.nidoo.feature.home.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.nidoo.climate.ClimateCommands
 import com.gekkotron.nidoo.climate.ClimateRepository
+import com.gekkotron.nidoo.climate.ClimateTopics
+import com.gekkotron.nidoo.transport.MqttTransport
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.model.Area
@@ -22,7 +25,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -49,6 +58,8 @@ class HomeViewModel @Inject constructor(
     private val history: HistoryClient = HistoryClient.None,
     preferences: AppPreferences,
     private val climate: ClimateRepository = ClimateRepository(),
+    /** Sends the Climat hold commands; null in previews and tests that never boost. */
+    private val transport: MqttTransport? = null,
 ) : ViewModel() {
     /** Whether the opt-in voice assistant is on; the mic button shows only then. */
     val voiceEnabled: StateFlow<Boolean> = preferences.voiceEnabled
@@ -85,9 +96,18 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    val state: StateFlow<HomeUiState> = combine(home, source.entities, climate.zones, climatClock) { ui, entities, zones, now ->
+    private data class ClimatSend(val sending: Boolean = false, val error: Boolean = false)
+
+    private val climatSend = MutableStateFlow(ClimatSend())
+    private var climatJob: Job? = null
+
+    val state: StateFlow<HomeUiState> = combine(home, source.entities, climate.zones, climatClock, climatSend) { ui, entities, zones, now, send ->
         val room = ui.selected as? RoomFilter.Area
-        ui.copy(climat = room?.let { climatBannerFor(it.id, zones.values, entities, now) })
+        ui.copy(
+            climat = room?.let { climatBannerFor(it.id, zones.values, entities, now) },
+            climatSending = send.sending,
+            climatError = send.error,
+        )
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
@@ -139,6 +159,37 @@ class HomeViewModel @Inject constructor(
             val renamed = name.trim() == target.name.trim() || editor.setGroupName(target.areaId, kindKey, name)
             val favorited = favorite == target.ui.favorite || editor.setGroupFavorite(target.areaId, kindKey, favorite)
             if (!renamed || !favorited || !editor.ungroup(removed)) _events.send(HomeEvent.SaveFailed)
+        }
+    }
+
+    /** Boosts Climat zone [zone] to [setpoint] °C for [minutes] (spec §6). */
+    fun startBoost(zone: String, setpoint: Double, minutes: Int) = sendHold(zone, ClimateCommands.boost(setpoint, minutes))
+
+    /** Ends the zone's boost (or whole-zone hold); holds made on the devices stay. */
+    fun cancelBoost(zone: String) = sendHold(zone, ClimateCommands.CANCEL)
+
+    fun dismissClimatError() = climatSend.update { it.copy(error = false) }
+
+    /**
+     * Publishes the hold command, then waits up to [BOOST_CONFIRM_MS] for the hub to republish the
+     * zone's overrides; no answer (or a failed publish) is [HomeUiState.climatError].
+     */
+    private fun sendHold(zone: String, payload: String) {
+        val transport = transport ?: return
+        climatJob?.cancel()
+        val before = climate.zones.value[zone]?.overrides
+        climatSend.value = ClimatSend(sending = true)
+        climatJob = viewModelScope.launch {
+            try {
+                transport.publish(ClimateTopics.holdCommand(zone), payload.encodeToByteArray(), qos = 1, retain = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                climatSend.value = ClimatSend(error = true)
+                return@launch
+            }
+            val answered = withTimeoutOrNull(BOOST_CONFIRM_MS) { climate.zones.first { it[zone]?.overrides != before } }
+            climatSend.value = ClimatSend(error = answered == null)
         }
     }
 
@@ -217,6 +268,7 @@ class HomeViewModel @Inject constructor(
     private companion object {
         const val GROUP_FAILURE_WINDOW_MS = 1_000L
         const val CLIMAT_TICK_MS = 30_000L
+        const val BOOST_CONFIRM_MS = 5_000L
         const val KEY_FILTER = "home.filter"
         const val KEY_QUERY = "home.query"
     }
