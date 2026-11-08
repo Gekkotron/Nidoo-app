@@ -54,7 +54,7 @@ data class ClimateZone(
 /** The retained zone documents the app reads. */
 enum class ClimateDoc { SETTINGS, DECISION, OVERRIDE }
 
-/** Decodes the hub's zone documents (Oikos-os `nidoo-climate/src/doc.rs`). Throws on a malformed payload. */
+/** Decodes the hub's zone documents (Nidoo `nidoo-climate/src/doc.rs`). Throws on a malformed payload. */
 object ClimateJson {
     private val json = Json { ignoreUnknownKeys = true }
 
