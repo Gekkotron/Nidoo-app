@@ -1,6 +1,8 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
 import com.gekkotron.nidoo.model.UiOverride
+import com.gekkotron.nidoo.climate.ClimateDoc
+import com.gekkotron.nidoo.climate.ClimateRepository
 import androidx.lifecycle.SavedStateHandle
 import com.gekkotron.nidoo.feature.home.FakeEntitySource
 import com.gekkotron.nidoo.feature.home.testEntity
@@ -470,6 +472,39 @@ class HomeViewModelTest {
         vm.send("zzz", Command.Open, card = staleCard)
         assertTrue(src.sent.isEmpty())
         assertEquals(listOf<HomeEvent>(HomeEvent.WaitingForConnection, HomeEvent.WaitingForConnection), events)
+    }
+
+    private val livingZone = """{"state":"active","entities":["lamp"],"sensor":null}"""
+    private val livingDecision =
+        """{"zone":"living","mode":"heat","setpoint":20.0,"source":"schedule","reason":"","reading":19.4,"at":1,"entities":{"lamp":{}}}"""
+
+    private fun climate() = ClimateRepository().apply {
+        onRetained("living", ClimateDoc.SETTINGS, livingZone)
+        onRetained("living", ClimateDoc.DECISION, livingDecision)
+    }
+
+    @Test
+    fun `climat banner shows only in a room view`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = climate())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.All)
+        assertEquals(null, vm.state.value.climat)
+        vm.select(RoomFilter.Favorites)
+        assertEquals(null, vm.state.value.climat)
+        vm.select(RoomFilter.Area("kitchen"))
+        assertEquals("living", vm.state.value.climat?.zone)
+        assertEquals(19.4, vm.state.value.climat?.reading)
+    }
+
+    @Test
+    fun `climat banner follows the zone documents`() = runTest(dispatcher) {
+        val repo = climate()
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = repo)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Area("kitchen"))
+        assertEquals(ClimatWhy.SCHEDULE, vm.state.value.climat?.why)
+        repo.onRetained("living", ClimateDoc.SETTINGS, null)
+        assertEquals(null, vm.state.value.climat)
     }
 }
 

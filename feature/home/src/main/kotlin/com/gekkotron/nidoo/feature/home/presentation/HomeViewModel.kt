@@ -3,6 +3,7 @@ package com.gekkotron.nidoo.feature.home.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.model.Area
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -46,6 +48,7 @@ class HomeViewModel @Inject constructor(
     private val labels: LabelText = LabelText { null },
     private val history: HistoryClient = HistoryClient.None,
     preferences: AppPreferences,
+    private val climate: ClimateRepository = ClimateRepository(),
 ) : ViewModel() {
     /** Whether the opt-in voice assistant is on; the mic button shows only then. */
     val voiceEnabled: StateFlow<Boolean> = preferences.voiceEnabled
@@ -55,7 +58,7 @@ class HomeViewModel @Inject constructor(
     // conflate() collapses a burst of state messages to one rebuild per collection turn instead of one
     // per message, and flowOn moves the combine (and HomeUiBuilder.build) off Main; the final value is
     // never dropped.
-    val state: StateFlow<HomeUiState> = combine(
+    private val home = combine(
         source.entities,
         source.states(),
         source.areas,
@@ -72,6 +75,19 @@ class HomeViewModel @Inject constructor(
         // lets the screen settle on Favorites once they arrive instead of sticking on All.
         if (ui.selected.key != key && key != RoomFilter.Favorites.key) savedState[KEY_FILTER] = ui.selected.key
         ui
+    }
+
+    /** Wall-clock seconds, every [CLIMAT_TICK_MS], so a boost's end and expiry stay right on screen. */
+    private val climatClock = flow {
+        while (true) {
+            emit(System.currentTimeMillis() / 1_000)
+            delay(CLIMAT_TICK_MS)
+        }
+    }
+
+    val state: StateFlow<HomeUiState> = combine(home, source.entities, climate.zones, climatClock) { ui, entities, zones, now ->
+        val room = ui.selected as? RoomFilter.Area
+        ui.copy(climat = room?.let { climatBannerFor(it.id, zones.values, entities, now) })
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
@@ -200,6 +216,7 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val GROUP_FAILURE_WINDOW_MS = 1_000L
+        const val CLIMAT_TICK_MS = 30_000L
         const val KEY_FILTER = "home.filter"
         const val KEY_QUERY = "home.query"
     }

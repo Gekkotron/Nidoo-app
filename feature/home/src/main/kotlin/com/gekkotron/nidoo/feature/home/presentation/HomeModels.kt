@@ -124,6 +124,8 @@ data class HomeUiState(
     val hiddenCount: Int = 0,
     /** The Home search text; blank when not searching. */
     val query: String = "",
+    /** The Climat banner of the selected room; null outside a room view or when no active zone covers it. */
+    val climat: ClimatBannerUi? = null,
 ) {
     fun card(id: String): CardUi? {
         fun search(cards: List<CardUi>): CardUi? = cards.firstNotNullOfOrNull { c ->
