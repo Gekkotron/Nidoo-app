@@ -256,6 +256,8 @@ class TileIsOnTest {
         // A shutter stopped midway is open, even one that reports no position.
         assert(tile(Kind.COVER, TileValue.Cover(CoverState.STOPPED, null)).isOn(now))
         assert(tile(Kind.ALARM_PANEL, TileValue.Alarm(com.gekkotron.nidoo.model.AlarmState.ARMED_AWAY)).isOn(now))
+        // A playing media player glows; its title is the value line.
+        assert(tile(Kind.MEDIA_PLAYER, TileValue.Media("Song", playing = true)).isOn(now))
     }
 
     @Test
@@ -264,6 +266,7 @@ class TileIsOnTest {
         assert(!tile(Kind.COVER, TileValue.Cover(CoverState.CLOSED, 0)).isOn(now))
         assert(!tile(Kind.ALARM_PANEL, TileValue.Alarm(com.gekkotron.nidoo.model.AlarmState.DISARMED)).isOn(now))
         assert(!tile(Kind.BINARY_SENSOR, TileValue.OnOff(true)).isOn(now))
+        assert(!tile(Kind.MEDIA_PLAYER, TileValue.Media("Song", playing = false)).isOn(now))
         assert(!tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(updatedAt = now - TileSnapshot.STALE_MS - 1) }.isOn(now))
         assert(!tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(available = false) }.isOn(now))
     }

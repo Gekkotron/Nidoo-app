@@ -96,4 +96,12 @@ class DashboardDecodeTest {
     fun `unknown top-level keys are ignored`() {
         assertEquals("N", DashboardJson.decode("a", """{"name":"N","order":0,"widgets":[],"future":{"x":1}}""").name)
     }
+
+    @Test
+    fun `media_player decodes as MEDIA_PLAYER`() {
+        val w = one("""{"id":"m","kind":"media_player","span":"2x2","config":{"entity_id":"music"}}""")
+        assertEquals(WidgetKind.MEDIA_PLAYER, w.kind)
+        assertEquals(WidgetSpan.S2X2, w.span)
+        assertEquals("music", w.config.entityId)
+    }
 }

@@ -77,7 +77,7 @@ object DashboardUiBuilder {
     private fun content(w: Widget, h: HouseData, x: TileExtras, locale: Locale, labels: LabelText, now: Long): TileContent {
         val c = w.config
         return when (w.kind) {
-            WidgetKind.LIGHT, WidgetKind.COVER, WidgetKind.CLIMATE, WidgetKind.SENSOR, WidgetKind.WATER_HEATER -> {
+            WidgetKind.LIGHT, WidgetKind.COVER, WidgetKind.CLIMATE, WidgetKind.SENSOR, WidgetKind.WATER_HEATER, WidgetKind.MEDIA_PLAYER -> {
                 val card = c.entityId?.let { HomeUiBuilder.cardFor(h.entities, h.states, h.areas, it, locale, labels, h.historyEnabled) }
                 when {
                     card == null -> TileContent.Unavailable(c.title)

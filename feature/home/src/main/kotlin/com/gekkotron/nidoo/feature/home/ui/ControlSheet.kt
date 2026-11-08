@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -23,6 +24,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -35,6 +37,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -52,6 +55,7 @@ import com.gekkotron.nidoo.feature.home.presentation.CardValue
 import com.gekkotron.nidoo.feature.home.presentation.EffectNames
 import com.gekkotron.nidoo.feature.home.presentation.hasColor
 import com.gekkotron.nidoo.feature.home.presentation.StepMath
+import com.gekkotron.nidoo.feature.home.presentation.parseTint
 import com.gekkotron.nidoo.model.ClimatePresets
 import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.Hs
@@ -75,8 +79,15 @@ internal fun ControlSheet(
     onCustomizeMember: (String) -> Unit = {},
 ) {
     val send: (Command) -> Unit = { onSend(card.id, it) }
+    // A playing media player's sheet takes its cover's colour, like its card (media player spec, Android).
+    val tint = (card.value as? CardValue.MediaPlayer)?.takeIf { card.available && it.state != "idle" }?.let { parseTint(it.color) }
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    TintedSheetColors(tint) { ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = tint ?: BottomSheetDefaults.ContainerColor,
+        contentColor = if (tint != null) Color.White else contentColorFor(BottomSheetDefaults.ContainerColor),
+    ) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -88,7 +99,9 @@ internal fun ControlSheet(
                 Text(card.name, style = NidooTheme.type.display.copy(fontSize = 22.sp))
                 // The card leads with the setpoint, which the climate controls below already show: the room temperature is more useful here.
                 val header = (card.value as? CardValue.Climate)?.takeIf { card.kind == Kind.CLIMATE }?.copy(target = null) ?: card.value
-                Text(cardValueText(header, card.kind), style = NidooTheme.type.body)
+                // A media player's controls show the song: the line under the name only says whether it plays.
+                val headerText = (header as? CardValue.MediaPlayer)?.let { mediaStateText(it.state) } ?: cardValueText(header, card.kind)
+                Text(headerText, style = NidooTheme.type.body)
                 when (card.kind) {
                     Kind.LIGHT -> LightControls(card, onSend)
                     Kind.COVER -> CoverControls(card, send)
@@ -98,6 +111,7 @@ internal fun ControlSheet(
                     Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
                     Kind.VACUUM -> VacuumControls(card, send)
                     Kind.WATER_HEATER -> WaterHeaterControls(card, send) { id, cmd -> onSend(id, cmd) }
+                    Kind.MEDIA_PLAYER -> MediaPlayerControls(card, send)
                     else -> Unit
                 }
             }
@@ -109,7 +123,7 @@ internal fun ControlSheet(
                 Text(stringResource(if (card.isGroup) R.string.sheet_customize_group else R.string.sheet_customize))
             }
         }
-    }
+    } }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

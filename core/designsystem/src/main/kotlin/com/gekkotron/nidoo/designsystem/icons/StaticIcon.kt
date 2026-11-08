@@ -55,6 +55,12 @@ enum class NidooGlyph(private val parts: List<Part>) {
     SUN_MOON(listOf(line("M20.5 12a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0z"), area("M12 3.5a8.5 8.5 0 0 0 0 17z"))),
     BROKER(listOf(line("M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"))),
     INFO(listOf(area("M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"), line("M12 11v5.5M12 7.5h.01"))),
+
+    // Media players: the note on the card, the transport buttons in the sheet (PLAY is above).
+    MUSIC(listOf(line("M9 18V5.5l11-2V16"), area("M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"))),
+    PAUSE(listOf(area("M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"))),
+    NEXT(listOf(area("M6 5.5v13l9-6.5z"), line("M18 5.5v13"))),
+    PREVIOUS(listOf(area("M18 5.5v13L9 12z"), line("M6 5.5v13"))),
     ;
 
     /** Parsed once per glyph. */

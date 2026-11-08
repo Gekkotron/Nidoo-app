@@ -8,6 +8,7 @@ import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.state.kinds.AlarmPanelMapper
 import com.gekkotron.nidoo.state.kinds.ClimateMapper
 import com.gekkotron.nidoo.state.kinds.NumberMapper
+import com.gekkotron.nidoo.state.kinds.MediaPlayerMapper
 import com.gekkotron.nidoo.state.kinds.VacuumMapper
 import com.gekkotron.nidoo.state.kinds.WaterHeaterMapper
 import com.gekkotron.nidoo.state.mqtt.MqttBindings
@@ -42,8 +43,9 @@ object DiscoveryParser {
         "button" to Kind.BUTTON,
         "vacuum" to Kind.VACUUM,
         "water_heater" to Kind.WATER_HEATER,
+        "media_player" to Kind.MEDIA_PLAYER,
     )
-    private val REQUIRES_COMMAND = setOf(Kind.SWITCH, Kind.LIGHT, Kind.NUMBER, Kind.SELECT, Kind.BUTTON, Kind.ALARM_PANEL)
+    private val REQUIRES_COMMAND = setOf(Kind.SWITCH, Kind.LIGHT, Kind.NUMBER, Kind.SELECT, Kind.BUTTON, Kind.ALARM_PANEL, Kind.MEDIA_PLAYER)
     private val REQUIRES_STATE = setOf(Kind.SENSOR, Kind.BINARY_SENSOR)
     private val LIGHT_SCHEMAS = setOf("default", "basic", "json")
 
@@ -210,6 +212,7 @@ object DiscoveryParser {
             codeFormat = codeFormat(b.str("code")),
         )
         Kind.VACUUM -> Capabilities(vacuumActions = VacuumMapper.actions(b), fanSpeeds = VacuumMapper.fanSpeeds(b))
+        Kind.MEDIA_PLAYER -> Capabilities(mediaFeatures = MediaPlayerMapper.features(b))
         Kind.WATER_HEATER -> Capabilities(
             hvacModes = WaterHeaterMapper.modes(b),
             minTemp = b.double("min_temp") ?: WaterHeaterMapper.DEFAULT_MIN_TEMP,

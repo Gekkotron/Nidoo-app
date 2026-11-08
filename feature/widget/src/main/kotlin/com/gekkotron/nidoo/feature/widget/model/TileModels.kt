@@ -37,9 +37,13 @@ sealed interface TileValue {
 
     @Serializable @SerialName("alarm")
     data class Alarm(val state: AlarmState) : TileValue
+
+    /** A media player that plays or is paused: its title is the value line, and the tile glows while it plays. */
+    @Serializable @SerialName("media")
+    data class Media(val title: String?, val playing: Boolean) : TileValue
 }
 
-enum class TileIcon { LIGHT, SWITCH, COVER, CLIMATE, TEMPERATURE, ALARM, BUTTON, SENSOR }
+enum class TileIcon { LIGHT, SWITCH, COVER, CLIMATE, TEMPERATURE, ALARM, BUTTON, SENSOR, MEDIA }
 
 enum class TileStatus { OK, PENDING, FAILED, REMOVED }
 

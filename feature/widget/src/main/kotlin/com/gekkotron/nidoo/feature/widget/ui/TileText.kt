@@ -24,6 +24,7 @@ object TileText {
         is TileValue.Cover -> cover(context, value)
         is TileValue.Climate -> (value.target ?: value.current)?.let { number(it, locale) + "°" } ?: value.mode ?: "—"
         is TileValue.Alarm -> context.getString(alarmLabel(value.state))
+        is TileValue.Media -> value.title ?: "—"
     }
 
     /** When a stale value was last live: the time if it was today, else the day ("3 Nov"). */

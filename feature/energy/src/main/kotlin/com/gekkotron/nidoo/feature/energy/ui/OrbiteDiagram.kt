@@ -3,10 +3,16 @@ package com.gekkotron.nidoo.feature.energy.ui
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +29,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.energy.presentation.EnergyFormat
@@ -52,6 +59,12 @@ internal object OrbiteGeometry {
     const val SLOP = 0.03f
 }
 
+/** From this width the legend sits beside the rings instead of under them. */
+private val SIDE_BY_SIDE_FROM = 600.dp
+
+/** The rings' share of the width when the legend sits beside them. */
+private const val RINGS_SHARE = 0.55f
+
 /** The arc id under ([x], [y]) in a square of [side], or null between the rings and in the middle. */
 internal fun orbiteHit(rings: Rings, x: Float, y: Float, side: Float): String? {
     val c = side / 2
@@ -69,10 +82,18 @@ internal fun orbiteHit(rings: Rings, x: Float, y: Float, side: Float): String? {
 
 /**
  * The Orbite view: inner ring = where power comes from, outer = where it goes, dots drifting along
- * the arcs, the house total in the middle (spec "Energy views").
+ * the arcs, the house total in the middle, and a row per arc underneath naming it (spec "Energy views").
  */
 @Composable
-internal fun OrbiteDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Unit, onNode: (EnergyNode) -> Unit, modifier: Modifier = Modifier) {
+internal fun OrbiteDiagram(
+    state: EnergyUiState,
+    locale: Locale,
+    onMore: () -> Unit,
+    onNode: (EnergyNode) -> Unit,
+    modifier: Modifier = Modifier,
+    /** The rings' largest side, so they fit the window's height (landscape, open foldables). */
+    maxSide: Dp = Dp.Infinity,
+) {
     val sankey = remember(state) { EnergySankey.build(state) }
     val rings = remember(sankey) { OrbiteLayout.rings(sankey) }
     val description = energyDescription(state, locale)
@@ -91,57 +112,86 @@ internal fun OrbiteDiagram(state: EnergyUiState, locale: Locale, onMore: () -> U
     val phases = remember { HashMap<String, Double>() }
     val last = remember { doubleArrayOf(0.0) }
     val colors = NidooTheme.colors
-    Column(modifier.fillMaxWidth().testTag("energy-orbite")) {
-        if (arcs.isNotEmpty()) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .testTag("energy-orbite-rings")
-                    .pointerInput(rings) { detectTapGestures { o -> orbiteHit(rings, o.x, o.y, size.width.toFloat())?.let(tap) } },
-                contentAlignment = Alignment.Center,
-            ) {
-                Canvas(Modifier.matchParentSize().clearAndSetSemantics { contentDescription = description }) {
-                    val side = size.minDimension
-                    val centre = Offset(size.width / 2, size.height / 2)
-                    fun ring(rFrac: Float, wFrac: Float, list: List<OrbiteArc>) {
-                        val r = rFrac * side
-                        val stroke = Stroke(width = wFrac * side)
-                        drawCircle(colors.energyMuted.copy(alpha = 0.3f), r, centre, style = stroke)
-                        list.forEach { a ->
-                            drawArc(
-                                sankeyColor(a.role, a.slot, colors),
-                                startAngle = (a.a0 - 90).toFloat(),
-                                sweepAngle = (a.a1 - a.a0).toFloat(),
-                                useCenter = false,
-                                topLeft = Offset(centre.x - r, centre.y - r),
-                                size = Size(2 * r, 2 * r),
-                                style = stroke,
-                            )
-                        }
+
+    @Composable
+    fun Rings(m: Modifier) {
+        Box(
+            m
+                .aspectRatio(1f)
+                .testTag("energy-orbite-rings")
+                .pointerInput(rings) { detectTapGestures { o -> orbiteHit(rings, o.x, o.y, size.width.toFloat())?.let(tap) } },
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(Modifier.matchParentSize().clearAndSetSemantics { contentDescription = description }) {
+                val side = size.minDimension
+                val centre = Offset(size.width / 2, size.height / 2)
+                fun ring(rFrac: Float, wFrac: Float, list: List<OrbiteArc>) {
+                    val r = rFrac * side
+                    val stroke = Stroke(width = wFrac * side)
+                    drawCircle(colors.energyMuted.copy(alpha = 0.3f), r, centre, style = stroke)
+                    list.forEach { a ->
+                        drawArc(
+                            sankeyColor(a.role, a.slot, colors),
+                            startAngle = (a.a0 - 90).toFloat(),
+                            sweepAngle = (a.a1 - a.a0).toFloat(),
+                            useCenter = false,
+                            topLeft = Offset(centre.x - r, centre.y - r),
+                            size = Size(2 * r, 2 * r),
+                            style = stroke,
+                        )
                     }
-                    ring(OrbiteGeometry.OUTER_R, OrbiteGeometry.OUTER_W, rings.outer)
-                    ring(OrbiteGeometry.INNER_R, OrbiteGeometry.INNER_W, rings.inner)
-                    if (animate) {
-                        val t = seconds.doubleValue
-                        val dt = (t - last[0]).coerceAtLeast(0.0)
-                        last[0] = t
-                        val dot = 2.5.dp.toPx()
-                        arcs.forEach { a ->
-                            val phase = OrbiteLayout.advancePhase(phases[a.id] ?: 0.0, dt, a)
-                            phases[a.id] = phase
-                            val r = (if (a.ring == Ring.OUTER) OrbiteGeometry.OUTER_R else OrbiteGeometry.INNER_R) * side
-                            OrbiteLayout.arcDots(a, phase).forEach { (deg, opacity) ->
-                                val (x, y) = OrbiteLayout.point(centre.x.toDouble(), centre.y.toDouble(), r.toDouble(), deg)
-                                drawCircle(Color.White.copy(alpha = opacity.toFloat()), dot, Offset(x.toFloat(), y.toFloat()))
-                            }
+                }
+                ring(OrbiteGeometry.OUTER_R, OrbiteGeometry.OUTER_W, rings.outer)
+                ring(OrbiteGeometry.INNER_R, OrbiteGeometry.INNER_W, rings.inner)
+                if (animate) {
+                    val t = seconds.doubleValue
+                    val dt = (t - last[0]).coerceAtLeast(0.0)
+                    last[0] = t
+                    val dot = 2.5.dp.toPx()
+                    arcs.forEach { a ->
+                        val phase = OrbiteLayout.advancePhase(phases[a.id] ?: 0.0, dt, a)
+                        phases[a.id] = phase
+                        val r = (if (a.ring == Ring.OUTER) OrbiteGeometry.OUTER_R else OrbiteGeometry.INNER_R) * side
+                        OrbiteLayout.arcDots(a, phase).forEach { (deg, opacity) ->
+                            val (x, y) = OrbiteLayout.point(centre.x.toDouble(), centre.y.toDouble(), r.toDouble(), deg)
+                            drawCircle(Color.White.copy(alpha = opacity.toFloat()), dot, Offset(x.toFloat(), y.toFloat()))
                         }
                     }
                 }
-                sankey.houseW?.let { w ->
+            }
+            sankey.houseW?.let { w ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(EnergyFormat.power(w, locale), style = NidooTheme.type.cardValue, color = colors.content)
+                    Text(stringResource(DsR.string.energy_house), style = NidooTheme.type.label, color = colors.contentMuted)
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun Legend(m: Modifier) = OrbiteLegend(
+        sankey,
+        rings.inner,
+        rings.outer,
+        locale,
+        canOpen = { id -> id == "others" || state.tapTarget(id) != null },
+        onTap = tap,
+        modifier = m,
+    )
+    Column(modifier.fillMaxWidth().testTag("energy-orbite")) {
+        if (arcs.isNotEmpty()) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                if (maxWidth >= SIDE_BY_SIDE_FROM) {
+                    // Wide windows: the legend beside the rings, so the whole view fits one screen.
+                    val side = minOf(maxSide, maxWidth * RINGS_SHARE)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        Rings(Modifier.width(side))
+                        Legend(Modifier.weight(1f))
+                    }
+                } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(EnergyFormat.power(w, locale), style = NidooTheme.type.cardValue, color = colors.content)
-                        Text(stringResource(DsR.string.energy_house), style = NidooTheme.type.label, color = colors.contentMuted)
+                        Rings(Modifier.widthIn(max = maxSide).fillMaxWidth())
+                        Legend(Modifier.padding(top = 8.dp))
                     }
                 }
             }

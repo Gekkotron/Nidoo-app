@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -64,11 +65,21 @@ fun NidooCard(
     onLongClickLabel: String? = null,
     /** Dense lists (Security tiles) go lower; still a minimum, so large font scales grow the card. */
     minHeight: Dp = NidooDimens.cardMinHeight,
+    /**
+     * A dark colour (a media cover's) that replaces the card's look: a vertical gradient from it to a darker shade,
+     * a lighter border of the same hue and white content. Wins over [on] and [accent]. The gradient ignores the theme,
+     * so the card stays dark with readable white text on Ivoire too.
+     */
+    tint: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = NidooTheme.colors
     val shape = RoundedCornerShape(NidooDimens.cardRadius)
-    val background = if (on) Brush.linearGradient(listOf(c.cardOnStart, c.cardOnEnd)) else SolidColor(c.card)
+    val background = when {
+        tint != null -> Brush.verticalGradient(listOf(tint, lerp(tint, Color.Black, 0.35f)))
+        on -> Brush.linearGradient(listOf(c.cardOnStart, c.cardOnEnd))
+        else -> SolidColor(c.card)
+    }
     val haptics = LocalHapticFeedback.current
     val longClick by rememberUpdatedState(onLongClick)
     val focusInteractionSource = remember { MutableInteractionSource() }
@@ -100,14 +111,19 @@ fun NidooCard(
         onClick != null -> Modifier.combinedClickable(enabled = false, onClick = onClick)
         else -> Modifier
     }
-    CompositionLocalProvider(LocalContentColor provides if (on) c.contentOnCardOn else c.content) {
+    val contentColor = when {
+        tint != null -> Color.White
+        on -> c.contentOnCardOn
+        else -> c.content
+    }
+    CompositionLocalProvider(LocalContentColor provides contentColor) {
         Column(
             modifier
                 .alpha(if (enabled) 1f else 0.45f)
                 .then(if (c.isDark) Modifier else Modifier.shadow(6.dp, shape, ambientColor = c.shadow, spotColor = c.shadow))
                 .clip(shape)
                 .background(background)
-                .border(1.dp, cardBorderColor(c, on, accent, accentColor), shape)
+                .border(1.dp, cardBorderColor(c, on, accent, accentColor, tint), shape)
                 .then(clicks)
                 .heightIn(min = minHeight)
                 .padding(NidooDimens.cardPadding),
@@ -117,7 +133,8 @@ fun NidooCard(
     }
 }
 
-internal fun cardBorderColor(colors: NidooColors, on: Boolean, accent: Boolean, accentColor: Color? = null): Color = when {
+internal fun cardBorderColor(colors: NidooColors, on: Boolean, accent: Boolean, accentColor: Color? = null, tint: Color? = null): Color = when {
+    tint != null -> lerp(tint, Color.White, 0.4f)
     on -> colors.cardOnBorder
     accent -> (accentColor ?: colors.warning).copy(alpha = 0.35f)
     else -> colors.cardBorder

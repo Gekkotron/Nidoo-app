@@ -24,6 +24,23 @@ sealed interface StateValue {
     data class Alarm(val state: AlarmState) : StateValue
     /** [state] is one of HA's vacuum states (cleaning, docked, paused, idle, returning, error); [battery] is 0..100. */
     data class Vacuum(val state: String?, val battery: Int?, val fanSpeed: String?) : StateValue
+
+    /**
+     * A media player (the hub's media player contract). [state] is playing, paused or idle;
+     * [positionS] was measured at [positionAtMs] (Unix ms, maybe a little in the future, null while
+     * a song loads); [color] is the cover's colour as `#rrggbb`, already darkened for white text.
+     */
+    data class MediaPlayer(
+        val state: String?,
+        val title: String?,
+        val artist: String?,
+        val album: String?,
+        val imageUrl: String?,
+        val color: String?,
+        val durationS: Double?,
+        val positionS: Double?,
+        val positionAtMs: Long?,
+    ) : StateValue
 }
 
 enum class CoverState { OPEN, CLOSED, OPENING, CLOSING, STOPPED, UNKNOWN }

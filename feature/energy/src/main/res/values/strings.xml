@@ -54,4 +54,11 @@
     <string name="energy_unitemised">Unmetered</string>
     <string name="energy_export">Export</string>
     <string name="energy_battery_charge">Charging</string>
+    <string name="energy_orbite_in">Coming in</string>
+    <string name="energy_orbite_out">Going out</string>
+    <string name="energy_orbite_production">production</string>
+    <string name="energy_orbite_import">import</string>
+    <string name="energy_orbite_export">export</string>
+    <string name="energy_orbite_charging">charging</string>
+    <string name="energy_orbite_discharging">discharging</string>
 </resources>

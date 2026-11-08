@@ -301,4 +301,15 @@
     <string name="climat_why_safety">Safety</string>
     <string name="climat_why_idle">Idle</string>
     <string name="climat_why_other">—</string>
+
+    <!-- Media players (media player spec, Android) -->
+    <string name="media_nothing_playing">Nothing playing</string>
+    <string name="media_play_some">Play some music</string>
+    <string name="media_play">Play</string>
+    <string name="media_pause">Pause</string>
+    <string name="media_next">Next</string>
+    <string name="media_previous">Previous</string>
+    <string name="media_state_playing">Playing</string>
+    <string name="media_state_paused">Paused</string>
+    <string name="media_state_idle">Idle</string>
 </resources>

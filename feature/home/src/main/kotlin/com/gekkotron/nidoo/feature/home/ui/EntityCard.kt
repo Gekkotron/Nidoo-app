@@ -24,9 +24,19 @@ import com.gekkotron.nidoo.feature.home.R
 import com.gekkotron.nidoo.feature.home.presentation.CardUi
 import com.gekkotron.nidoo.feature.home.presentation.CardValue
 import com.gekkotron.nidoo.feature.home.presentation.TapAction
+import com.gekkotron.nidoo.feature.home.presentation.parseTint
+import com.gekkotron.nidoo.model.Command
 
 @Composable
-internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, onForce: () -> Unit = {}, modifier: Modifier = Modifier) {
+internal fun EntityCard(
+    card: CardUi,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onForce: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    /** The card's own buttons (a media player's play/pause); the tap still opens the sheet. */
+    onSend: (Command) -> Unit = {},
+) {
     val valueText = if (card.available) cardValueText(card.value, card.kind) else stringResource(R.string.value_unavailable)
     val room = card.areaName ?: stringResource(R.string.area_unassigned)
     val heater = card.heater
@@ -43,6 +53,9 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
     val staleText = stringResource(R.string.card_stale)
     val toggle = card.tap == TapAction.TOGGLE
     val icon = iconSpec(card)
+    val media = (card.value as? CardValue.MediaPlayer)?.takeIf { card.available }
+    // Idle has no cover, so no colour either: the plain card.
+    val tint = media?.takeIf { it.state != "idle" }?.let { parseTint(it.color) }
     NidooCard(
         modifier = modifier
             .testTag("card-${card.id}")
@@ -58,10 +71,16 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
         onClick = if (card.tap != TapAction.NONE) onClick else null,
         onLongClick = onLongClick,
         onLongClickLabel = stringResource(if (card.hasSheet) R.string.action_controls else R.string.action_customize),
+        tint = tint,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (heater != null) TankGlyph(heating = heater.heating) else KindIcon(icon)
+            when {
+                heater != null -> TankGlyph(heating = heater.heating)
+                media != null -> MediaCardCover(media)
+                else -> KindIcon(icon)
+            }
             Spacer(Modifier.weight(1f))
+            if (media != null) MediaCardButton(card, media, onSend)
             card.forceToggle?.let { forced ->
                 val forceDescription = stringResource(R.string.card_force_toggle, card.name)
                 Switch(
@@ -81,7 +100,10 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        if (heater != null && card.available) WaterHeaterDetails(card, heater, valueText)
-        else Text(valueText, style = NidooTheme.type.cardValue)
+        when {
+            heater != null && card.available -> WaterHeaterDetails(card, heater, valueText)
+            media != null -> MediaPlayerDetails(media, valueText, tinted = tint != null)
+            else -> Text(valueText, style = NidooTheme.type.cardValue)
+        }
     }
 }

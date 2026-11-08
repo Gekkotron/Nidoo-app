@@ -30,6 +30,9 @@ internal fun cardValueText(value: CardValue, kind: Kind = Kind.SENSOR): String =
             .joinToString(" · ")
             .ifEmpty { stringResource(R.string.value_none) }
     is CardValue.Alarm -> stringResource(alarmLabel(value.state))
+    is CardValue.MediaPlayer ->
+        if (value.state == "idle") stringResource(R.string.media_nothing_playing)
+        else listOfNotNull(value.title, value.artist).joinToString(" · ").ifEmpty { stringResource(R.string.value_none) }
     is CardValue.Vacuum ->
         listOfNotNull(value.state?.let { stringResource(vacuumStateLabel(it)) }, value.battery?.let { stringResource(R.string.value_percent, it) })
             .joinToString(" · ")

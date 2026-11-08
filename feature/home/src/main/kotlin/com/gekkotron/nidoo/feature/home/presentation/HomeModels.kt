@@ -61,6 +61,19 @@ sealed interface CardValue {
     data class Vacuum(val state: String?, val battery: Int?) : CardValue
     data class Contact(val deviceClass: String?, val on: Boolean) : CardValue
 
+    /** A media player as the hub sends it; [color] is the cover's dark tint as `#rrggbb`. */
+    data class MediaPlayer(
+        val state: String?,
+        val title: String?,
+        val artist: String?,
+        val album: String?,
+        val imageUrl: String?,
+        val color: String?,
+        val durationS: Double?,
+        val positionS: Double?,
+        val positionAtMs: Long?,
+    ) : CardValue
+
     /** Room groups spec §3.1. [positions] has one 0..100 entry per member; a member without position counts 100 when open, 0 when closed. */
     data class CoverGroup(val open: Int, val total: Int, val moving: CoverState?, val positions: List<Int>) : CardValue
 

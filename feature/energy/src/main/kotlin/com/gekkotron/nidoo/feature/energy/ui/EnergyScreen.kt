@@ -1,6 +1,8 @@
 package com.gekkotron.nidoo.feature.energy.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -25,10 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
@@ -38,9 +42,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.components.LinkPill
@@ -57,7 +63,6 @@ import com.gekkotron.nidoo.feature.energy.presentation.NodeKind
 import com.gekkotron.nidoo.feature.energy.presentation.NodeStatus
 import com.gekkotron.nidoo.feature.energy.presentation.SensorEdit
 import java.util.Locale
-import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.designsystem.R as DsR
 
 @Composable
@@ -82,6 +87,12 @@ fun EnergyRoute(
     EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar, view = view)
 }
 
+/** Room left above the diagram for the title, its subtitle and the link pill. */
+private val DIAGRAM_HEADROOM: Dp = 140.dp
+
+/** The diagram is never squeezed below this, however short the window. */
+private val DIAGRAM_MIN: Dp = 280.dp
+
 @Composable
 fun EnergyScreen(
     state: EnergyUiState,
@@ -102,45 +113,61 @@ fun EnergyScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = windowInsets,
     ) { padding ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = padding.calculateStartPadding(layoutDirection) + 16.dp,
-                end = padding.calculateEndPadding(layoutDirection) + 16.dp,
-                top = padding.calculateTopPadding() + 8.dp,
-                bottom = padding.calculateBottomPadding() + 24.dp,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
-            verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
-        ) {
-            item(key = "header", span = { GridItemSpan(maxLineSpan) }) { EnergyHeader(state) }
-            when {
-                state.loading -> Unit
-                state.empty -> item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 24.dp)) {
-                        Text(stringResource(R.string.energy_empty), style = NidooTheme.type.body)
-                        Button(onClick = onOpenHome, modifier = Modifier.heightIn(min = NidooDimens.minTouch)) { Text(stringResource(R.string.energy_go_home)) }
-                    }
-                }
-                else -> {
-                    if (state.hint == EnergyHint.CHECK_SIGN) {
-                        item(key = "hint", span = { GridItemSpan(maxLineSpan) }) {
-                            Text(stringResource(R.string.energy_check_sign), style = NidooTheme.type.label, color = NidooTheme.colors.warning)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // The diagram's tallest: what the viewport shows under the header, so a landscape tablet or an
+            // open foldable sees it whole instead of a width-sized square running off the bottom.
+            val diagramMax = (maxHeight - padding.calculateTopPadding() - padding.calculateBottomPadding() - DIAGRAM_HEADROOM)
+                .coerceAtLeast(DIAGRAM_MIN)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = padding.calculateStartPadding(layoutDirection) + 16.dp,
+                    end = padding.calculateEndPadding(layoutDirection) + 16.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 24.dp,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
+                verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
+            ) {
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { EnergyHeader(state) }
+                when {
+                    state.loading -> Unit
+                    state.empty -> item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 24.dp)) {
+                            Text(stringResource(R.string.energy_empty), style = NidooTheme.type.body)
+                            Button(onClick = onOpenHome, modifier = Modifier.heightIn(min = NidooDimens.minTouch)) { Text(stringResource(R.string.energy_go_home)) }
                         }
                     }
-                    item(key = "diagram", span = { GridItemSpan(maxLineSpan) }) {
-                        NidooCard(Modifier.fillMaxWidth()) {
-                            val onMore = { consumersSheet = true }
-                            val onNode = { n: EnergyNode -> detailId = n.id }
-                            when (view) {
-                                EnergyViewPreference.CLASSIC -> FlowDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
-                                EnergyViewPreference.FLUX -> FluxDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
-                                EnergyViewPreference.ORBITE -> OrbiteDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
+                    else -> {
+                        if (state.hint == EnergyHint.CHECK_SIGN) {
+                            item(key = "hint", span = { GridItemSpan(maxLineSpan) }) {
+                                Text(stringResource(R.string.energy_check_sign), style = NidooTheme.type.label, color = NidooTheme.colors.warning)
                             }
                         }
+                        item(key = "diagram", span = { GridItemSpan(maxLineSpan) }) {
+                            NidooCard(Modifier.fillMaxWidth()) {
+                                val onMore = { consumersSheet = true }
+                                val onNode = { n: EnergyNode -> detailId = n.id }
+                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                    when (view) {
+                                        // Classic is drawn for its width at a fixed ratio: narrowed until it fits the height.
+                                        EnergyViewPreference.CLASSIC -> FlowDiagram(
+                                            state, locale, onMore = onMore, onNode = onNode,
+                                            modifier = Modifier.widthIn(max = diagramMax * FlowLayout.ASPECT).padding(8.dp),
+                                        )
+                                        // Flux turns horizontal on wide windows, so it already fits.
+                                        EnergyViewPreference.FLUX -> FluxDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
+                                        EnergyViewPreference.ORBITE -> OrbiteDiagram(
+                                            state, locale, onMore = onMore, onNode = onNode,
+                                            modifier = Modifier.padding(8.dp), maxSide = diagramMax,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        items(state.cards, key = { "card-${it.id}" }) { node -> EnergyValueCard(node, locale, onClick = { detailId = node.id }) }
                     }
-                    items(state.cards, key = { "card-${it.id}" }) { node -> EnergyValueCard(node, locale, onClick = { detailId = node.id }) }
                 }
             }
         }

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlin.math.roundToInt
@@ -50,6 +51,7 @@ class DemoHouse(
         plainLight("demo_living_spot", "Spot", "Living room", "demo/living/spot")
         climate("demo_living_ac", "Air conditioner", "Living room", "demo/living/ac")
         vacuum("demo_living_vacuum", "Robot vacuum", "Living room", "demo/living/vacuum")
+        mediaPlayer("demo_living_music", "Music", "Living room", "demo/living/music")
         sensor("demo_bedroom_temperature", "Bedroom", "Temperature", "Bedroom", "demo/bedroom/climate", "temperature", "temperature", "°C")
         sensor("demo_bedroom_humidity", "Bedroom", "Humidity", "Bedroom", "demo/bedroom/climate", "humidity", "humidity", "%")
         doc("demo/bedroom/climate", obj("temperature" to 19.6, "humidity" to 54))
@@ -415,6 +417,41 @@ class DemoHouse(
         doc(topic, obj("state" to "docked", "battery_level" to 100, "fan_speed" to "Standard"))
         echo("$topic/command", topic) { p -> states[p]?.let { obj("state" to it) } }
         echo("$topic/fan_speed/set", topic) { p -> if (p in speeds) obj("fan_speed" to p) else null }
+    }
+
+    /** The hub's media player contract: the whole state as JSON, `{"command": …}` JSON commands. Made-up songs, no cover. */
+    private fun mediaPlayer(id: String, device: String, area: String, topic: String) {
+        val songs = listOf(
+            Triple("Morning Tide", "The Paper Boats", "Harbour Lights"),
+            Triple("Glass Garden", "Mira Vale", "Small Hours"),
+            Triple("Northbound", "The Paper Boats", "Harbour Lights"),
+        )
+        var current = 0
+        fun song(index: Int, state: String): JsonObject {
+            val (title, artist, album) = songs[index]
+            return obj(
+                "state" to state, "title" to title, "artist" to artist, "album" to album,
+                "color" to "#3d2466", "duration_s" to 214, "position_s" to 63,
+            )
+        }
+        config("media_player", id, device, null, area) {
+            put("state_topic", topic)
+            put("command_topic", "$topic/set")
+            putJsonArray("supported_features") { listOf("play", "pause", "next", "previous", "play_media").forEach { add(it) } }
+        }
+        doc(topic, song(current, "playing"))
+        echo("$topic/set", topic) { p ->
+            val command = runCatching { Json.parseToJsonElement(p).jsonObject["command"]?.jsonPrimitive?.content }.getOrNull()
+            when (command) {
+                "play" -> obj("state" to "playing")
+                "pause" -> obj("state" to "paused")
+                "next", "previous", "play_media" -> {
+                    current = (current + if (command == "previous") songs.size - 1 else 1) % songs.size
+                    song(current, "playing")
+                }
+                else -> null
+            }
+        }
     }
 
     private fun sensor(
