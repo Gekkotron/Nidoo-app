@@ -8,6 +8,7 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -19,13 +20,20 @@ import kotlin.random.Random
  * one JSON state document per device, and a command topic that is echoed back into that document.
  * Thread-safe.
  */
-class DemoHouse(private val random: Random = Random(7)) {
+class DemoHouse(
+    private val random: Random = Random(7),
+    /** Wall-clock Unix seconds, for a boost's end. */
+    private val clock: () -> Long = { System.currentTimeMillis() / 1_000 },
+) {
     private class Echo(val stateTopic: String, val patch: (String) -> JsonObject?)
 
     private val configs = mutableListOf<DemoMessage>()
     private val extras = mutableListOf<DemoMessage>()
     private val docs = linkedMapOf<String, JsonObject>()
     private val echoes = mutableMapOf<String, Echo>()
+
+    /** The Climat zone documents (retained `nidoo/climate/zone/living/…`); the override is a JSON array. */
+    private val climateDocs = linkedMapOf<String, String>()
 
     init {
         areas()
@@ -74,6 +82,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         waterHeater("demo_water_heater", "Water heater", "Garage", "demo/water_heater")
         vacuum("Living room", "demo/living/vacuum")
         dashboards()
+        climatZone()
         override("demo_outdoor_temperature", """{"cardStyle":"hero_weather"}""")
         override("demo_living_lamp", """{"favorite":true}""")
         override("demo_living_ac", """{"favorite":true}""")
@@ -89,7 +98,29 @@ class DemoHouse(private val random: Random = Random(7)) {
     /** Configs first, then overrides and areas, then state: the order a real broker replays retained messages. */
     @Synchronized
     fun retainedMessages(): List<DemoMessage> =
-        configs + extras + docs.map { (topic, json) -> DemoMessage(topic, json.toString()) }
+        configs + extras + docs.map { (topic, json) -> DemoMessage(topic, json.toString()) } +
+            climateDocs.map { (topic, payload) -> DemoMessage(topic, payload) }
+
+    /**
+     * What the hub does with a Climat hold command on [topic]: the zone's new `override` and
+     * `decision`. Null when [topic] is not the demo zone's hold command; empty when the payload
+     * is refused (no duration, bad JSON), as the hub only logs it.
+     */
+    @Synchronized
+    fun onClimateCommand(topic: String, payload: String): List<DemoMessage>? {
+        if (topic != "$CLIMAT_ZONE/hold/set") return null
+        if (payload.isEmpty()) return climatSchedule()
+        val request = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull() ?: return emptyList()
+        val setpoint = (request["setpoint"] as? JsonPrimitive)?.doubleOrNull ?: return emptyList()
+        val minutes = (request["minutes"] as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 } ?: return emptyList()
+        val until = clock() + minutes * 60L
+        val ends = java.time.Instant.ofEpochSecond(until).atZone(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        climateDocs["$CLIMAT_ZONE/override"] =
+            """[{"entity":null,"setpoint":$setpoint,"mode":null,"until":$until,"origin":"user"}]"""
+        climateDocs["$CLIMAT_ZONE/decision"] = climatDecision("boost", setpoint, "Boost to $setpoint °C until $ends")
+        return climatMessages()
+    }
 
     /** The state message a real device would publish after receiving [payload] on [topic], or null. */
     @Synchronized
@@ -103,7 +134,8 @@ class DemoHouse(private val random: Random = Random(7)) {
 
     /** The house's current state document for [topic], or null when it has none. Delayed echoes publish this, never a snapshot. */
     @Synchronized
-    fun current(topic: String): DemoMessage? = docs[topic]?.let { DemoMessage(topic, it.toString()) }
+    fun current(topic: String): DemoMessage? =
+        docs[topic]?.let { DemoMessage(topic, it.toString()) } ?: climateDocs[topic]?.let { DemoMessage(topic, it) }
 
     /** One step of live sensor noise: solar and house drift, grid follows, outdoor temperature wobbles. */
     @Synchronized
@@ -142,6 +174,25 @@ class DemoHouse(private val random: Random = Random(7)) {
     /** A lifetime counter advanced by one tick of [watts], rounded to 0.01 kWh; demo ticks are sped up so it visibly moves. */
     private fun counter(doc: JsonObject, key: String, watts: Double): Double =
         ((doc.number(key) + watts / 1_000 * COUNTER_STEP_HOURS) * 100).roundToInt() / 100.0
+
+    /** One active Climat zone, the living room's AC, on its schedule (no room thermometer in the demo). */
+    private fun climatZone() {
+        climateDocs["$CLIMAT_ZONE/settings"] = """{"state":"active","entities":["demo_living_ac"],"sensor":null}"""
+        climatSchedule()
+    }
+
+    private fun climatSchedule(): List<DemoMessage> {
+        climateDocs["$CLIMAT_ZONE/override"] = "[]"
+        climateDocs["$CLIMAT_ZONE/decision"] = climatDecision("schedule", 20.0, "Schedule: 20.0 °C")
+        return climatMessages()
+    }
+
+    private fun climatDecision(source: String, setpoint: Double, reason: String): String =
+        """{"zone":"living","mode":"heat","setpoint":$setpoint,"source":"$source","reason":"$reason","reading":19.4,""" +
+            """"home":true,"applied":true,"at":${clock()},"entities":{"demo_living_ac":{"setpoint":$setpoint,"mode":"heat","held":false}}}"""
+
+    private fun climatMessages(): List<DemoMessage> =
+        listOf("override", "decision").map { DemoMessage("$CLIMAT_ZONE/$it", climateDocs.getValue("$CLIMAT_ZONE/$it")) }
 
     private fun areas() {
         val areas = listOf("Living room", "Kitchen", "Bedroom", "Hallway", "Garage").withIndex().joinToString(",") { (i, name) ->
@@ -492,6 +543,7 @@ class DemoHouse(private val random: Random = Random(7)) {
     }
 
     private companion object {
+        const val CLIMAT_ZONE = "nidoo/climate/zone/living"
         const val ENERGY = "demo/energy"
         const val COUNTER_STEP_HOURS = 0.05
         const val OUTDOOR = "demo/outdoor"

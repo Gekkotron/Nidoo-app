@@ -117,4 +117,58 @@ class DemoHouseTest {
         assertEquals(listOf("Soirée", "Énergie"), decoded.map { it.name })
         assertEquals(listOf(5, 4), decoded.map { it.widgets.size })
     }
+
+    private val zone = "nidoo/climate/zone/living"
+
+    private fun doc(house: DemoHouse, topic: String) = house.retainedMessages().single { it.topic == topic }.payload
+
+    @Test
+    fun demoHasActiveLivingZone() {
+        val house = DemoHouse()
+        val settings = Json.parseToJsonElement(doc(house, "$zone/settings")).jsonObject
+        assertEquals("active", settings["state"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("""["demo_living_ac"]""", settings["entities"].toString())
+        val decision = Json.parseToJsonElement(doc(house, "$zone/decision")).jsonObject
+        assertEquals("schedule", decision["source"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("20.0", decision["setpoint"].toString())
+        assertEquals("19.4", decision["reading"].toString())
+        assertTrue("demo_living_ac" in decision["entities"]!!.jsonObject)
+        assertEquals("[]", doc(house, "$zone/override"))
+    }
+
+    @Test
+    fun holdCommandBoostsDemoZone() {
+        val house = DemoHouse(clock = { 1_000L })
+        val out = assertNotNull(house.onClimateCommand("$zone/hold/set", """{"setpoint":22.5,"minutes":90}"""))
+        val override = Json.parseToJsonElement(out.single { it.topic == "$zone/override" }.payload)
+        assertEquals(
+            Json.parseToJsonElement("""[{"entity":null,"setpoint":22.5,"mode":null,"until":6400,"origin":"user"}]"""),
+            override,
+        )
+        val decision = Json.parseToJsonElement(out.single { it.topic == "$zone/decision" }.payload).jsonObject
+        assertEquals("boost", decision["source"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("22.5", decision["setpoint"].toString())
+        assertTrue(decision["reason"]!!.jsonPrimitive.content.startsWith("Boost to 22.5 °C until "))
+        // The retained documents follow, so a reconnect replays the boost.
+        assertEquals(out.single { it.topic == "$zone/override" }.payload, doc(house, "$zone/override"))
+    }
+
+    @Test
+    fun emptyHoldCommandCancels() {
+        val house = DemoHouse(clock = { 1_000L })
+        house.onClimateCommand("$zone/hold/set", """{"setpoint":22.0,"minutes":60}""")
+        val out = assertNotNull(house.onClimateCommand("$zone/hold/set", ""))
+        assertEquals("[]", out.single { it.topic == "$zone/override" }.payload)
+        val decision = Json.parseToJsonElement(out.single { it.topic == "$zone/decision" }.payload).jsonObject
+        assertEquals("schedule", decision["source"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    @Test
+    fun otherTopicsAndBadPayloadsAreNotClimateCommands() {
+        val house = DemoHouse()
+        assertNull(house.onClimateCommand("demo/living/ac/temperature/set", "21"))
+        assertNull(house.onClimateCommand("nidoo/climate/zone/bedroom/hold/set", """{"setpoint":22.0,"minutes":60}"""))
+        assertEquals(emptyList(), house.onClimateCommand("$zone/hold/set", "{nope"))
+        assertEquals(emptyList(), house.onClimateCommand("$zone/hold/set", """{"setpoint":22.0}"""))
+    }
 }

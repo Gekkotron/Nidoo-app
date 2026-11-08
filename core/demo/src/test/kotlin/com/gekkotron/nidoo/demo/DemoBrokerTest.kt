@@ -1,5 +1,7 @@
 package com.gekkotron.nidoo.demo
 
+import com.gekkotron.nidoo.climate.ClimateRepository
+import com.gekkotron.nidoo.climate.ClimateSetpoint
 import com.gekkotron.nidoo.model.AlarmMode
 import com.gekkotron.nidoo.model.AlarmState
 import com.gekkotron.nidoo.model.Command
@@ -140,6 +142,22 @@ class DemoBrokerTest {
         assertEquals("Water heater", entities.getValue("demo_water_heater").name)
         assertEquals("Water heater Power 1", entities.getValue("demo_water_heater_triac_0").name)
         assertEquals("Power 1", entities.getValue("demo_water_heater_triac_0").label)
+    }
+
+    @Test
+    fun `a demo boost reaches the app's climate repository`() = runTest {
+        val broker = DemoBroker(backgroundScope)
+        val climate = ClimateRepository()
+        MqttDiscoverySource(broker, backgroundScope, climateSink = climate)
+        runCurrent()
+        settle()
+        assertEquals("active", climate.zones.value["living"]?.settings?.state)
+        assertTrue(climate.zones.value.getValue("living").overrides.isEmpty())
+        broker.publish("nidoo/climate/zone/living/hold/set", """{"setpoint":22.0,"minutes":60}""".encodeToByteArray(), qos = 1, retain = false)
+        settle()
+        val living = climate.zones.value.getValue("living")
+        assertEquals(ClimateSetpoint.Temp(22.0), living.overrides.single().setpoint)
+        assertEquals("boost", living.decision?.source)
     }
 
     @Test

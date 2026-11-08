@@ -57,6 +57,14 @@ class DemoBroker(
     override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) {
         if (!isValidPublishTopic(topic)) throw PublishFailed("invalid publish topic '$topic'")
         receive(topic, payload, retain)
+        house.onClimateCommand(topic, payload.decodeToString())?.let { answers ->
+            // The hub republishes the zone's retained documents; a refused command changes nothing.
+            scope.launch {
+                delay(echoDelay)
+                for (m in answers) receive(m.topic, (house.current(m.topic) ?: m).payload.encodeToByteArray(), retain = true)
+            }
+            return
+        }
         val echo = house.onCommand(topic, payload.decodeToString()) ?: return
         scope.launch {
             delay(echoDelay)
