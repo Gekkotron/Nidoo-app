@@ -2,11 +2,14 @@ package com.gekkotron.nidoo.feature.energy.ui
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
@@ -24,6 +27,7 @@ import org.robolectric.annotation.Config
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h914dp")
@@ -64,7 +68,39 @@ class OrbiteDiagramTest {
     @Test
     fun orbiteShowsHouseTotal() {
         show(house)
-        compose.onNodeWithText(EnergyFormat.power(2260.0, Locale.US)).assertExists()
+        // The centre total, and the grid's legend row (the grid feeds the whole house).
+        assertEquals(2, compose.onAllNodesWithText(EnergyFormat.power(2260.0, Locale.US)).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun orbiteLegendNamesEveryArc() {
+        show(house)
+        compose.onNodeWithText("Coming in").assertExists()
+        compose.onNodeWithText("Going out").assertExists()
+        compose.onNodeWithText("Grid").assertExists()
+        compose.onNodeWithText("↘ import").assertExists()
+        compose.onNodeWithText("Oven").assertExists()
+        compose.onNodeWithText(EnergyFormat.power(600.0, Locale.US)).assertExists()
+    }
+
+    @Test
+    fun orbiteTapOnLegendRowOpensNode() {
+        var opened: EnergyNode? = null
+        show(house, onNode = { opened = it })
+        compose.onNodeWithTag("energy-orbite-row-${oven.id}").performClick()
+        assertEquals(oven, opened)
+    }
+
+    @Test
+    @Config(qualifiers = "w932dp-h704dp")
+    fun orbiteWideWindowPutsLegendBesideRingsThatFitTheHeight() {
+        compose.setContent {
+            NidooTheme(ThemeChoice.IVOIRE) { OrbiteDiagram(house, Locale.US, onMore = {}, onNode = {}, maxSide = 500.dp) }
+        }
+        val rings = compose.onNodeWithTag("energy-orbite-rings").getBoundsInRoot()
+        val legend = compose.onNodeWithTag("energy-orbite-legend").getBoundsInRoot()
+        assertTrue(rings.bottom - rings.top <= 500.dp, "rings ${rings.bottom - rings.top} taller than maxSide")
+        assertTrue(legend.left >= rings.right, "legend should sit right of the rings")
     }
 
     @Test

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
@@ -302,6 +304,14 @@ class EnergyScreenTest {
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { EnergyScreen(state(house, houseStates), {}, locale = Locale.US, view = com.gekkotron.nidoo.data.EnergyViewPreference.FLUX) } }
         compose.onNodeWithTag("energy-flux").assertExists()
         compose.onNodeWithTag("energy-diagram").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "w932dp-h704dp")
+    fun `classicFitsTheHeightOfALandscapeWindow`() {
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { EnergyScreen(state(house, houseStates), {}, locale = Locale.US) } }
+        val diagram = compose.onNodeWithTag("energy-diagram").getBoundsInRoot()
+        assertTrue(diagram.bottom <= 704.dp, "diagram ends at ${diagram.bottom}, below a 704dp window")
     }
 
     @Test
