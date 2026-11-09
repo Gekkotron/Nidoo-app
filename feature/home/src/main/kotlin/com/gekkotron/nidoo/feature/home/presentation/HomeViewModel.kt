@@ -3,6 +3,10 @@ package com.gekkotron.nidoo.feature.home.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.nidoo.climate.ClimateCommands
+import com.gekkotron.nidoo.climate.ClimateRepository
+import com.gekkotron.nidoo.climate.ClimateTopics
+import com.gekkotron.nidoo.transport.MqttTransport
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.model.Area
@@ -21,6 +25,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -46,6 +57,9 @@ class HomeViewModel @Inject constructor(
     private val labels: LabelText = LabelText { null },
     private val history: HistoryClient = HistoryClient.None,
     preferences: AppPreferences,
+    private val climate: ClimateRepository = ClimateRepository(),
+    /** Sends the Climat hold commands; null in previews and tests that never boost. */
+    private val transport: MqttTransport? = null,
 ) : ViewModel() {
     /** Whether the opt-in voice assistant is on; the mic button shows only then. */
     val voiceEnabled: StateFlow<Boolean> = preferences.voiceEnabled
@@ -55,7 +69,7 @@ class HomeViewModel @Inject constructor(
     // conflate() collapses a burst of state messages to one rebuild per collection turn instead of one
     // per message, and flowOn moves the combine (and HomeUiBuilder.build) off Main; the final value is
     // never dropped.
-    val state: StateFlow<HomeUiState> = combine(
+    private val home = combine(
         source.entities,
         source.states(),
         source.areas,
@@ -72,6 +86,32 @@ class HomeViewModel @Inject constructor(
         // lets the screen settle on Favorites once they arrive instead of sticking on All.
         if (ui.selected.key != key && key != RoomFilter.Favorites.key) savedState[KEY_FILTER] = ui.selected.key
         ui
+    }
+
+    /** Wall-clock seconds, every [CLIMAT_TICK_MS], so a boost's end and expiry stay right on screen. */
+    private val climatClock = flow {
+        while (true) {
+            emit(System.currentTimeMillis() / 1_000)
+            delay(CLIMAT_TICK_MS)
+        }
+    }
+
+    private data class ClimatSend(val sending: Boolean = false, val error: Boolean = false)
+
+    private val climatSend = MutableStateFlow(ClimatSend())
+    private val _climatResults = Channel<ClimatResult>(Channel.BUFFERED)
+
+    /** One result per boost or cancel; the screen acts on it once (state edges can be conflated away). */
+    val climatResults: Flow<ClimatResult> = _climatResults.receiveAsFlow()
+    private var climatJob: Job? = null
+
+    val state: StateFlow<HomeUiState> = combine(home, source.entities, climate.zones, climatClock, climatSend) { ui, entities, zones, now, send ->
+        val room = ui.selected as? RoomFilter.Area
+        ui.copy(
+            climat = room?.let { climatBannerFor(it.id, zones.values, entities, now) },
+            climatSending = send.sending,
+            climatError = send.error,
+        )
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
@@ -123,6 +163,39 @@ class HomeViewModel @Inject constructor(
             val renamed = name.trim() == target.name.trim() || editor.setGroupName(target.areaId, kindKey, name)
             val favorited = favorite == target.ui.favorite || editor.setGroupFavorite(target.areaId, kindKey, favorite)
             if (!renamed || !favorited || !editor.ungroup(removed)) _events.send(HomeEvent.SaveFailed)
+        }
+    }
+
+    /** Boosts Climat zone [zone] to [setpoint] °C for [minutes] (spec §6). */
+    fun startBoost(zone: String, setpoint: Double, minutes: Int) = sendHold(zone, ClimateCommands.boost(setpoint, minutes))
+
+    /** Ends the zone's boost (or whole-zone hold); holds made on the devices stay. */
+    fun cancelBoost(zone: String) = sendHold(zone, ClimateCommands.CANCEL)
+
+    fun dismissClimatError() = climatSend.update { it.copy(error = false) }
+
+    /**
+     * Publishes the hold command, then waits up to [BOOST_CONFIRM_MS] for the hub to republish the
+     * zone's overrides; no answer (or a failed publish) is [HomeUiState.climatError].
+     */
+    private fun sendHold(zone: String, payload: String) {
+        val transport = transport ?: return
+        climatJob?.cancel()
+        val before = climate.zones.value[zone]?.overrides
+        climatSend.value = ClimatSend(sending = true)
+        climatJob = viewModelScope.launch {
+            try {
+                transport.publish(ClimateTopics.holdCommand(zone), payload.encodeToByteArray(), qos = 1, retain = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                climatSend.value = ClimatSend(error = true)
+                _climatResults.send(ClimatResult.REFUSED)
+                return@launch
+            }
+            val answered = withTimeoutOrNull(BOOST_CONFIRM_MS) { climate.zones.first { it[zone]?.overrides != before } }
+            climatSend.value = ClimatSend(error = answered == null)
+            _climatResults.send(if (answered == null) ClimatResult.REFUSED else ClimatResult.CONFIRMED)
         }
     }
 
@@ -200,6 +273,8 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val GROUP_FAILURE_WINDOW_MS = 1_000L
+        const val CLIMAT_TICK_MS = 30_000L
+        const val BOOST_CONFIRM_MS = 5_000L
         const val KEY_FILTER = "home.filter"
         const val KEY_QUERY = "home.query"
     }

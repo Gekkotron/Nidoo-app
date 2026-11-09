@@ -1,5 +1,7 @@
 package com.gekkotron.nidoo.source
 
+import com.gekkotron.nidoo.climate.ClimateSink
+import com.gekkotron.nidoo.climate.ClimateTopics
 import com.gekkotron.nidoo.dashboards.DashboardsSink
 import com.gekkotron.nidoo.flows.FlowsSink
 import com.gekkotron.nidoo.model.Area
@@ -70,6 +72,7 @@ class MqttDiscoverySource(
     now: () -> Instant = Instant::now,
     private val flowsSink: FlowsSink? = null,
     private val dashboardsSink: DashboardsSink? = null,
+    private val climateSink: ClimateSink? = null,
 ) : EntitySource {
     private val store = StateStore(now, diagnostics)
     private val tracker = CommandTracker(store, scope, commandTimeout)
@@ -127,6 +130,12 @@ class MqttDiscoverySource(
     private class Snapshot(val entities: Map<String, Entity>, val devices: Map<String, Device>, val areas: List<Area>)
 
     init {
+        if (climateSink != null) {
+            climateSink.clear()
+            scope.launch {
+                link.map { it is LinkState.Connected }.distinctUntilChanged().filter { it }.collect { climateSink.markLinkUp() }
+            }
+        }
         if (dashboardsSink != null) {
             dashboardsSink.clear()
             scope.launch {
@@ -327,11 +336,12 @@ class MqttDiscoverySource(
             val payload = message.payloadString()
             val flowId = flowIdOf(topic)
             val dashboardId = dashboardIdOf(topic)
+            val climateDocument = isClimateDocument(topic)
             val ignoredDocument = flowId == null && dashboardId == null && isIgnoredUiDocument(topic)
             // The phone no longer owns voice shortcuts; retained ones still match `nidoo/#` and are dropped untouched.
             if (topic.startsWith(RETIRED_VOICE_SHORTCUT_PREFIX)) return
             // flows and dashboards are never cached; the broker's retained replay is the truth
-            if ((flowId != null || dashboardId != null) && restored) return
+            if ((flowId != null || dashboardId != null || climateDocument) && restored) return
             if (ignoredDocument) {
                 if (!restored && ignoredReported.add(topic)) report("$topic: not an override, ignored")
                 return
@@ -349,6 +359,9 @@ class MqttDiscoverySource(
                 flowId != null -> flowsSink?.onRetained(flowId, payload.ifEmpty { null })
                 topic == AREAS_TOPIC -> onAreas(payload)
                 dashboardId != null -> dashboardsSink?.onRetained(dashboardId, payload.ifEmpty { null })
+                climateDocument -> ClimateTopics.parse(topic)?.let { (zone, doc) ->
+                    climateSink?.onRetained(zone, doc, payload.ifEmpty { null })
+                }
                 topic.startsWith(UI_PREFIX) -> onOverride(topic.removePrefix(UI_PREFIX), payload)
                 topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) ->
                     onHubGroupDefinition(hubGroupIdOf(topic), payload)
@@ -481,6 +494,15 @@ class MqttDiscoverySource(
     /** The flow id of an `nidoo/automation/<id>` topic (exactly one non-empty segment after the prefix), else null. */
     private fun flowIdOf(topic: String): String? =
         topic.takeIf { it.startsWith(FLOW_PREFIX) }?.removePrefix(FLOW_PREFIX)?.takeIf { it.isNotEmpty() && '/' !in it }
+
+    /**
+     * A Climat engine topic (`nidoo/climate/house`, `nidoo/climate/zone/…`: zone documents and the
+     * hold command), never an entity. The hub's climate devices are discovered under the same
+     * prefix (`nidoo/climate/<node>/climate/config`); those end in `/config` and stay discovery.
+     */
+    private fun isClimateDocument(topic: String): Boolean =
+        !topic.endsWith("/config") &&
+            (topic == ClimateTopics.PREFIX + "/house" || topic.startsWith(ClimateTopics.PREFIX + "/zone/"))
 
     /** The dashboard id of an `nidoo/ui/dashboards/<id>` topic (exactly one non-empty segment), else null. */
     private fun dashboardIdOf(topic: String): String? =

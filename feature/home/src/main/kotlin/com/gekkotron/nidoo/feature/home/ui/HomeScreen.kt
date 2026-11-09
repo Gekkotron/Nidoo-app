@@ -1,5 +1,10 @@
 package com.gekkotron.nidoo.feature.home.ui
 
+import com.gekkotron.nidoo.feature.home.presentation.ClimatResult
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.Flow
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
@@ -161,6 +166,10 @@ fun HomeRoute(
         onSelectDashboard = dashboardViewModel::select,
         onRunFlow = dashboardViewModel::runFlow,
         onOpenEnergy = onOpenEnergy,
+        onStartBoost = viewModel::startBoost,
+        onCancelBoost = viewModel::cancelBoost,
+        onDismissClimatError = viewModel::dismissClimatError,
+        climatResults = viewModel.climatResults,
     )
 }
 
@@ -187,6 +196,10 @@ fun HomeScreen(
     onSelectDashboard: (String) -> Unit = {},
     onRunFlow: (String) -> Unit = {},
     onOpenEnergy: () -> Unit = {},
+    onStartBoost: (zone: String, setpoint: Double, minutes: Int) -> Unit = { _, _, _ -> },
+    onCancelBoost: (zone: String) -> Unit = {},
+    onDismissClimatError: () -> Unit = {},
+    climatResults: Flow<ClimatResult> = emptyFlow(),
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -196,6 +209,24 @@ fun HomeScreen(
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     var picker by rememberSaveable { mutableStateOf(false) }
+    var boostSheet by rememberSaveable { mutableStateOf(false) }
+    // The boost sheet closes once the hub took what it sent; a refused command from the banner (sheet
+    // closed) is a snackbar. One-shot results, collected under a stable key, so neither is lost.
+    val climatError = stringResource(R.string.climat_error)
+    val dismissClimatError by rememberUpdatedState(onDismissClimatError)
+    LaunchedEffect(climatResults, snackbarHostState) {
+        climatResults.collect { result ->
+            when (result) {
+                ClimatResult.CONFIRMED -> boostSheet = false
+                ClimatResult.REFUSED -> if (!boostSheet) {
+                    launch {
+                        dismissClimatError()
+                        snackbarHostState.showSnackbar(climatError)
+                    }
+                }
+            }
+        }
+    }
     // Searching always looks through House, even from a dashboard.
     val onDashboard = dashboard.switcherVisible && dashboard.view !is DashboardView.House && !searching
     val shownDashboard = (dashboard.view as? DashboardView.Shown)?.ui
@@ -246,6 +277,12 @@ fun HomeScreen(
                             // On a dashboard a room chip goes back to House, filtered.
                             HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
                         }
+                    }
+                }
+                val climat = state.climat
+                if (climat != null && !onDashboard && !searching) {
+                    item(key = "climat-banner", span = { GridItemSpan(maxLineSpan) }) {
+                        ClimatBanner(climat, onBoost = { boostSheet = true }, onCancel = { onCancelBoost(climat.zone) })
                     }
                 }
                 if (onDashboard) {
@@ -308,6 +345,17 @@ fun HomeScreen(
                     .testTag("status-scrim"),
             )
         }
+    }
+    val climatUi = state.climat
+    if (boostSheet && climatUi != null) {
+        BoostSheet(
+            climatUi,
+            sending = state.climatSending,
+            error = state.climatError,
+            onStart = { target, minutes -> onStartBoost(climatUi.zone, target, minutes) },
+            onCancel = { onCancelBoost(climatUi.zone) },
+            onDismiss = { boostSheet = false; onDismissClimatError() },
+        )
     }
     val sheetCard = sheetId?.let { state.card(it) ?: dashboard.card(it) }
     if (sheetCard != null) {

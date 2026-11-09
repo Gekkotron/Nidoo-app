@@ -19,4 +19,5 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose) // BackHandler closes the search
     implementation(libs.coil.compose) // media player covers
+    testImplementation(testFixtures(project(":core:transport")))
 }

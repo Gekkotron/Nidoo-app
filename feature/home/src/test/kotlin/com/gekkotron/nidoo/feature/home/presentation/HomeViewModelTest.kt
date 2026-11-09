@@ -1,6 +1,9 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
 import com.gekkotron.nidoo.model.UiOverride
+import com.gekkotron.nidoo.climate.ClimateDoc
+import com.gekkotron.nidoo.climate.ClimateRepository
+import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
 import androidx.lifecycle.SavedStateHandle
 import com.gekkotron.nidoo.feature.home.FakeEntitySource
 import com.gekkotron.nidoo.feature.home.testEntity
@@ -470,6 +473,118 @@ class HomeViewModelTest {
         vm.send("zzz", Command.Open, card = staleCard)
         assertTrue(src.sent.isEmpty())
         assertEquals(listOf<HomeEvent>(HomeEvent.WaitingForConnection, HomeEvent.WaitingForConnection), events)
+    }
+
+    private val livingZone = """{"state":"active","entities":["lamp"],"sensor":null}"""
+    private val livingDecision =
+        """{"zone":"living","mode":"heat","setpoint":20.0,"source":"schedule","reason":"","reading":19.4,"at":1,"entities":{"lamp":{}}}"""
+
+    private fun climate() = ClimateRepository().apply {
+        onRetained("living", ClimateDoc.SETTINGS, livingZone)
+        onRetained("living", ClimateDoc.DECISION, livingDecision)
+    }
+
+    @Test
+    fun `climat banner shows only in a room view`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = climate())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.All)
+        assertEquals(null, vm.state.value.climat)
+        vm.select(RoomFilter.Favorites)
+        assertEquals(null, vm.state.value.climat)
+        vm.select(RoomFilter.Area("kitchen"))
+        assertEquals("living", vm.state.value.climat?.zone)
+        assertEquals(19.4, vm.state.value.climat?.reading)
+    }
+
+    @Test
+    fun `climat banner follows the zone documents`() = runTest(dispatcher) {
+        val repo = climate()
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = repo)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Area("kitchen"))
+        assertEquals(ClimatWhy.SCHEDULE, vm.state.value.climat?.why)
+        repo.onRetained("living", ClimateDoc.SETTINGS, null)
+        assertEquals(null, vm.state.value.climat)
+    }
+
+    private val boostOverride = """[{"entity":null,"setpoint":22.0,"mode":null,"until":9999999999,"origin":"user"}]"""
+
+    private fun climatVm(repo: ClimateRepository, transport: FakeMqttTransport) =
+        HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = repo, transport = transport)
+
+    @Test
+    fun `startBoost publishes the hold command`() = runTest(dispatcher) {
+        val transport = FakeMqttTransport()
+        val vm = climatVm(climate(), transport)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.startBoost("living", 22.0, 90)
+        val sent = transport.published.single()
+        assertEquals("nidoo/climate/zone/living/hold/set", sent.topic)
+        assertEquals("""{"setpoint":22.0,"minutes":90}""", sent.payloadString())
+        assertFalse(sent.retained)
+        assertTrue(vm.state.value.climatSending)
+    }
+
+    @Test
+    fun `cancelBoost publishes an empty payload`() = runTest(dispatcher) {
+        val transport = FakeMqttTransport()
+        val vm = climatVm(climate(), transport)
+        vm.cancelBoost("living")
+        assertEquals(listOf("nidoo/climate/zone/living/hold/set" to ""), transport.publishedStrings())
+    }
+
+    @Test
+    fun `a boost is confirmed when the zone's overrides change`() = runTest(dispatcher) {
+        val repo = climate()
+        val vm = climatVm(repo, FakeMqttTransport())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.startBoost("living", 22.0, 60)
+        assertTrue(vm.state.value.climatSending)
+        repo.onRetained("living", ClimateDoc.OVERRIDE, boostOverride)
+        assertFalse(vm.state.value.climatSending)
+        assertFalse(vm.state.value.climatError)
+        advanceTimeBy(6_000)
+        assertFalse(vm.state.value.climatError)
+    }
+
+    @Test
+    fun `no reply from the hub is an error after five seconds`() = runTest(dispatcher) {
+        val vm = climatVm(climate(), FakeMqttTransport())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.startBoost("living", 22.0, 60)
+        advanceTimeBy(4_900)
+        assertTrue(vm.state.value.climatSending)
+        assertFalse(vm.state.value.climatError)
+        advanceTimeBy(200)
+        assertFalse(vm.state.value.climatSending)
+        assertTrue(vm.state.value.climatError)
+        vm.dismissClimatError()
+        assertFalse(vm.state.value.climatError)
+    }
+
+    @Test
+    fun `each climat command reports its result once`() = runTest(dispatcher) {
+        val repo = climate()
+        val vm = climatVm(repo, FakeMqttTransport())
+        val results = mutableListOf<ClimatResult>()
+        backgroundScope.launch { vm.climatResults.collect { results += it } }
+        vm.startBoost("living", 22.0, 60)
+        repo.onRetained("living", ClimateDoc.OVERRIDE, boostOverride)
+        assertEquals(listOf(ClimatResult.CONFIRMED), results)
+        vm.cancelBoost("living")
+        advanceTimeBy(5_100)
+        assertEquals(listOf(ClimatResult.CONFIRMED, ClimatResult.REFUSED), results)
+    }
+
+    @Test
+    fun `a failed publish is an error at once`() = runTest(dispatcher) {
+        val transport = FakeMqttTransport().apply { failPublishes = true }
+        val vm = climatVm(climate(), transport)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.startBoost("living", 22.0, 60)
+        assertFalse(vm.state.value.climatSending)
+        assertTrue(vm.state.value.climatError)
     }
 }
 

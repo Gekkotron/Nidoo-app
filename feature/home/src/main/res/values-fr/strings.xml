@@ -278,6 +278,30 @@
     <string name="widget_energy_solar_now">Solaire maintenant</string>
     <string name="widget_energy_self">Autoconsommation</string>
     <string name="widget_history_band">min %1$s · max %2$s</string>
+    <!-- Climat banner and boost sheet (room view) -->
+    <string name="climat_title">Climat</string>
+    <string name="climat_boost">Boost</string>
+    <string name="climat_cancel">Annuler</string>
+    <string name="climat_start">Lancer le boost</string>
+    <string name="climat_update">Mettre à jour</string>
+    <string name="climat_boost_until">Boost %1$s° jusqu\'à %2$s</string>
+    <string name="climat_hold_until">Maintien jusqu\'à %1$s</string>
+    <string name="climat_sheet_line">Pièce à %1$s° jusqu\'à %2$s · s\'arrête si vous partez</string>
+    <string name="climat_duration_60">1 h</string>
+    <string name="climat_duration_90">1 h 30</string>
+    <string name="climat_duration_120">2 h</string>
+    <string name="climat_error">Climat n\'a pas pris le boost</string>
+    <string name="climat_why_schedule">Programme</string>
+    <string name="climat_why_boost">Boost</string>
+    <string name="climat_why_hold">Maintien</string>
+    <string name="climat_why_eco">Éco</string>
+    <string name="climat_why_away">Absent</string>
+    <string name="climat_why_holiday">Vacances</string>
+    <string name="climat_why_empty">Pièce vide</string>
+    <string name="climat_why_safety">Sécurité</string>
+    <string name="climat_why_idle">À l\'arrêt</string>
+    <string name="climat_why_other">—</string>
+
     <!-- Media players (media player spec, Android) -->
     <string name="media_nothing_playing">Rien ne joue</string>
     <string name="media_play_some">Lancer de la musique</string>

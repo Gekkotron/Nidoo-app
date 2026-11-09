@@ -9,6 +9,7 @@ kotlin {
             api(project(":core:model"))
             api(project(":core:flows"))
             api(project(":core:dashboards"))
+            api(project(":core:climate"))
             api(project(":core:state"))
             api(libs.kotlinx.serialization.json)
         }

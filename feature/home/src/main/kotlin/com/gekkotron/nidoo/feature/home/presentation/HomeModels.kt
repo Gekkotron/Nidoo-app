@@ -137,6 +137,12 @@ data class HomeUiState(
     val hiddenCount: Int = 0,
     /** The Home search text; blank when not searching. */
     val query: String = "",
+    /** The Climat banner of the selected room; null outside a room view or when no active zone covers it. */
+    val climat: ClimatBannerUi? = null,
+    /** A boost or cancel was sent and the hub has not answered yet. */
+    val climatSending: Boolean = false,
+    /** The hub did not take the last boost or cancel (no answer in time, or the publish failed). */
+    val climatError: Boolean = false,
 ) {
     fun card(id: String): CardUi? {
         fun search(cards: List<CardUi>): CardUi? = cards.firstNotNullOfOrNull { c ->

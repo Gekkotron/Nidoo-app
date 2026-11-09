@@ -3,6 +3,7 @@ package com.gekkotron.nidoo.connection
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.DEFAULT_PREFIX
 import com.gekkotron.nidoo.data.EntityCache
+import com.gekkotron.nidoo.climate.ClimateSink
 import com.gekkotron.nidoo.dashboards.DashboardsSink
 import com.gekkotron.nidoo.flows.FlowsSink
 import com.gekkotron.nidoo.model.Diagnostic
@@ -38,8 +39,12 @@ class EntitySourceSession(
     flowsSink: FlowsSink? = null,
     /** Receives the hub's dashboards from this (main) session's source. */
     dashboardsSink: DashboardsSink? = null,
+    /** Receives the hub's Climat zone documents from this (main) session's source. */
+    climateSink: ClimateSink? = null,
     private val build: (MqttTransport, CoroutineScope, String, DiagnosticSink) -> EntitySource =
-        { transport, scope, prefix, diagnostics -> defaultBuild(transport, scope, prefix, diagnostics, flowsSink, dashboardsSink) },
+        { transport, scope, prefix, diagnostics ->
+            defaultBuild(transport, scope, prefix, diagnostics, flowsSink, dashboardsSink, climateSink)
+        },
 ) {
     private var profile: ConnectionProfile? = null
     private var scope: CoroutineScope? = null
@@ -137,7 +142,16 @@ class EntitySourceSession(
             diagnostics: DiagnosticSink,
             flowsSink: FlowsSink? = null,
             dashboardsSink: DashboardsSink? = null,
+            climateSink: ClimateSink? = null,
         ): EntitySource =
-            MqttDiscoverySource(transport, scope, prefix = prefix, diagnostics = diagnostics, flowsSink = flowsSink, dashboardsSink = dashboardsSink)
+            MqttDiscoverySource(
+                transport,
+                scope,
+                prefix = prefix,
+                diagnostics = diagnostics,
+                flowsSink = flowsSink,
+                dashboardsSink = dashboardsSink,
+                climateSink = climateSink,
+            )
     }
 }
