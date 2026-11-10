@@ -6,7 +6,7 @@
 
 A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack Compose).
 
-Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Athena-HttpMqttGateway](https://github.com/Gekkotron/Athena-HttpMqttGateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
+Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Nidoo-gateway](https://github.com/Gekkotron/Nidoo-gateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
 > **Status:** foundation and demo Home screen. The core and the Home screen run against a built-in demo house; real broker transports come next. See the design spec (in [docs/superpowers/specs/](docs/superpowers/specs/)) and [mockups](docs/design/mockups/).
 
@@ -15,7 +15,7 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 | Module | Role |
 |---|---|
 | `:core:model` | Domain types: `Entity`, `StateValue`, `Command`, `UiOverride`, `Area` |
-| `:core:crypto` | AES-256-GCM envelope for Athena-HttpMqttGateway |
+| `:core:crypto` | AES-256-GCM envelope for Nidoo-gateway |
 | `:core:transport` | `MqttTransport` contract and topic matching (+ a test fake) |
 | `:core:state` | Jinja-subset templates, one mapper per kind, `StateStore`, optimistic `CommandTracker` |
 | `:core:source` | HA MQTT Discovery parser and `MqttDiscoverySource` |
