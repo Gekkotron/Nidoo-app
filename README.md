@@ -6,22 +6,41 @@
 
 A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack Compose).
 
-Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Athena-HttpMqttGateway](https://github.com/Gekkotron/Athena-HttpMqttGateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
+Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Nidoo-gateway](https://github.com/Gekkotron/Nidoo-gateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
-> **Status:** foundation and demo Home screen. The core and the Home screen run against a built-in demo house; real broker transports come next. See the design spec (in [docs/superpowers/specs/](docs/superpowers/specs/)) and [mockups](docs/design/mockups/).
+> **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
 
 ## Modules
 
 | Module | Role |
 |---|---|
-| `:core:model` | Domain types: `Entity`, `StateValue`, `Command`, `UiOverride`, `Area` |
-| `:core:crypto` | AES-256-GCM envelope for Athena-HttpMqttGateway |
-| `:core:transport` | `MqttTransport` contract and topic matching (+ a test fake) |
+| `:core:model` | Domain types: `Entity`, `StateValue`, `Command`, `UiOverride`, `Area`, hub groups, units |
+| `:core:crypto` | AES-256-GCM envelope for Nidoo-gateway |
+| `:core:transport` | `MqttTransport` contract, direct MQTT, the gateway transport and the LAN-or-gateway selector with make-before-break handover |
 | `:core:state` | Jinja-subset templates, one mapper per kind, `StateStore`, optimistic `CommandTracker` |
 | `:core:source` | HA MQTT Discovery parser and `MqttDiscoverySource` |
+| `:core:data` | Connection profiles, the setup QR payload, preferences, Keystore-backed secrets, the entity cache |
+| `:core:history` | Client for the hub's history API: sensor series, energy totals, last change |
+| `:core:dashboards` | The hub's dashboards and their layout |
+| `:core:flows` | The hub's flows: list and enable/disable |
+| `:core:climate` | Climate zones and room boost |
+| `:core:assist` | Client for the hub's voice assistant |
+| `:core:alerts` | Alert store (Room), parsing, and Frigate snapshots and clips |
+| `:core:push` | Firebase messaging: token registration, alert notifications, replies, presence refresh |
 | `:core:demo` | In-process demo broker with a fake house (discovery, state, echoed commands, live power) |
-| `:core:designsystem` | Night Glass / Ivoire tokens, bundled Inter + Manrope, cards, pill, chips |
-| `:feature:home` | Home screen: rooms, cards, control sheet |
+| `:core:designsystem` | Night Glass / Ivoire tokens, bundled Inter + Manrope, cards, pills, chips, icons, charts |
+| `:shared` | Kotlin Multiplatform module (migration in progress) |
+| `:feature:onboarding` | Welcome, QR scan or manual setup, connection test, notification permission |
+| `:feature:home` | Home and dashboards: rooms, favorites, cards, groups, control and customize sheets, Climat banner |
+| `:feature:energy` | Live power flow (Flux and Orbite views), today's totals, consumers |
+| `:feature:security` | Alarm panel, sensors and time since their last change |
+| `:feature:history` | Sensor and energy charts |
+| `:feature:automations` | Flows tab |
+| `:feature:alerts` | Alert list and detail, with snapshots and video |
+| `:feature:voice` | Voice sheet: speech capture and the hub's spoken answer |
+| `:feature:widget` | Home-screen widgets (Glance): device tiles and voice |
+| `:feature:controls` | Device controls in the Android status-bar panel |
+| `:feature:settings` | Settings sub-pages: connection, notifications, presence, voice, room order, licences |
 | `:app` | Hilt graph, Navigation 3, demo-mode wiring |
 
 ## Try the demo
@@ -51,15 +70,22 @@ Build and test: `./gradlew check koverXmlReport`.
 
 The sources live in `core/designsystem/src/screenshotTest/` and the reference PNGs in `core/designsystem/src/screenshotTestDefaultDebug/reference/`. This is local only: `check` and CI do not run it.
 
-## Highlights (v1)
+## Highlights
 
 - Live state over MQTT subscriptions, with no polling.
-- Automatic switching between direct Wi-Fi and the encrypted gateway.
-- Device discovery via `homeassistant/…/config`, plus `nidoo/ui/…` overrides (rename, rooms, order, card style).
-- Home, Energy (live power flow) and Security screens.
+- Automatic switching between direct Wi-Fi and the encrypted gateway, without losing messages.
+- Setup in one scan: the hub's QR code carries the broker, the gateway and the history address.
+- Device discovery via `homeassistant/…/config`, plus `nidoo/ui/…` overrides (rename, rooms, order, card style). Lights, switches, covers, climate, water heaters, sensors, alarm panels, vacuums, media players, buttons, numbers and selects.
+- Home with favorites and groups, plus the hub's own dashboards (House ▾ switcher).
+- Energy: live power flow between solar, grid, battery and the house, in Flux and Orbite views.
+- Security: alarm panel with code keypad, and time since each sensor last changed.
+- Climate: zone state and room boost, sent to the hub.
+- Flows: the hub's automations, filtered by room, with an enable toggle.
+- Voice: ask the hub's assistant and hear its answer, from the app or a widget.
+- Push notifications, with the device token registered over MQTT, Frigate snapshots and clips, and optional phone presence.
+- Home-screen widgets and device controls in the status-bar panel.
 - Night Glass (dark) and Ivoire (light) themes.
-- Push notifications, with the device token registered over MQTT.
-- History: sensor and energy charts (24 h, 7 d, 30 d, kWh per day) read from the hub's history API. It is found automatically at `http://<broker host>:8090` (the history API runs next to Mosquitto); Settings → History service (or `history.url` in the setup QR, `tools/setup-qr.py --history-url`) only overrides that. Away from home, add `<broker host>:8090` to the gateway key's rules once.
+- History: sensor and energy charts (1 h to 30 d, kWh per day) read from the hub's history API. It is found automatically at `http://<broker host>:8090` (the history API runs next to Mosquitto); Settings → History service (or `history.url` in the setup QR, `tools/setup-qr.py --history-url`) only overrides that. Away from home, add `<broker host>:8090` to the gateway key's rules once.
 
 ## License
 
