@@ -85,23 +85,26 @@ object RoomGroups {
     }
 
     /**
-     * Hub cover groups spec §2.3: swaps a hub group's cover tile for a wide group card built from
-     * its (would-be visible) members, and removes those members from [cards]. Groups whose entity is
-     * absent, whose kind is not supported here (shutters only in v1), or that have no renderable
-     * member on Home are left untouched.
+     * Hub groups spec §2.3: swaps a hub group's tile for a wide group card built from its
+     * (would-be visible) members, and removes those members from [cards] when the hub asks to hide
+     * them (`hideMembers`). Capabilities are the hub entity's own: the hub intersects member
+     * capabilities when it builds the discovery config. Groups whose entity is absent, whose kind
+     * Home cannot render as a group (covers and lights only), or that have no renderable member on
+     * Home are left untouched.
      */
     fun foldHubGroups(cards: List<CardUi>, hubGroups: Map<String, HubGroup>): List<CardUi> {
         if (hubGroups.isEmpty()) return cards
         val byId = cards.associateBy { it.id }
         val plan = hubGroups.values.mapNotNull { spec ->
-            if (spec.kind != Kind.COVER) return@mapNotNull null
+            if (spec.kind !in GROUP_KINDS) return@mapNotNull null
             val groupCard = byId[groupEntityId(spec.id)] ?: return@mapNotNull null
             val members = spec.members.mapNotNull { byId[it] }
             if (members.isEmpty()) return@mapNotNull null
             val area = members.map { it.areaId }.distinct().singleOrNull() ?: UNASSIGNED_AREA
-            val folded = group(area, Kind.COVER, members, spec.name, favorite = groupCard.ui.favorite)
-                .copy(id = groupCard.id, isHubGroup = true, ui = groupCard.ui)
-            Triple(groupCard.id, members.map { it.id }.toSet(), folded)
+            val folded = group(area, spec.kind, members, spec.name, favorite = groupCard.ui.favorite)
+                .copy(id = groupCard.id, isHubGroup = true, ui = groupCard.ui, capabilities = groupCard.capabilities)
+            val hidden = if (spec.hideMembers) members.map { it.id }.toSet() else emptySet()
+            Triple(groupCard.id, hidden, folded)
         }
         if (plan.isEmpty()) return cards
         val replacements = plan.associate { it.first to it.third }
