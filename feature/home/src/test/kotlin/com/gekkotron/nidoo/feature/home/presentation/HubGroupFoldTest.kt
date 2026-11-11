@@ -101,20 +101,83 @@ class HubGroupFoldTest {
         assertEquals("group:living:cover", group.id)
     }
 
+    private fun hubLight(id: String, area: String = "living") =
+        testEntity("group_$id", Kind.LIGHT, id, area = area, deviceId = HUB_GROUP_DEVICE_ID)
+
     @Test
-    fun `a non-cover kind in the spec is ignored for v1`() {
-        // Spec §4 non-goals: lights, switches, etc. land in a later pass.
-        val spec = HubGroup("living_lights", Kind.LIGHT, "Living lights", listOf("l1", "l2"))
-        val lightUi = testEntity("group_living_lights", Kind.LIGHT, "Living lights", area = "living", deviceId = HUB_GROUP_DEVICE_ID)
+    fun `a hub light group folds its members into one wide light group card`() {
+        val spec = HubGroup("light_living", Kind.LIGHT, "Lights", listOf("l1", "l2"), hideMembers = true)
+        val states = mapOf("l1" to EntityState("l1", StateValue.Light(true)))
+        val ui = build(
+            listOf(testEntity("l1", Kind.LIGHT, area = "living"), testEntity("l2", Kind.LIGHT, area = "living"), hubLight("light_living")),
+            mapOf("light_living" to spec),
+            states,
+        )
+        val group = ui.cards.single { it.isHubGroup }
+        assertEquals("group_light_living", group.id)
+        assertEquals("Lights", group.name)
+        assertEquals(Kind.LIGHT, group.kind)
+        assertTrue(group.wide)
+        assertEquals(CardValue.LightGroup(onCount = 1, total = 2), group.value)
+        // No loose members and no client-side "Lights" group stacked on top of the hub one.
+        assertEquals(listOf("group_light_living"), ui.cards.map { it.id })
+    }
+
+    @Test
+    fun `hideMembers false keeps the members on Home beside the group card`() {
+        // The hub's "All shutters" spans every room and asks to keep the shutters visible.
+        val spec = HubGroup("cover_house", Kind.COVER, "All shutters", listOf("bay", "bed"), hideMembers = false)
+        val ui = build(
+            listOf(shutter("bay", area = "living"), shutter("bed", area = "bedroom"), hubCover("cover_house")),
+            mapOf("cover_house" to spec),
+        )
+        val group = ui.cards.single { it.isHubGroup }
+        assertEquals(listOf("bay", "bed"), group.members.map { it.id })
+        assertTrue(ui.cards.any { it.id == "bay" })
+        assertTrue(ui.cards.any { it.id == "bed" })
+    }
+
+    @Test
+    fun `a visible member of one hub group still folds into a hiding hub group`() {
+        val house = HubGroup("cover_house", Kind.COVER, "All shutters", listOf("bay", "side", "bed"), hideMembers = false)
+        val living = HubGroup("cover_living", Kind.COVER, "Shutters", listOf("bay", "side"), hideMembers = true)
+        val ui = build(
+            listOf(shutter("bay"), shutter("side"), shutter("bed", area = "bedroom"), hubCover("cover_house"), hubCover("cover_living")),
+            mapOf("cover_house" to house, "cover_living" to living),
+        )
+        assertEquals(setOf("group_cover_house", "group_cover_living"), ui.cards.filter { it.isHubGroup }.map { it.id }.toSet())
+        assertFalse(ui.cards.any { it.id == "bay" || it.id == "side" })
+        assertTrue(ui.cards.any { it.id == "bed" })
+    }
+
+    @Test
+    fun `hub group capabilities come from the hub entity, not the members`() {
+        // The hub publishes no brightness topic for the group: no slider it cannot honour.
+        val spec = HubGroup("light_living", Kind.LIGHT, "Lights", listOf("l1", "l2"))
+        val dimmable = Capabilities(brightness = true)
         val ui = build(
             listOf(
-                testEntity("l1", Kind.LIGHT, area = "living"),
-                testEntity("l2", Kind.LIGHT, area = "living"),
-                lightUi,
+                testEntity("l1", Kind.LIGHT, area = "living", capabilities = dimmable),
+                testEntity("l2", Kind.LIGHT, area = "living", capabilities = dimmable),
+                hubLight("light_living"),
             ),
-            mapOf("living_lights" to spec),
+            mapOf("light_living" to spec),
         )
-        // No HubGroup fold happened — the hub entity + members all still show.
+        assertFalse(ui.cards.single { it.isHubGroup }.capabilities.brightness)
+    }
+
+    @Test
+    fun `a hub group of a kind Home cannot render as a group is left as a plain tile`() {
+        val spec = HubGroup("heat", Kind.CLIMATE, "Heating", listOf("c1", "c2"))
+        val ui = build(
+            listOf(
+                testEntity("c1", Kind.CLIMATE, area = "living"),
+                testEntity("c2", Kind.CLIMATE, area = "living"),
+                testEntity("group_heat", Kind.CLIMATE, area = "living", deviceId = HUB_GROUP_DEVICE_ID),
+            ),
+            mapOf("heat" to spec),
+        )
         assertFalse(ui.cards.any { it.isHubGroup })
+        assertEquals(setOf("c1", "c2", "group_heat"), ui.cards.map { it.id }.toSet())
     }
 }
