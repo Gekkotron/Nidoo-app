@@ -267,11 +267,37 @@ class HeadlessEntitiesTest {
     })
 
     @Test
-    fun a_tap_on_a_non_retained_state_sends_once_discovery_settles_not_after_8_s() = runTest {
+    fun a_tap_publishes_right_after_connecting_not_once_discovery_settles() = runTest {
+        // Zigbee2MQTT: no retained state, so waiting for discovery to settle cost seconds before the light switched.
         val h = nonRetainedHarness(echo = true)
         val result = h.entities.send(switchId, Command.TurnOn())
         assertTrue("$result", result is SendResult.Confirmed)
-        assertTrue("took ${testScheduler.currentTime} ms", testScheduler.currentTime < 5_000)
+        assertEquals(StateValue.OnOff(true), (result as SendResult.Confirmed).state.value)
+        assertTrue("took ${testScheduler.currentTime} ms", testScheduler.currentTime < 200)
+    }
+
+    @Test
+    fun a_tap_from_the_cache_publishes_at_once_and_confirms_on_the_echo() = runTest {
+        // The usual widget session: the house comes from the cache, the broker's replay is still under way.
+        val cache = MemoryCache(mapOf(configTopic to config, "sw/1" to "OFF"))
+        val h = harness(cache = cache, connect = { t ->
+            t.fake.retain(configTopic, config)
+            t.fake.retain("sw/1", "OFF")
+            t.fake.setLink(LinkState.Connected(TransportMode.DIRECT))
+            backgroundScope.launch {
+                var seen = 0
+                while (true) {
+                    val new = t.fake.published.drop(seen)
+                    seen += new.size
+                    new.filter { it.topic == "sw/1/set" }.forEach { t.fake.deliver("sw/1", it.payloadString()) }
+                    delay(50)
+                }
+            }
+        })
+        val result = h.entities.send(switchId, Command.TurnOn())
+        assertTrue("$result", result is SendResult.Confirmed)
+        assertEquals(StateValue.OnOff(true), (result as SendResult.Confirmed).state.value)
+        assertTrue("took ${testScheduler.currentTime} ms", testScheduler.currentTime < 200)
     }
 
     @Test

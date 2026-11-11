@@ -13,7 +13,6 @@ import com.gekkotron.nidoo.feature.widget.WidgetEntities
 import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.CommandResult
 import com.gekkotron.nidoo.model.EntityState
-import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.source.MqttDiscoverySource
@@ -93,9 +92,9 @@ class HeadlessEntities(
         live()?.let { return sendOn(it, id, command, historyEnabled(readyProfile())) }
         val session = session(save = true) { source, history ->
             if (withTimeoutOrNull(waitBudget) { source.entities.first { id in it } } == null) return@session SendResult.NotConfirmed
-            // Wait for the state topic's retained replay first: arriving after the send, it would "confirm" the old value.
-            // A button has no state topic, so there is nothing to wait for.
-            if (source.entities.value[id]?.kind != Kind.BUTTON) awaitLiveOrSettled(source, setOf(id))
+            // Sent at once, not after discovery settles (seconds on a house whose states are not retained): listening
+            // first is enough, since the store never takes a late retained replay of the old value as the answer.
+            source.subscribeStatesNow()
             sendOn(source, id, command, history)
         }
         return when (session) {

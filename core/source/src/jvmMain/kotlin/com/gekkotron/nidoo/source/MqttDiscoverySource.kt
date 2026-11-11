@@ -53,6 +53,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
 import java.time.Instant
@@ -126,6 +128,8 @@ class MqttDiscoverySource(
     private val prefixes: Set<String> = linkedSetOf(prefix, HUB_PREFIX)
     private val baseFilters = prefixes.map { "$it/#" }.toSet()
     private val stateTopics = MutableStateFlow<Set<String>>(emptySet())
+    private val subscriptionMutex = Mutex()
+    private var appliedStateTopics = emptySet<String>() // guarded by subscriptionMutex
 
     private class Snapshot(val entities: Map<String, Entity>, val devices: Map<String, Device>, val areas: List<Area>)
 
@@ -151,15 +155,9 @@ class MqttDiscoverySource(
         // Undispatched so the collector is subscribed before any subscription can replay retained messages.
         scope.launch(start = CoroutineStart.UNDISPATCHED) { transport.messages().collect { handle(it) } }
         scope.launch {
-            transport.setSubscriptions(baseFilters)
-            var applied = emptySet<String>()
-            stateTopics.debounce(SUBSCRIPTION_DEBOUNCE).collect { topics ->
-                if (topics != applied) {
-                    applied = topics
-                    transport.setSubscriptions(baseFilters + topics)
-                    store.retainPayloads(topics)
-                }
-            }
+            // Through the same lock as [subscribeStatesNow], so this first pass can never drop topics it already applied.
+            subscriptionMutex.withLock { transport.setSubscriptions(baseFilters + appliedStateTopics) }
+            stateTopics.debounce(SUBSCRIPTION_DEBOUNCE).collect { applyStateTopics(it) }
         }
         scope.launch {
             // Settle once the broker's retained replay has started and then gone quiet, on a link that stayed
@@ -175,6 +173,19 @@ class MqttDiscoverySource(
     }
 
     override fun states(): Flow<Map<String, EntityState>> = store.states
+
+    /**
+     * Subscribes to the current state topics now rather than after [SUBSCRIPTION_DEBOUNCE]. A short widget session calls
+     * it before sending, so the device's answer cannot arrive before we listen for it.
+     */
+    suspend fun subscribeStatesNow() = applyStateTopics(stateTopics.value)
+
+    private suspend fun applyStateTopics(topics: Set<String>) = subscriptionMutex.withLock {
+        if (topics == appliedStateTopics) return@withLock
+        appliedStateTopics = topics
+        transport.setSubscriptions(baseFilters + topics)
+        store.retainPayloads(topics)
+    }
 
     override suspend fun send(uniqueId: String, command: Command): CommandResult {
         val entity = _entities.value[uniqueId] ?: return CommandResult.Rejected("unknown entity $uniqueId")
@@ -366,7 +377,7 @@ class MqttDiscoverySource(
                 topic.startsWith(HUB_GROUP_PREFIX) && topic.endsWith(HUB_GROUP_DEFINITION_SUFFIX) ->
                     onHubGroupDefinition(hubGroupIdOf(topic), payload)
                 else -> when (val r = parseDiscovery(topic, payload)) {
-                    DiscoveryResult.NotDiscovery -> store.onMessage(topic, payload, restored)
+                    DiscoveryResult.NotDiscovery -> store.onMessage(topic, payload, restored, retained = message.retained)
                     DiscoveryResult.Removed -> replaceDiscovered(topic, null)
                     // Like HA: an invalid update is logged and the previously discovered entities are kept.
                     is DiscoveryResult.Skipped -> report("$topic: ${r.reason}")

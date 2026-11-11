@@ -646,4 +646,35 @@ class MqttDiscoverySourceTest {
         assertFalse("living" in h.source.hubGroups.value)
         assertTrue(h.diagnostics.any { it.message.contains("invalid group spec") })
     }
+
+    @Test
+    fun `subscribeStatesNow skips the debounce`() = runTest {
+        val h = start()
+        h.transport.deliver(lightTopic, lightConfig)
+        runCurrent()
+        assertFalse("z2m/lampe" in h.transport.subscriptions)
+        h.source.subscribeStatesNow()
+        assertTrue("z2m/lampe" in h.transport.subscriptions)
+        assertTrue(h.transport.subscriptions.containsAll(setOf("homeassistant/#", "nidoo/#")))
+        settle()
+        assertEquals(2, h.transport.subscriptionHistory.size) // the debounced pass found nothing left to apply
+    }
+
+    @Test
+    fun `a state replayed after a command does not confirm it, the device's answer does`() = runTest {
+        val transport = FakeMqttTransport()
+        transport.deliver("sw/a", "OFF", retain = true)
+        val h = start(transport)
+        h.transport.deliver("homeassistant/switch/a/config", switchConfig("a"))
+        runCurrent()
+        // Sent before the state topic is subscribed: its retained replay lands after the command.
+        assertEquals(CommandResult.Accepted, h.source.send("a", Command.TurnOn()))
+        settle()
+        assertTrue(h.state("a").pending)
+        assertEquals(StateValue.OnOff(true), h.state("a").value)
+        h.transport.deliver("sw/a", "ON")
+        runCurrent()
+        assertFalse(h.state("a").pending)
+        assertEquals(StateValue.OnOff(true), h.state("a").value)
+    }
 }
