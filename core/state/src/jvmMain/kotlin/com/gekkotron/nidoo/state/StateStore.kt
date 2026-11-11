@@ -73,7 +73,7 @@ class StateStore(
         }
         for (id in fresh) {
             val t = tracked.getValue(id)
-            for (topic in t.allTopics) lastPayload[topic]?.let { apply(id, topic, it, next) }
+            for (topic in t.allTopics) lastPayload[topic]?.let { apply(id, topic, it, retained = false, states = next) }
         }
         _states.value = next
     }
@@ -89,13 +89,16 @@ class StateStore(
         restoredTopics.retainAll(subscribed)
     }
 
-    /** Returns the ids whose value was confirmed by this message. A [restored] message comes from the entity cache. */
-    fun onMessage(topic: String, payload: String, restored: Boolean = false): Set<String> = synchronized(lock) {
+    /**
+     * Returns the ids whose value was confirmed by this message. A [restored] message comes from the entity cache. A
+     * [retained] one is the broker replaying what it held when we subscribed, so it predates any command still pending.
+     */
+    fun onMessage(topic: String, payload: String, restored: Boolean = false, retained: Boolean = false): Set<String> = synchronized(lock) {
         val ids = topicIndex[topic] ?: return emptySet()
         lastPayload[topic] = payload
         if (restored) restoredTopics += topic else restoredTopics -= topic
         val next = _states.value.toMutableMap()
-        val confirmedIds = ids.filterTo(mutableSetOf()) { apply(it, topic, payload, next) }
+        val confirmedIds = ids.filterTo(mutableSetOf()) { apply(it, topic, payload, retained, next) }
         _states.value = next
         confirmedIds
     }
@@ -147,7 +150,7 @@ class StateStore(
     }
 
     /** Applies one message to one entity inside [states]. Returns true if its value was confirmed. */
-    private fun apply(id: String, topic: String, payload: String, states: MutableMap<String, EntityState>): Boolean {
+    private fun apply(id: String, topic: String, payload: String, retained: Boolean, states: MutableMap<String, EntityState>): Boolean {
         val t = tracked[id] ?: return false
         var s = states[id] ?: return false
         var confirmedNow = false
@@ -156,7 +159,10 @@ class StateStore(
                 is Decoded.State -> {
                     val previous = confirmed[id]
                     confirmed[id] = d.value
-                    val confirmsCommand = !s.pending || confirmTopics[id]?.contains(topic) != false
+                    // A retained replay of another value is the old state, not the device's answer: it only moves the
+                    // revert target. One already showing the prediction confirms (a broker forwarding retain-as-published).
+                    val confirmsCommand = !s.pending ||
+                        (confirmTopics[id]?.contains(topic) != false && (!retained || d.value == s.value))
                     if (confirmsCommand) {
                         confirmTopics.remove(id)
                         // Only a flip seen live from a live, known value: not the first message, nor a cache restore or the message after one.

@@ -288,4 +288,37 @@ class StateStoreTest {
         timed.revert("l")
         assertEquals(null, timed.states.value.getValue("l").changedAt)
     }
+
+    @Test
+    fun `a retained replay of the old state does not confirm a pending command`() {
+        store.setEntities(listOf(lamp))
+        store.onMessage("s", "OFF")
+        store.markPending("l", StateValue.OnOff(true))
+        // The broker replaying what it held before the command (a new subscription) is not the device's answer.
+        assertEquals(emptySet(), store.onMessage("s", "OFF", retained = true))
+        assertTrue(store.states.value.getValue("l").pending)
+        assertEquals(StateValue.OnOff(true), value("l"))
+        // No answer: the revert goes back to what the replay showed.
+        assertTrue(store.revert("l"))
+        assertEquals(StateValue.OnOff(false), value("l"))
+    }
+
+    @Test
+    fun `a live message after a retained replay confirms`() {
+        store.setEntities(listOf(lamp))
+        store.markPending("l", StateValue.OnOff(true))
+        store.onMessage("s", "OFF", retained = true)
+        assertEquals(setOf("l"), store.onMessage("s", "ON"))
+        assertFalse(store.states.value.getValue("l").pending)
+        assertEquals(StateValue.OnOff(true), value("l"))
+    }
+
+    @Test
+    fun `a retained message already showing the prediction confirms`() {
+        store.setEntities(listOf(lamp))
+        store.onMessage("s", "OFF")
+        store.markPending("l", StateValue.OnOff(true))
+        assertEquals(setOf("l"), store.onMessage("s", "ON", retained = true))
+        assertFalse(store.states.value.getValue("l").pending)
+    }
 }
