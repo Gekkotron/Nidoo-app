@@ -5,9 +5,11 @@ import com.gekkotron.nidoo.designsystem.icons.VacuumMotion
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
 import com.gekkotron.nidoo.feature.home.testEntity
+import com.gekkotron.nidoo.model.AlarmState
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.CoverState
 import com.gekkotron.nidoo.model.EntityState
+import com.gekkotron.nidoo.model.Hs
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.model.UiOverride
@@ -25,6 +27,21 @@ class IconSpecTest {
         val states = value?.let { mapOf("e" to EntityState("e", it, available = available)) } ?: emptyMap()
         val card = HomeUiBuilder.build(mapOf("e" to e), states, emptyList(), RoomFilter.All, LinkState.Connecting, Locale.US).card("e")!!
         return iconSpec(card)
+    }
+
+    @Test
+    fun `a light carries its colour, and is not available when the entity is not`() {
+        val red = Hs(0.0, 1.0)
+        assertEquals(IconSpec.Light(on = true, color = red, available = true), spec(Kind.LIGHT, StateValue.Light(true, 200, color = red)))
+        assertEquals(IconSpec.Light(on = false, color = null, available = true), spec(Kind.LIGHT, StateValue.Light(false)))
+        assertEquals(IconSpec.Light(on = true, color = null, available = false), spec(Kind.LIGHT, StateValue.Light(true), available = false))
+    }
+
+    @Test
+    fun `an alarm panel pulses only while triggered and available`() {
+        assertEquals(IconSpec.Siren(NidooGlyph.SHIELD, active = true), spec(Kind.ALARM_PANEL, StateValue.Alarm(AlarmState.TRIGGERED)))
+        assertEquals(IconSpec.Siren(NidooGlyph.SHIELD, active = false), spec(Kind.ALARM_PANEL, StateValue.Alarm(AlarmState.ARMED_AWAY)))
+        assertEquals(IconSpec.Siren(NidooGlyph.SHIELD, active = false), spec(Kind.ALARM_PANEL, StateValue.Alarm(AlarmState.TRIGGERED), available = false))
     }
 
     @Test
@@ -69,7 +86,7 @@ class IconSpecTest {
 
     @Test
     fun `other kinds get their static glyph, lit only for lights and switches that are on`() {
-        assertEquals(IconSpec.Static(NidooGlyph.BULB, true), spec(Kind.LIGHT, StateValue.Light(true, 180)))
+        assertEquals(IconSpec.Light(on = true, color = null, available = true), spec(Kind.LIGHT, StateValue.Light(true, 180)))
         assertEquals(IconSpec.Static(NidooGlyph.PLUG, false), spec(Kind.SWITCH, StateValue.OnOff(false)))
         assertEquals(IconSpec.Static(NidooGlyph.THERMOMETER, false), spec(Kind.SENSOR, StateValue.Numeric(20.0), "temperature"))
         assertEquals(IconSpec.Static(NidooGlyph.DROP, false), spec(Kind.SENSOR, StateValue.Numeric(50.0), "humidity"))
@@ -82,7 +99,7 @@ class IconSpecTest {
         assertEquals(IconSpec.Climate(running = false, fanMode = "silence"), spec(Kind.CLIMATE, StateValue.Climate(mode = "off", target = 21.0, current = 22.0, fanMode = "silence")))
         assertEquals(IconSpec.Climate(running = true, fanMode = "high"), spec(Kind.CLIMATE, StateValue.Climate(mode = "cool", target = 21.0, current = 22.0, fanMode = "high")))
         assertEquals(IconSpec.Climate(running = false, fanMode = "high"), spec(Kind.CLIMATE, StateValue.Climate(mode = "cool", target = 21.0, current = 22.0, fanMode = "high"), available = false))
-        assertEquals(IconSpec.Static(NidooGlyph.SHIELD, false), spec(Kind.ALARM_PANEL, null))
+        assertEquals(IconSpec.Siren(NidooGlyph.SHIELD, active = false), spec(Kind.ALARM_PANEL, null))
         assertEquals(IconSpec.Static(NidooGlyph.SLIDER, false), spec(Kind.NUMBER, null))
         assertEquals(IconSpec.Static(NidooGlyph.LIST, false), spec(Kind.SELECT, null))
         assertEquals(IconSpec.Static(NidooGlyph.PLAY, false), spec(Kind.BUTTON, null))
