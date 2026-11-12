@@ -31,10 +31,11 @@ object RoomGroups {
     /**
      * [cards] are already filtered and sorted; each group takes its first member's place. [groupFavorites]
      * (areaId → kind keys like "cover","light") marks the folded group as a Favorite so the chip picks it up.
+     * A card that is already a group (a folded hub group) never joins one, so it cannot nest.
      */
     fun fold(cards: List<CardUi>, areas: List<Area>, groupFavorites: Map<String, Set<String>> = emptyMap()): List<CardUi> {
         val members = cards
-            .filter { candidate(it.areaId, it.kind) && !it.ui.ungrouped }
+            .filter { candidate(it.areaId, it.kind) && !it.ui.ungrouped && !it.isGroup }
             .groupBy { it.areaId to it.kind }
             .filterValues { it.size >= MIN_MEMBERS }
         if (members.isEmpty()) return cards

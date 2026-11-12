@@ -138,6 +138,37 @@ class HubGroupFoldTest {
     }
 
     @Test
+    fun `a hub group leads its room, above members it keeps visible and other devices`() {
+        val spec = HubGroup("cover_living", Kind.COVER, "Shutters", listOf("bay", "side"), hideMembers = false)
+        val ui = build(
+            listOf(
+                testEntity("aaa", Kind.SWITCH, "Aardvark lamp", area = "living"),
+                shutter("bay"),
+                shutter("side"),
+                hubCover("cover_living", area = "living"),
+                shutter("bed", area = "bedroom"),
+            ),
+            mapOf("cover_living" to spec),
+        )
+        val living = ui.cards.filter { it.areaId == "living" }
+        assertTrue(living.any { it.isHubGroup })
+        // Every group card (hub or room fold) sits above every single card of the room.
+        assertEquals(living.sortedBy { !it.isGroup }, living)
+        assertTrue(ui.cards.first().isGroup)
+    }
+
+    @Test
+    fun `a hub group is never swallowed by its room's own group`() {
+        // The hub group hides its two shutters; a third living shutter is not in it.
+        val spec = HubGroup("cover_living", Kind.COVER, "Shutters", listOf("bay", "side"), hideMembers = true)
+        val ui = build(
+            listOf(shutter("bay"), shutter("side"), shutter("extra"), hubCover("cover_living")),
+            mapOf("cover_living" to spec),
+        )
+        assertEquals(listOf("group_cover_living", "extra"), ui.cards.map { it.id })
+    }
+
+    @Test
     fun `a visible member of one hub group still folds into a hiding hub group`() {
         val house = HubGroup("cover_house", Kind.COVER, "All shutters", listOf("bay", "side", "bed"), hideMembers = false)
         val living = HubGroup("cover_living", Kind.COVER, "Shutters", listOf("bay", "side"), hideMembers = true)
