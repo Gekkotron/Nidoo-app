@@ -126,6 +126,27 @@ class GroupSheetTest {
     }
 
     @Test
+    fun `long-pressing the light group opens its sheet so each light is driven on its own`() {
+        show()
+        compose.onNodeWithTag("card-group_light_living").performTouchInput { longClick() }
+        compose.onNodeWithText("Living room · 2 lights").assertIsDisplayed()
+        compose.onNodeWithTag("member-l1").assertExists()
+        compose.onNodeWithTag("member-l2").assertExists()
+        compose.onNode(hasContentDescription("Floor lamp") and isToggleable()).performClick()
+        assertEquals(listOf("l2" to Command.TurnOn() as Command), sends)
+        assertEquals(emptyList(), groupSends)
+    }
+
+    @Test
+    fun `long-pressing the shutter group still opens its customize sheet`() {
+        show()
+        compose.onNodeWithTag("card-group_cover_living").performTouchInput { longClick() }
+        // Group Customize marker: only it has a Save button; the group sheet has none.
+        compose.onNodeWithText("Save").assertExists()
+        compose.onAllNodesWithTag("member-bay").assertCountEquals(0)
+    }
+
+    @Test
     fun `every light switch in the group sheet is named for TalkBack`() {
         show()
         compose.onNodeWithTag("card-group_light_living").performClick()
