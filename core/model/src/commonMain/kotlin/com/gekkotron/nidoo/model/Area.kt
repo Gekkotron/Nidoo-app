@@ -10,9 +10,9 @@ data class Area(
     val name: String,
     val icon: String? = null,
     val order: Int? = null,
-    /** Custom group card names by kind key (`cover`, `light`); missing = the localized default (room groups spec §6). */
+    /** Custom group card names by kind key (`cover`, `light`). No longer read by Home (it shows hub groups only); kept so stored areas round-trip intact. */
     val groupNames: Map<String, String> = emptyMap(),
-    /** Kind keys (`cover`, `light`) whose room group shows in the Favorites chip on Home. */
+    /** Kind keys (`cover`, `light`) of favorited room groups. No longer read by Home (it shows hub groups only); kept so stored areas round-trip intact. */
     val groupFavorites: Set<String> = emptySet(),
 )
 

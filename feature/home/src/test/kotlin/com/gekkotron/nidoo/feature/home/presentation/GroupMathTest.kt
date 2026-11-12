@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
+import com.gekkotron.nidoo.feature.home.hubGroupCard
 import com.gekkotron.nidoo.feature.home.testEntity
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Capabilities
@@ -15,9 +16,7 @@ import java.util.Locale
 import kotlin.test.assertEquals
 
 class GroupMathTest {
-    private fun group(vararg e: Entity, states: Map<String, EntityState>) =
-        HomeUiBuilder.build(e.associateBy { it.uniqueId }, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
-            .cards.single { it.isGroup }
+    private fun group(vararg e: Entity, states: Map<String, EntityState>) = hubGroupCard(*e, kind = e.first().kind, states = states)
 
     @Test
     fun `mean position counts only members with a known position`() {

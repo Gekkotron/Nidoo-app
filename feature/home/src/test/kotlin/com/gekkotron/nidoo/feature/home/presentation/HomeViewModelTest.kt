@@ -12,6 +12,8 @@ import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.CommandFailure
 import com.gekkotron.nidoo.model.CommandResult
 import com.gekkotron.nidoo.model.EntityState
+import com.gekkotron.nidoo.model.HUB_GROUP_DEVICE_ID
+import com.gekkotron.nidoo.model.HubGroup
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.data.AppPreferences
@@ -266,26 +268,19 @@ class HomeViewModelTest {
             "a" to testEntity("a", Kind.COVER, "Bay", area = "living", capabilities = Capabilities(position = true)),
             "b" to testEntity("b", Kind.COVER, "Side", area = "living", capabilities = Capabilities(position = true)),
             "c" to testEntity("c", Kind.COVER, "Patio", area = "living"),
+            "group_cover_living" to testEntity("group_cover_living", Kind.COVER, "Shutters", area = "living", deviceId = HUB_GROUP_DEVICE_ID, capabilities = Capabilities(position = true)),
         )
         areas.value = listOf(Area("living", "Living room"))
+        hubGroups.value = mapOf("cover_living" to HubGroup("cover_living", Kind.COVER, "Shutters", listOf("a", "b", "c")))
     }
 
     @Test
-    fun `a group send reaches every available member`() = runTest(dispatcher) {
+    fun `a group send goes to the hub group entity, the hub fans out`() = runTest(dispatcher) {
         val src = groupSource()
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
-        vm.sendGroup("group:living:cover", Command.Close)
-        assertEquals(setOf("a" to Command.Close, "b" to Command.Close, "c" to Command.Close), src.sent.toSet())
-    }
-
-    @Test
-    fun `unavailable members are skipped`() = runTest(dispatcher) {
-        val src = groupSource().apply { stateMap.value = mapOf("c" to EntityState("c", StateValue.Cover(CoverState.OPEN, null), available = false)) }
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
-        backgroundScope.launch { vm.state.collect {} }
-        vm.sendGroup("group:living:cover", Command.Open)
-        assertEquals(setOf("a", "b"), src.sent.map { it.first }.toSet())
+        vm.sendGroup("group_cover_living", Command.Close)
+        assertEquals(listOf<Pair<String, Command>>("group_cover_living" to Command.Close), src.sent)
     }
 
     @Test
@@ -294,33 +289,23 @@ class HomeViewModelTest {
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val event = async { vm.events.first() }
-        vm.sendGroup("group:living:cover", Command.Open)
+        vm.sendGroup("group_cover_living", Command.Open)
         assertEquals(HomeEvent.WaitingForConnection, event.await())
         assertTrue(src.sent.isEmpty())
     }
 
     @Test
-    fun `only resends to the listed members`() = runTest(dispatcher) {
-        val src = groupSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
-        backgroundScope.launch { vm.state.collect {} }
-        vm.sendGroup("group:living:cover", Command.Open, only = listOf("b"))
-        assertEquals(listOf<Pair<String, Command>>("b" to Command.Open), src.sent)
-    }
-
-    @Test
-    fun `failures of one group send merge into one event`() = runTest(dispatcher) {
+    fun `a failed group send reports the group under its own name`() = runTest(dispatcher) {
         val src = groupSource()
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
-        vm.sendGroup("group:living:cover", Command.Close)
-        src.commandFailures.emit(CommandFailure("a", Command.Close, "timeout"))
-        src.commandFailures.emit(CommandFailure("c", Command.Close, "timeout"))
+        vm.sendGroup("group_cover_living", Command.Close)
+        src.commandFailures.emit(CommandFailure("group_cover_living", Command.Close, "timeout"))
         advanceTimeBy(1_100)
         assertEquals(
-            listOf<HomeEvent>(HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "c"), listOf("Bay", "Patio"), Command.Close)),
+            listOf<HomeEvent>(HomeEvent.GroupNotConfirmed("group_cover_living", Kind.COVER, listOf("group_cover_living"), listOf("Shutters"), Command.Close)),
             events,
         )
     }
@@ -332,7 +317,7 @@ class HomeViewModelTest {
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
-        vm.sendGroup("group:living:cover", Command.Close)
+        vm.sendGroup("group_cover_living", Command.Close)
         vm.send("a", Command.Open)
         src.commandFailures.emit(CommandFailure("a", Command.Open, "timeout"))
         advanceTimeBy(1_100)
@@ -340,20 +325,22 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `the light group inline toggle sends to every light`() = runTest(dispatcher) {
+    fun `the light group inline toggle sends one command to the hub group`() = runTest(dispatcher) {
         val src = FakeEntitySource().apply {
             entities.value = mapOf(
                 "x" to testEntity("x", Kind.LIGHT, area = "living"),
                 "y" to testEntity("y", Kind.LIGHT, area = "living"),
+                "group_light_living" to testEntity("group_light_living", Kind.LIGHT, area = "living", deviceId = HUB_GROUP_DEVICE_ID),
             )
             areas.value = listOf(Area("living", "Living room"))
+            hubGroups.value = mapOf("light_living" to HubGroup("light_living", Kind.LIGHT, "Lights", listOf("x", "y")))
             stateMap.value = mapOf("x" to EntityState("x", StateValue.Light(true, 255)))
         }
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val group = vm.state.value.cards.single()
         vm.sendGroup(group.id, GroupCommands.toggle(group))
-        assertEquals(setOf("x" to Command.TurnOff, "y" to Command.TurnOff), src.sent.toSet())
+        assertEquals(listOf<Pair<String, Command>>("group_light_living" to Command.TurnOff), src.sent)
     }
 
     @Test
@@ -363,19 +350,18 @@ class HomeViewModelTest {
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
-        vm.sendGroup("group:living:cover", Command.Open)
-        assertEquals(listOf<HomeEvent>(HomeEvent.Rejected("group:living:cover", "read-only")), events)
+        vm.sendGroup("group_cover_living", Command.Open)
+        assertEquals(listOf<HomeEvent>(HomeEvent.Rejected("group_cover_living", "read-only")), events)
     }
 
     @Test
-    fun `customizing a group renames it and ungroups the unticked members`() = runTest(dispatcher) {
+    fun `customizing a hub group saves its name and favorite on the group entity`() = runTest(dispatcher) {
         val src = groupSource()
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
-        vm.customizeGroup("group:living:cover", "Baie", favorite = false, removed = listOf("c"))
-        assertEquals(mapOf("cover" to "Baie"), src.areas.value.single().groupNames)
-        assertTrue(src.overrides.getValue("c").ungrouped)
-        assertEquals(listOf("a", "b"), vm.state.value.cards.single { it.isGroup }.members.map { it.id })
+        vm.customizeGroup("group_cover_living", " Baie ", favorite = true)
+        assertEquals(UiOverride(name = "Baie", favorite = true), src.overrides["group_cover_living"])
+        assertEquals(emptyList(), src.areaWrites)
     }
 
     @Test
@@ -385,17 +371,16 @@ class HomeViewModelTest {
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
-        vm.sendGroup("group:living:cover", Command.Open)
-        vm.sendGroup("group:living:cover", Command.SetPosition(30))
-        src.commandFailures.emit(CommandFailure("c", Command.Open, "timeout"))
-        advanceTimeBy(300)
-        src.commandFailures.emit(CommandFailure("a", Command.SetPosition(30), "timeout"))
-        src.commandFailures.emit(CommandFailure("b", Command.SetPosition(30), "timeout"))
+        vm.sendGroup("group_cover_living", Command.Open)
+        src.commandFailures.emit(CommandFailure("group_cover_living", Command.Open, "timeout"))
+        advanceTimeBy(1_100)
+        vm.sendGroup("group_cover_living", Command.SetPosition(30))
+        src.commandFailures.emit(CommandFailure("group_cover_living", Command.SetPosition(30), "timeout"))
         advanceTimeBy(1_100)
         assertEquals(
             setOf<HomeEvent>(
-                HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("c"), listOf("Patio"), Command.Open),
-                HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "b"), listOf("Bay", "Side"), Command.SetPosition(30)),
+                HomeEvent.GroupNotConfirmed("group_cover_living", Kind.COVER, listOf("group_cover_living"), listOf("Shutters"), Command.Open),
+                HomeEvent.GroupNotConfirmed("group_cover_living", Kind.COVER, listOf("group_cover_living"), listOf("Shutters"), Command.SetPosition(30)),
             ),
             events.toSet(),
         )
@@ -412,7 +397,7 @@ class HomeViewModelTest {
         val states = if (stale) src.entities.value.keys.associateWith { EntityState(it, StateValue.Cover(CoverState.OPEN, 100), stale = true) } else emptyMap()
         return HomeUiBuilder.build(
             src.entities.value, states, src.areas.value, RoomFilter.Area("living"),
-            LinkState.Connected(TransportMode.DEMO), java.util.Locale.US,
+            LinkState.Connected(TransportMode.DEMO), java.util.Locale.US, hubGroups = src.hubGroups.value,
         ).cards.single { it.isGroup }
     }
 
@@ -425,7 +410,7 @@ class HomeViewModelTest {
         val card = livingGroupCard(src)
         assertEquals(null, vm.state.value.card(card.id))
         vm.sendGroup(card.id, Command.Close, group = card)
-        assertEquals(setOf("a" to Command.Close, "b" to Command.Close, "c" to Command.Close), src.sent.toSet())
+        assertEquals(listOf<Pair<String, Command>>("group_cover_living" to Command.Close), src.sent)
     }
 
     @Test
@@ -455,8 +440,8 @@ class HomeViewModelTest {
         val card = livingGroupCard(src)
         vm.sendGroup(card.id, Command.Close, group = card)
         src.sent.clear()
-        vm.sendGroup(card.id, Command.Close, only = listOf("b"))
-        assertEquals(listOf<Pair<String, Command>>("b" to Command.Close), src.sent)
+        vm.sendGroup(card.id, Command.Close, only = listOf(card.id))
+        assertEquals(listOf<Pair<String, Command>>("group_cover_living" to Command.Close), src.sent)
     }
 
     @Test

@@ -14,6 +14,7 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
 import com.gekkotron.nidoo.feature.home.testEntity
+import com.gekkotron.nidoo.feature.home.withLivingHubGroups
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Capabilities
 import com.gekkotron.nidoo.model.Command
@@ -37,13 +38,13 @@ class GroupCardTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val entities = listOf(
+    private val house = withLivingHubGroups(listOf(
         testEntity("bay", Kind.COVER, "Bay window", area = "living", capabilities = Capabilities(position = true)),
         testEntity("side", Kind.COVER, "Side window", area = "living", capabilities = Capabilities(position = true)),
         testEntity("patio", Kind.COVER, "Patio door", area = "living"),
         testEntity("l1", Kind.LIGHT, "Ceiling", area = "living"),
         testEntity("l2", Kind.LIGHT, "Floor lamp", area = "living"),
-    ).associateBy { it.uniqueId }
+    ))
     private val states = mapOf(
         "bay" to EntityState("bay", StateValue.Cover(CoverState.OPEN, 100)),
         "side" to EntityState("side", StateValue.Cover(CoverState.OPEN, 80)),
@@ -57,7 +58,7 @@ class GroupCardTest {
     private fun show() = compose.setContent {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             HomeScreen(
-                state = HomeUiBuilder.build(entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                state = HomeUiBuilder.build(house.entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US, hubGroups = house.hubGroups),
                 onSelect = {},
                 onTap = { taps += it.id },
                 onSend = { id, c -> sends += id to c },
@@ -74,14 +75,14 @@ class GroupCardTest {
         compose.onNodeWithText("2 open · 1 closed").assertIsDisplayed()
         compose.onNodeWithText("×3").assertIsDisplayed()
         compose.onNodeWithContentDescription("Close all shutters").performClick()
-        assertEquals(listOf("group:living:cover" to Command.Close as Command), groupSends)
+        assertEquals(listOf("group_cover_living" to Command.Close as Command), groupSends)
     }
 
     @Test
     fun `the light group card opens its sheet on tap`() {
         show()
         compose.onNodeWithText("1 of 2 on").assertIsDisplayed()
-        compose.onNodeWithTag("card-group:living:light").performClick()
+        compose.onNodeWithTag("card-group_light_living").performClick()
         // Sheet marker: the per-member row for one of the lights is visible.
         compose.onNodeWithText("Ceiling").assertIsDisplayed()
         assertEquals(emptyList(), taps)
@@ -91,14 +92,14 @@ class GroupCardTest {
     fun `the light group card toggles the whole group from its inline button`() {
         show()
         // One of the two lights is on, so the group reads on; the toggle turns them all off.
-        compose.onNodeWithTag("group-toggle-group:living:light").performClick()
-        assertEquals(listOf("group:living:light" to Command.TurnOff as Command), groupSends)
+        compose.onNodeWithTag("group-toggle-group_light_living").performClick()
+        assertEquals(listOf("group_light_living" to Command.TurnOff as Command), groupSends)
     }
 
     @Test
     fun `tapping the shutter group opens its sheet`() {
         show()
-        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithTag("card-group_cover_living").performClick()
         compose.onNodeWithText("Bay window").assertIsDisplayed()
     }
 }

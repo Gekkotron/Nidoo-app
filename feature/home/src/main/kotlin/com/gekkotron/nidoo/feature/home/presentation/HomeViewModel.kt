@@ -155,14 +155,13 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { if (!editor.customize(id, newRooms, override)) _events.send(HomeEvent.SaveFailed) }
     }
 
-    /** Room groups spec §6: rename, pin to Favorites, then take [removed] members out. A failed write is a [HomeEvent.SaveFailed]. */
-    fun customizeGroup(groupId: String, name: String, favorite: Boolean, removed: List<String>, group: CardUi? = null) {
+    /** A hub group's name and Favorites pin live on the group entity's own override. A failed write is a [HomeEvent.SaveFailed]. */
+    fun customizeGroup(groupId: String, name: String, favorite: Boolean, group: CardUi? = null) {
         viewModelScope.launch {
-            val target = (state.value.card(groupId) ?: group ?: lastGroupCards[groupId])?.takeIf { it.isGroup } ?: return@launch
-            val kindKey = RoomGroups.kindKey(target.kind)
-            val renamed = name.trim() == target.name.trim() || editor.setGroupName(target.areaId, kindKey, name)
-            val favorited = favorite == target.ui.favorite || editor.setGroupFavorite(target.areaId, kindKey, favorite)
-            if (!renamed || !favorited || !editor.ungroup(removed)) _events.send(HomeEvent.SaveFailed)
+            val target = (state.value.card(groupId) ?: group ?: lastGroupCards[groupId])?.takeIf { it.isHubGroup } ?: return@launch
+            val clean = name.trim().takeIf { it.isNotEmpty() }
+            val saved = editor.save(groupId, target.ui.copy(name = clean, favorite = favorite))
+            if (!saved) _events.send(HomeEvent.SaveFailed)
         }
     }
 
@@ -259,10 +258,10 @@ class HomeViewModel @Inject constructor(
             if (group != null && group.isGroup) lastGroupCards[groupId] = group
             val target = (state.value.card(groupId) ?: group ?: lastGroupCards[groupId])?.takeIf { it.isGroup } ?: return@launch
             if (target.members.any { it.stale }) return@launch _events.send(HomeEvent.WaitingForConnection)
-            val ids = GroupCommands.targets(target, command).filter { only == null || it in only }
+            val ids = GroupCommands.targets(target).filter { only == null || it in only }
             // Hub cover groups spec §2.4: a hub group fails under its own id, so the snackbar reads the
             // group's name instead of a bare "group_xyz".
-            val names = if (target.isHubGroup) mapOf(target.id to target.name) else target.members.associate { it.id to it.name }
+            val names = mapOf(target.id to target.name)
             ids.forEach { groupSends[it] = GroupSend(groupId, target.kind, command, names) }
             val results = ids.map { id -> async { source.send(id, command) } }.awaitAll()
             results.firstOrNull { it is CommandResult.Rejected }?.let {

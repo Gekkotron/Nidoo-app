@@ -18,6 +18,7 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
 import com.gekkotron.nidoo.feature.home.testEntity
+import com.gekkotron.nidoo.feature.home.withLivingHubGroups
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Capabilities
 import com.gekkotron.nidoo.model.Command
@@ -43,13 +44,13 @@ class GroupSheetTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val entities = listOf(
+    private val house = withLivingHubGroups(listOf(
         testEntity("bay", Kind.COVER, "Bay window", area = "living", capabilities = Capabilities(position = true)),
         testEntity("side", Kind.COVER, "Side window", area = "living", capabilities = Capabilities(position = true)),
         testEntity("patio", Kind.COVER, "Patio door", area = "living"),
         testEntity("l1", Kind.LIGHT, "Ceiling", area = "living"),
         testEntity("l2", Kind.LIGHT, "Floor lamp", area = "living"),
-    ).associateBy { it.uniqueId }
+    ))
     private val states = mapOf(
         "bay" to EntityState("bay", StateValue.Cover(CoverState.OPEN, 100)),
         "side" to EntityState("side", StateValue.Cover(CoverState.OPEN, 80)),
@@ -63,7 +64,7 @@ class GroupSheetTest {
     private fun show() = compose.setContent {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             HomeScreen(
-                state = HomeUiBuilder.build(entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                state = HomeUiBuilder.build(house.entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US, hubGroups = house.hubGroups),
                 onSelect = {},
                 onTap = { taps += it.id },
                 onSend = { id, c -> sends += id to c },
@@ -76,18 +77,18 @@ class GroupSheetTest {
     @Test
     fun `the shutter sheet sends Open to the group and lists every member`() {
         show()
-        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithTag("card-group_cover_living").performClick()
         compose.onNodeWithText("Living room · 3 shutters").assertIsDisplayed()
         // The group's Open button comes before the "Open" state text of the Bay window row.
         compose.onAllNodesWithText("Open").onFirst().performClick()
-        assertEquals("group:living:cover" to Command.Open as Command, groupSends.last())
+        assertEquals("group_cover_living" to Command.Open as Command, groupSends.last())
         compose.onNodeWithTag("member-patio").assertExists()
     }
 
     @Test
     fun `a member row's own button sends to that member only`() {
         show()
-        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithTag("card-group_cover_living").performClick()
         compose.onNodeWithTag("member-close-side").performClick()
         assertEquals(listOf("side" to Command.Close as Command), sends)
     }
@@ -95,7 +96,7 @@ class GroupSheetTest {
     @Test
     fun `tapping a member expands its inline controls while the group sheet stays open`() {
         show()
-        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithTag("card-group_cover_living").performClick()
         compose.onAllNodesWithTag("member-position-bay").assertCountEquals(0)
         compose.onNodeWithTag("member-bay").performClick()
         // The position slider only exists after the row has been expanded; the group header is still visible.
@@ -109,7 +110,7 @@ class GroupSheetTest {
     @Test
     fun `long-pressing a member opens its customize sheet`() {
         show()
-        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithTag("card-group_cover_living").performClick()
         compose.onNodeWithTag("member-bay").performTouchInput { longClick() }
         // Customize sheet marker: the Name field label is unique to it.
         compose.onNodeWithText("Name").assertIsDisplayed()
@@ -118,16 +119,16 @@ class GroupSheetTest {
     @Test
     fun `tapping the light group opens its sheet with a master switch`() {
         show()
-        compose.onNodeWithTag("card-group:living:light").performClick()
+        compose.onNodeWithTag("card-group_light_living").performClick()
         compose.onNodeWithText("Living room · 2 lights").assertIsDisplayed()
-        compose.onNodeWithTag("group-power-group:living:light").performClick()
-        assertEquals("group:living:light" to Command.TurnOff as Command, groupSends.last())
+        compose.onNodeWithTag("group-power-group_light_living").performClick()
+        assertEquals("group_light_living" to Command.TurnOff as Command, groupSends.last())
     }
 
     @Test
     fun `every light switch in the group sheet is named for TalkBack`() {
         show()
-        compose.onNodeWithTag("card-group:living:light").performClick()
+        compose.onNodeWithTag("card-group_light_living").performClick()
         compose.onNode(hasContentDescription("Ceiling") and isToggleable()).assertExists()
         compose.onNode(hasContentDescription("Floor lamp") and isToggleable()).assertExists()
         compose.onNode(hasContentDescription("Power") and isToggleable()).assertExists()

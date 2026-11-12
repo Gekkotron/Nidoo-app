@@ -61,18 +61,18 @@ class HomeEventsEffectTest {
     fun `a merged group failure shows one snackbar and Retry resends to the failed members`() {
         show()
         compose.waitForIdle()
-        events.tryEmit(HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "c"), listOf("Bay", "Patio"), Command.Close))
+        events.tryEmit(HomeEvent.GroupNotConfirmed("group_cover_living", Kind.COVER, listOf("a", "c"), listOf("Bay", "Patio"), Command.Close))
         compose.onNodeWithText("2 shutters didn't respond").assertExists()
         compose.onNodeWithText("Retry").performClick()
         compose.waitForIdle()
-        assertEquals(listOf(Triple<String, Command, List<String>>("group:living:cover", Command.Close, listOf("a", "c"))), retriedGroups)
+        assertEquals(listOf(Triple<String, Command, List<String>>("group_cover_living", Command.Close, listOf("a", "c"))), retriedGroups)
     }
 
     @Test
     fun `a single failed member is named`() {
         show()
         compose.waitForIdle()
-        events.tryEmit(HomeEvent.GroupNotConfirmed("group:living:light", Kind.LIGHT, listOf("x"), listOf("Ceiling"), Command.TurnOff))
+        events.tryEmit(HomeEvent.GroupNotConfirmed("group_light_living", Kind.LIGHT, listOf("x"), listOf("Ceiling"), Command.TurnOff))
         compose.onNodeWithText("Ceiling didn't respond").assertExists()
     }
 }

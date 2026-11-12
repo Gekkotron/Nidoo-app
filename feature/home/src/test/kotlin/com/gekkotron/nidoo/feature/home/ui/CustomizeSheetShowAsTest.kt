@@ -27,7 +27,6 @@ class CustomizeSheetShowAsTest {
         homePinned = false,
         securityAction = securityAction,
         securityAsk = securityAsk,
-        grouped = true,
         showAs = showAs,
     )
 

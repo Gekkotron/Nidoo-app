@@ -1,5 +1,7 @@
 # Oikos — Room groups (shutters and lights) design
 
+> **Superseded 2026-11-12: Home shows hub groups only.** The app no longer folds a room's covers or lights into client-side groups; the hub is the single source of groups (see the hub cover groups spec, 2026-10-26). `Area.groupNames`, `Area.groupFavorites` and `UiOverride.ungrouped` stay in the model for stored-data compatibility but Home no longer reads them.
+
 Status: approved design, 2026-10-09. Mockups: option A of the "Shutter grouping options" artifact. It replaces, for now, the planned card sparklines + event log sub-project, which stays queued.
 
 ## 1. Goals and scope

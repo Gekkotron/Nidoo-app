@@ -160,7 +160,7 @@ fun HomeRoute(
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
         onSendGroup = { id, c -> viewModel.sendGroup(id, c, group = cardOf(id)) },
-        onCustomizeGroup = { id, name, favorite, removed -> viewModel.customizeGroup(id, name, favorite, removed, cardOf(id)) },
+        onCustomizeGroup = { id, name, favorite -> viewModel.customizeGroup(id, name, favorite, cardOf(id)) },
         voiceEnabled = voiceEnabled,
         dashboard = dashboard,
         onSelectDashboard = dashboardViewModel::select,
@@ -190,7 +190,7 @@ fun HomeScreen(
     onSearch: (String) -> Unit = {},
     onOpenHistory: (String) -> Unit = {},
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
-    onCustomizeGroup: (String, String, Boolean, List<String>) -> Unit = { _, _, _, _ -> },
+    onCustomizeGroup: (String, String, Boolean) -> Unit = { _, _, _ -> },
     voiceEnabled: Boolean = false,
     dashboard: DashboardScreenState = DashboardScreenState(),
     onSelectDashboard: (String) -> Unit = {},
@@ -377,7 +377,7 @@ fun HomeScreen(
         if (customizeCard.isGroup) {
             GroupCustomizeSheet(
                 customizeCard,
-                onSave = { name, favorite, removed -> onCustomizeGroup(customizeCard.id, name, favorite, removed) },
+                onSave = { name, favorite -> onCustomizeGroup(customizeCard.id, name, favorite) },
                 onDismiss = { customizeId = null },
             )
         } else {

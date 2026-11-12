@@ -113,8 +113,6 @@ data class CardUi(
     val companions: List<CardUi> = emptyList(),
     /** A room group's member cards in sort order (room groups spec §3); empty for a single card. */
     val members: List<CardUi> = emptyList(),
-    /** A cover or light whose room has another one: its Customize shows the "Group with…" switch. */
-    val groupable: Boolean = false,
     /** Water heater on-card Force switch (spec §5): null = no toggle, true = currently in `performance`. */
     val forceToggle: Boolean? = null,
     /** Water heater card extras (tank glow, activity chip, inlet); null for every other kind. */
