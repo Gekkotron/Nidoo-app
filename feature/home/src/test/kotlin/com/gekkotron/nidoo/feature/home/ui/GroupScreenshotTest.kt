@@ -19,6 +19,7 @@ import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
 import com.gekkotron.nidoo.feature.home.renderPng
 import com.gekkotron.nidoo.feature.home.testEntity
+import com.gekkotron.nidoo.feature.home.withLivingHubGroups
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Capabilities
 import com.gekkotron.nidoo.model.CoverState
@@ -44,7 +45,7 @@ class GroupScreenshotTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun state(): HomeUiState = HomeUiBuilder.build(
+    private val house = withLivingHubGroups(
         listOf(
             testEntity("bay", Kind.COVER, "Bay window", area = "living", capabilities = Capabilities(position = true)),
             testEntity("side", Kind.COVER, "Side window", area = "living", capabilities = Capabilities(position = true)),
@@ -52,7 +53,11 @@ class GroupScreenshotTest {
             testEntity("l1", Kind.LIGHT, "Ceiling", area = "living", capabilities = Capabilities(brightness = true)),
             testEntity("l2", Kind.LIGHT, "Floor lamp", area = "living"),
             testEntity("temp", Kind.SENSOR, "Temperature", area = "living", unit = "°C"),
-        ).associateBy { it.uniqueId },
+        ),
+    )
+
+    private fun state(): HomeUiState = HomeUiBuilder.build(
+        house.entities,
         mapOf(
             "bay" to EntityState("bay", StateValue.Cover(CoverState.OPEN, 100)),
             "side" to EntityState("side", StateValue.Cover(CoverState.OPEN, 80)),
@@ -60,7 +65,7 @@ class GroupScreenshotTest {
             "l1" to EntityState("l1", StateValue.Light(true, 200)),
             "temp" to EntityState("temp", StateValue.Numeric(21.4)),
         ),
-        listOf(Area("living", "Living room")), RoomFilter.Area("living"), LinkState.Connected(TransportMode.DEMO), Locale.US,
+        listOf(Area("living", "Living room")), RoomFilter.Area("living"), LinkState.Connected(TransportMode.DEMO), Locale.US, hubGroups = house.hubGroups,
     )
 
     private fun group(kind: Kind): CardUi = state().cards.single { it.isGroup && it.kind == kind }

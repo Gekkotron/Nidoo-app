@@ -1,24 +1,11 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
-import com.gekkotron.nidoo.model.Command
-
-/** Which members of a group a command goes to (room groups spec §5). */
+/** Where a command to a hub group goes (hub cover groups spec §2.4). */
 object GroupCommands {
-    fun targets(group: CardUi, command: Command): List<String> {
-        // Hub cover groups spec §2.4: the hub owns fanout — one command to the group entity.
-        if (group.isHubGroup) return listOf(group.id)
-        return group.members
-            .filter { it.available }
-            .filter { m ->
-                when (command) {
-                    is Command.SetPosition -> m.capabilities.position
-                    is Command.TurnOn -> command.brightness == null || m.capabilities.brightness
-                    else -> true
-                }
-            }
-            .map { it.id }
-    }
+    /** The hub owns fanout: one command to the group entity. */
+    fun targets(group: CardUi): List<String> = listOf(group.id)
 
     /** Absolute, so Retry repeats the intent instead of flipping it back. */
-    fun toggle(group: CardUi): Command = if (group.on) Command.TurnOff else Command.TurnOn()
+    fun toggle(group: CardUi): com.gekkotron.nidoo.model.Command =
+        if (group.on) com.gekkotron.nidoo.model.Command.TurnOff else com.gekkotron.nidoo.model.Command.TurnOn()
 }

@@ -24,8 +24,6 @@ data class OverrideDraft(
     val homePinned: Boolean = false,
     val securityAction: Boolean = false,
     val securityAsk: Boolean = true,
-    /** Off = this cover or light leaves its room's group (room groups spec §6). */
-    val grouped: Boolean = true,
     /** The switch's presentation type (device sheet spec §5.1). One of [com.gekkotron.nidoo.model.SHOW_AS], or null for a plain switch. */
     val showAs: String? = null,
     /** A named preset the tile uses when turning the light on, or null to resume the last state. */
@@ -60,7 +58,6 @@ data class OverrideDraft(
             homePinned = homePinned,
             securityAction = securityAction,
             securityAsk = securityAsk,
-            ungrouped = !grouped,
             showAs = showAs,
             lightOnPreset = lightOnPreset?.takeIf { LightOnPreset.of(it) != null },
             lightOnBrightness = lightOnBrightness?.takeIf { lightOnPreset != null && it in 1..255 },
@@ -84,7 +81,6 @@ data class OverrideDraft(
             homePinned = card.ui.homePinned,
             securityAction = card.ui.securityAction,
             securityAsk = card.ui.securityAsk,
-            grouped = !card.ui.ungrouped,
             showAs = card.ui.showAs,
             lightOnPreset = card.ui.lightOnPreset,
             lightOnBrightness = card.ui.lightOnBrightness,

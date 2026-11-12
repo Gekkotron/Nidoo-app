@@ -129,7 +129,7 @@ class DashboardUiBuilderTest {
     }
 
     @Test
-    fun `room group shows the room's light and cover cards`() {
+    fun `room group shows the room's light and cover cards, singly when the hub sends no group`() {
         val ui = build(
             dash(w("r", WidgetKind.ROOM_GROUP, config = WidgetConfig(areaId = "kitchen"))),
             house(
@@ -140,8 +140,8 @@ class DashboardUiBuilderTest {
         )
         val room = assertIs<TileContent.Room>(ui.tiles.single().content)
         assertEquals("Kitchen", room.title)
-        assertEquals(listOf(Kind.COVER, Kind.LIGHT), room.cards.map { it.kind })
-        assertEquals(true, room.cards.all { it.isGroup })
+        assertEquals(setOf(Kind.COVER, Kind.LIGHT), room.cards.map { it.kind }.toSet())
+        assertEquals(setOf("l1", "l2", "c1", "c2"), room.cards.map { it.id }.toSet())
         assertNotNull(ui.card("l1"))
     }
 

@@ -72,10 +72,9 @@ class HubGroupFoldTest {
         // The config topic hasn't landed yet, only the definition — don't invent a card.
         val spec = HubGroup("living", Kind.COVER, "Living", listOf("bay", "side"))
         val ui = build(listOf(shutter("bay"), shutter("side")), mapOf("living" to spec))
-        // Falls back to the existing client-side room-group fold.
-        val group = ui.cards.single { it.isGroup }
-        assertFalse(group.isHubGroup)
-        assertEquals("group:living:cover", group.id)
+        // No client-side fold: the members stay single cards.
+        assertFalse(ui.cards.any { it.isGroup })
+        assertEquals(setOf("bay", "side"), ui.cards.map { it.id }.toSet())
     }
 
     @Test
@@ -94,11 +93,10 @@ class HubGroupFoldTest {
     }
 
     @Test
-    fun `empty hubGroups keeps the old behaviour exactly`() {
+    fun `two shutters in a room with no hub group stay as single cards`() {
         val ui = build(listOf(shutter("bay"), shutter("side")), emptyMap())
-        val group = ui.cards.single { it.isGroup }
-        assertFalse(group.isHubGroup)
-        assertEquals("group:living:cover", group.id)
+        assertEquals(setOf("bay", "side"), ui.cards.map { it.id }.toSet())
+        assertFalse(ui.cards.any { it.isGroup })
     }
 
     private fun hubLight(id: String, area: String = "living") =
@@ -119,7 +117,7 @@ class HubGroupFoldTest {
         assertEquals(Kind.LIGHT, group.kind)
         assertTrue(group.wide)
         assertEquals(CardValue.LightGroup(onCount = 1, total = 2), group.value)
-        // No loose members and no client-side "Lights" group stacked on top of the hub one.
+        // No loose members left beside the hub group.
         assertEquals(listOf("group_light_living"), ui.cards.map { it.id })
     }
 
@@ -152,13 +150,13 @@ class HubGroupFoldTest {
         )
         val living = ui.cards.filter { it.areaId == "living" }
         assertTrue(living.any { it.isHubGroup })
-        // Every group card (hub or room fold) sits above every single card of the room.
+        // A group card sits above every single card of the room.
         assertEquals(living.sortedBy { !it.isGroup }, living)
         assertTrue(ui.cards.first().isGroup)
     }
 
     @Test
-    fun `a hub group is never swallowed by its room's own group`() {
+    fun `a hub group leaves a shutter that is not a member as a single card`() {
         // The hub group hides its two shutters; a third living shutter is not in it.
         val spec = HubGroup("cover_living", Kind.COVER, "Shutters", listOf("bay", "side"), hideMembers = true)
         val ui = build(

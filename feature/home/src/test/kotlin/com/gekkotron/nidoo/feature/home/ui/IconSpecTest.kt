@@ -4,6 +4,7 @@ import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
 import com.gekkotron.nidoo.designsystem.icons.VacuumMotion
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
+import com.gekkotron.nidoo.feature.home.hubGroupCard
 import com.gekkotron.nidoo.feature.home.testEntity
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.CoverState
@@ -100,23 +101,18 @@ class IconSpecTest {
 
     @Test
     fun `a cover group's shutter icon follows the mean position and motion`() {
-        val entities = listOf(
+        val members = arrayOf(
             testEntity("bay", Kind.COVER, area = "living"),
             testEntity("side", Kind.COVER, area = "living"),
             testEntity("patio", Kind.COVER, area = "living"),
-        ).associateBy { it.uniqueId }
+        )
         val states = mapOf(
             "bay" to EntityState("bay", StateValue.Cover(CoverState.OPEN, 100)),
             "side" to EntityState("side", StateValue.Cover(CoverState.OPEN, 80)),
             "patio" to EntityState("patio", StateValue.Cover(CoverState.CLOSED, null)),
         )
-        val group = HomeUiBuilder.build(entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connecting, Locale.US)
-            .cards.single { it.isGroup }
-        assertEquals(IconSpec.Shutter(0.6f, null), iconSpec(group))
-        val moving = HomeUiBuilder.build(
-            entities, states + ("side" to EntityState("side", StateValue.Cover(CoverState.CLOSING, 50))),
-            listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connecting, Locale.US,
-        ).cards.single { it.isGroup }
+        assertEquals(IconSpec.Shutter(0.6f, null), iconSpec(hubGroupCard(*members, kind = Kind.COVER, states = states)))
+        val moving = hubGroupCard(*members, kind = Kind.COVER, states = states + ("side" to EntityState("side", StateValue.Cover(CoverState.CLOSING, 50))))
         assertEquals(IconSpec.Shutter(0.5f, CoverState.CLOSING), iconSpec(moving))
     }
 

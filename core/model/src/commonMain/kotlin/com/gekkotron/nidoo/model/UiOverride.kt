@@ -36,7 +36,7 @@ data class UiOverride(
     val securityAction: Boolean = false,
     /** Ask before turning this action on or pressing it; only read when [securityAction]. */
     val securityAsk: Boolean = true,
-    /** Keeps this cover or light out of its room's group card (room groups spec §6). */
+    /** Formerly kept this cover or light out of its room's group card. No longer read by Home (it shows hub groups only); kept so stored overrides round-trip intact. */
     val ungrouped: Boolean = false,
     /** Switch presentation type — one of [SHOW_AS], or null for a plain switch. Only read when `protocolKind == Kind.SWITCH` (device sheet spec §5.1).
      *  An unknown value round-trips but is treated as a plain switch. */

@@ -114,14 +114,6 @@ class OverrideDraftTest {
     }
 
     @Test
-    fun `turning grouping off sets ungrouped`() {
-        val card = card(testEntity("shutter", Kind.COVER, "Shutter", area = "kitchen"))
-        val draft = OverrideDraft.from(card)
-        assertTrue(draft.grouped)
-        assertTrue(draft.copy(grouped = false).applyTo(card).ungrouped)
-    }
-
-    @Test
     fun `showing a switch as a light round-trips and keeps the protocol kind`() {
         val asLight = testEntity("lamp", Kind.LIGHT, "Lamp", ui = UiOverride(showAs = "light")).copy(protocolKind = Kind.SWITCH)
         val card = card(asLight)

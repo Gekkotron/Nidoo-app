@@ -51,13 +51,10 @@ object HomeUiBuilder {
         val hidden = standalone.filter { it.ui.hidden }
         val hero = visible.filter { it.ui.cardStyle == HERO_WEATHER }.minByOrNull { it.uniqueId }
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }
-        val groupable = RoomGroups.groupableIds(grid)
 
         val occupied = entities.values.mapTo(mutableSetOf()) { it.area }
         val used = grid.mapTo(mutableSetOf()) { it.area }
-        val groupFavorites: Map<String, Set<String>> = areas.filter { it.groupFavorites.isNotEmpty() }
-            .associate { it.id to it.groupFavorites }
-        val hasFavorites = grid.any { it.ui.favorite } || grid.any { favoriteGrouped(it, groupFavorites) }
+        val hasFavorites = grid.any { it.ui.favorite }
         val chips = buildList {
             if (hasFavorites) add(ChipUi(RoomFilter.Favorites, null))
             add(ChipUi(RoomFilter.All, null))
@@ -72,7 +69,7 @@ object HomeUiBuilder {
         val shown = when {
             query.isNotBlank() -> standalone.filter { SearchMatch.matches(query, names.getValue(it.uniqueId), it.deviceName, areaNames[it.area]) }
             effective == RoomFilter.Hidden -> hidden
-            else -> grid.filter { matches(it, effective, groupFavorites) }
+            else -> grid.filter { matches(it, effective) }
         }
         val sorted = shown
             .sortedWith(
@@ -83,19 +80,16 @@ object HomeUiBuilder {
                     { it.uniqueId },
                 ),
             )
-            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled, it.uniqueId in groupable) }
-        // Room groups spec §2.1: groups show in All, a room, and Favourites (a favorited group counts). Hidden and search stay flat.
+            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled) }
+        // Hub groups show in All, a room, and Favourites (a favorited group counts). Hidden and search stay flat.
         val folds = query.isBlank() && effective != RoomFilter.Hidden
         val cards = if (folds) {
-            // Hub cover groups spec §2.3: swap hub group tiles for wide cards + drop their members
-            // first; the client-side fold then runs over what remains, so a member cannot be
-            // double-grouped.
-            val hubFolded = RoomGroups.foldHubGroups(sorted, hubGroups)
+            // Hub cover groups spec §2.3: swap hub group tiles for wide cards + drop their members.
+            val folded = RoomGroups.foldHubGroups(sorted, hubGroups)
             // A room's groups lead that room. A group takes the lowest Position of any card in its
             // room, so a pinned device can still lift its room up the list but never above the group;
             // ties fall to the area, then groups first. Stable sort keeps the alphabetical
             // intra-bucket order from the per-entity sort above.
-            val folded = RoomGroups.fold(hubFolded, areas, groupFavorites)
             val roomLead: Map<String, Int> = folded.filter { it.ui.order != null }
                 .groupBy { it.areaId }
                 .mapValues { (_, list) -> list.minOf { it.ui.order!! } }
@@ -171,17 +165,11 @@ object HomeUiBuilder {
             .let { cards -> if (e.kind == Kind.LIGHT) cards.sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id })) else cards }
     }
 
-    private fun matches(entity: Entity, filter: RoomFilter, groupFavorites: Map<String, Set<String>>) = when (filter) {
+    private fun matches(entity: Entity, filter: RoomFilter) = when (filter) {
         RoomFilter.All -> true
-        RoomFilter.Favorites -> entity.ui.favorite || favoriteGrouped(entity, groupFavorites)
+        RoomFilter.Favorites -> entity.ui.favorite
         is RoomFilter.Area -> entity.area == filter.id
         RoomFilter.Hidden -> false
-    }
-
-    /** An entity whose room has its (cover/light) group pinned to Favorites: lifts the whole group into the chip. */
-    private fun favoriteGrouped(entity: Entity, groupFavorites: Map<String, Set<String>>): Boolean {
-        if (entity.kind !in RoomGroups.GROUP_KINDS || entity.ui.ungrouped) return false
-        return RoomGroups.kindKey(entity.kind) in (groupFavorites[entity.area] ?: return false)
     }
 
     /** A name the user typed wins; otherwise a known label is translated after the device name. */
@@ -212,7 +200,6 @@ object HomeUiBuilder {
         locale: Locale,
         companions: List<CardUi>,
         historyEnabled: Boolean,
-        groupable: Boolean = false,
     ): CardUi {
         val hasHistory = historyEnabled && HistoryRefs.of(entity) != null
         val value = state?.value ?: StateValue.Unknown
@@ -240,7 +227,6 @@ object HomeUiBuilder {
             ui = entity.ui,
             hidden = entity.ui.hidden,
             companions = companions,
-            groupable = groupable,
             forceToggle = forceToggleFor(entity, value),
             heater = heater,
         )
