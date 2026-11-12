@@ -88,6 +88,7 @@ import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
 import com.gekkotron.nidoo.feature.home.presentation.TapAction
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Command
+import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.UiOverride
 import com.gekkotron.nidoo.transport.Route
 import java.time.LocalTime
@@ -239,7 +240,10 @@ fun HomeScreen(
         }
     }
     val cardLongClick: (CardUi) -> Unit = { card ->
-        if (card.isGroup || !card.hasSheet) customizeId = card.id else sheetId = card.id
+        // Room groups spec §3: a light group's long-press opens its sheet (one switch per light);
+        // a shutter group's opens Customize. Either sheet reaches the other.
+        val customizes = if (card.isGroup) card.kind == Kind.COVER else !card.hasSheet
+        if (customizes) customizeId = card.id else sheetId = card.id
     }
     val cardForce: (CardUi) -> Unit = { card ->
         val next = if (card.forceToggle == true) "eco" else "performance"
@@ -318,7 +322,7 @@ fun HomeScreen(
                 if (!onDashboard) items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
                     val onClick = { cardClick(card) }
                     if (card.isGroup) {
-                        // Group: tap opens the sheet, long-press customizes; the inline buttons drive the group directly.
+                        // Group: tap opens the sheet; long-press opens it too for lights, Customize for shutters; the inline buttons drive the group directly.
                         GroupCard(
                             card,
                             onClick = onClick,
