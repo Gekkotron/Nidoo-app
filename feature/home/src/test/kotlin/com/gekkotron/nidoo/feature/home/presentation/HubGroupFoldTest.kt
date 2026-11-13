@@ -10,7 +10,7 @@ import com.gekkotron.nidoo.model.HUB_GROUP_DEVICE_ID
 import com.gekkotron.nidoo.model.HubGroup
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
-import com.gekkotron.nidoo.model.UNASSIGNED_AREA
+import com.gekkotron.nidoo.model.UiOverride
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.TransportMode
 import org.junit.Test
@@ -58,13 +58,13 @@ class HubGroupFoldTest {
     }
 
     @Test
-    fun `mismatched member areas fall back to Unassigned`() {
+    fun `mismatched member areas fall back to the group's own room`() {
         val spec = HubGroup("mixed", Kind.COVER, "Mixed", listOf("bay", "bed"))
         val ui = build(
-            listOf(shutter("bay", area = "living"), shutter("bed", area = "bedroom"), hubCover("mixed", area = "living")),
+            listOf(shutter("bay", area = "living"), shutter("bed", area = "bedroom"), hubCover("mixed", area = "bedroom")),
             mapOf("mixed" to spec),
         )
-        assertEquals(UNASSIGNED_AREA, ui.cards.single { it.isHubGroup }.areaId)
+        assertEquals("bedroom", ui.cards.single { it.isHubGroup }.areaId)
     }
 
     @Test
@@ -193,6 +193,50 @@ class HubGroupFoldTest {
             mapOf("light_living" to spec),
         )
         assertFalse(ui.cards.single { it.isHubGroup }.capabilities.brightness)
+    }
+
+    // The hub lets a group take members from any room, hidden ones included: the card counts them all.
+    private val fourLights = HubGroup("light_living", Kind.LIGHT, "Lights", listOf("l1", "l2", "l3", "l4"))
+    private fun fourLightEntities(l4: Entity = testEntity("l4", Kind.LIGHT, area = "bedroom")) = listOf(
+        testEntity("l1", Kind.LIGHT, area = "living"),
+        testEntity("l2", Kind.LIGHT, area = "living"),
+        testEntity("l3", Kind.LIGHT, area = "living"),
+        l4,
+    )
+
+    private fun buildIn(filter: RoomFilter, entities: List<Entity>, hub: Map<String, HubGroup>) =
+        HomeUiBuilder.build(
+            entities.associateBy { it.uniqueId }, emptyMap(), areas, filter,
+            LinkState.Connected(TransportMode.DEMO), Locale.US, hubGroups = hub,
+        )
+
+    @Test
+    fun `a room tab keeps the hub group's member from another room`() {
+        val ui = buildIn(RoomFilter.Area("living"), fourLightEntities() + hubLight("light_living"), mapOf("light_living" to fourLights))
+        val group = ui.cards.single { it.isHubGroup }
+        assertEquals(listOf("l1", "l2", "l3", "l4"), group.members.map { it.id })
+        assertEquals(CardValue.LightGroup(onCount = 0, total = 4), group.value)
+        // The group still sits in, and leads, the room the hub gave it.
+        assertEquals("living", group.areaId)
+        assertEquals("group_light_living", ui.cards.first().id)
+    }
+
+    @Test
+    fun `Favorites keeps the members of a favourite hub group that are not favourites`() {
+        val entities = fourLightEntities() + testEntity(
+            "group_light_living", Kind.LIGHT, area = "living", deviceId = HUB_GROUP_DEVICE_ID,
+            ui = UiOverride(favorite = true),
+        )
+        val ui = buildIn(RoomFilter.Favorites, entities, mapOf("light_living" to fourLights))
+        assertEquals(listOf("l1", "l2", "l3", "l4"), ui.cards.single { it.isHubGroup }.members.map { it.id })
+    }
+
+    @Test
+    fun `a member hidden from Home still counts in its hub group`() {
+        val hidden = testEntity("l4", Kind.LIGHT, area = "living", ui = UiOverride(hidden = true))
+        val ui = buildIn(RoomFilter.All, fourLightEntities(l4 = hidden) + hubLight("light_living"), mapOf("light_living" to fourLights))
+        assertEquals(4, ui.cards.single { it.isHubGroup }.members.size)
+        assertFalse(ui.cards.any { it.id == "l4" })
     }
 
     @Test

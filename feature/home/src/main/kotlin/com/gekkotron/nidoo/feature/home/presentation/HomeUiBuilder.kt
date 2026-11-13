@@ -85,7 +85,12 @@ object HomeUiBuilder {
         val folds = query.isBlank() && effective != RoomFilter.Hidden
         val cards = if (folds) {
             // Hub cover groups spec §2.3: swap hub group tiles for wide cards + drop their members.
-            val folded = RoomGroups.foldHubGroups(sorted, hubGroups)
+            // Every member the hub lists, whatever the chip filters out: a group never loses a light.
+            val memberIds = hubGroups.values.flatMapTo(mutableSetOf()) { it.members }
+            val memberCards = standalone.filter { it.uniqueId in memberIds }.associate {
+                it.uniqueId to card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled)
+            }
+            val folded = RoomGroups.foldHubGroups(sorted, hubGroups, memberCards)
             // A room's groups lead that room. A group takes the lowest Position of any card in its
             // room, so a pinned device can still lift its room up the list but never above the group;
             // ties fall to the area, then groups first. Stable sort keeps the alphabetical
