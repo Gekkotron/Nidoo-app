@@ -178,7 +178,8 @@ fun EnergyScreen(
     // A node that left Energy (its role was cleared) closes its sheet.
     val detail = detailId?.let { id -> state.node(id) ?: state.consumers.firstOrNull { it.id == id } }
     if (detail != null) {
-        EnergyDetailSheet(detail, state, locale, onSave = onSave, onOpenHistory = onOpenHistory, onDismiss = { detailId = null })
+        // History closes the sheet first: one left open would show over History during a back swipe and swallow it.
+        EnergyDetailSheet(detail, state, locale, onSave = onSave, onOpenHistory = { detailId = null; onOpenHistory(it) }, onDismiss = { detailId = null })
     }
 }
 

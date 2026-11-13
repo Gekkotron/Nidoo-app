@@ -77,6 +77,12 @@ internal fun Throwable?.mediaFailure(): MediaFailure =
     (this as? MediaException)?.failure ?: MediaFailure.Unavailable(this?.message ?: "error")
 
 /**
+ * Home's control sheet for device [id], passed in by the app so this module does not depend on Home.
+ * [onDismiss] closes the device sheet; [onLeave] also closes the alert under it, before the device opens another screen.
+ */
+typealias DeviceSheet = @Composable (id: String, onDismiss: () -> Unit, onLeave: () -> Unit) -> Unit
+
+/**
  * The detail sheet for [alertId], from a row or from the `nidoo://alert/<id>` link (push alerts spec §7.3).
  * [deviceSheet] is Home's control sheet, passed in by the app so this module does not depend on Home.
  */
@@ -84,7 +90,7 @@ internal fun Throwable?.mediaFailure(): MediaFailure =
 fun AlertDetailRoute(
     alertId: String,
     onDismiss: () -> Unit,
-    deviceSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
+    deviceSheet: DeviceSheet? = null,
     viewModel: AlertDetailViewModel = hiltViewModel(),
 ) {
     val loaded by remember(alertId) { viewModel.state(alertId) }.collectAsStateWithLifecycle(DetailState.Loading)
@@ -115,7 +121,8 @@ fun AlertDetailRoute(
         onDismiss = onDismiss,
         snackbarHostState = snackbar,
     )
-    deviceId?.let { id -> deviceSheet?.invoke(id) { deviceId = null } }
+    // Leaving from the device (to its History) closes this sheet too: one left open shows over History during a back swipe and swallows it.
+    deviceId?.let { id -> deviceSheet?.invoke(id, { deviceId = null }, onDismiss) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -100,7 +100,7 @@ fun RecentAlertsEffects(snackbar: SnackbarHostState, viewModel: RecentAlertsView
 @Composable
 fun RecentAlertsRoute(
     onOpenAll: () -> Unit,
-    deviceSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
+    deviceSheet: DeviceSheet? = null,
     viewModel: RecentAlertsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()

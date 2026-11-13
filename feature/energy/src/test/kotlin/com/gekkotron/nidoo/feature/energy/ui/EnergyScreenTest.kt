@@ -284,6 +284,17 @@ class EnergyScreenTest {
     }
 
     @Test
+    fun `opening history closes the sheet so it cannot cover the history screen`() {
+        // A sheet left open shows over History during a back swipe and swallows the gesture.
+        val s = state(listOf(energyEntity("solar_power", EnergyRole.SOLAR, name = "Inverter")), listOf(numeric("solar_power", 1000.0)))
+        showHistory(s.copy(historyAvailable = true), mutableListOf())
+        compose.onNodeWithTag("energy-card-solar").performScrollTo().performClick()
+        compose.onNodeWithText("History").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("History").assertDoesNotExist()
+    }
+
+    @Test
     fun `the derived house's history button opens the house history`() {
         val opened = mutableListOf<String?>()
         showHistory(state(house, houseStates).copy(historyAvailable = true), opened)
