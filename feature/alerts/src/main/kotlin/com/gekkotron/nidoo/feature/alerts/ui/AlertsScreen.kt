@@ -55,7 +55,7 @@ import java.time.format.FormatStyle
 fun AlertsRoute(
     onBack: () -> Unit,
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    deviceSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
+    deviceSheet: DeviceSheet? = null,
     viewModel: AlertsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()

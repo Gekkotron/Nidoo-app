@@ -29,6 +29,7 @@ import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.designsystem.permissions.AskForNotificationsOnLaunch
 import com.gekkotron.nidoo.feature.alerts.ui.AlertDetailRoute
 import com.gekkotron.nidoo.feature.alerts.ui.AlertsRoute
+import com.gekkotron.nidoo.feature.alerts.ui.DeviceSheet
 import com.gekkotron.nidoo.feature.alerts.ui.RecentAlertsEffects
 import com.gekkotron.nidoo.feature.alerts.ui.RecentAlertsRoute
 import com.gekkotron.nidoo.feature.automations.ui.AutomationsRoute
@@ -170,11 +171,12 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
         }
     }
     val openHistory: (HistoryTarget) -> Unit = { push(backStack, HistoryKey(it.encode())) }
-    val deviceSheet: @Composable (String, () -> Unit) -> Unit = { id, dismiss ->
+    // History closes the alert under the device sheet first (leave): a sheet left open shows over History during a back swipe and swallows it.
+    val deviceSheet: DeviceSheet = { id, dismiss, leave ->
         EntityControlSheet(
             id, dismiss,
             onSaveFailed = { Toast.makeText(context, R.string.device_save_failed, Toast.LENGTH_SHORT).show() },
-            onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
+            onOpenHistory = { leave(); openHistory(HistoryTarget.Entity(it)) },
         )
     }
     val top = backStack.lastOrNull()
