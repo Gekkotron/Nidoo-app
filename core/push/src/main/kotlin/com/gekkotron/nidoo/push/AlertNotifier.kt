@@ -102,7 +102,7 @@ class AlertNotifier(
     internal fun build(alert: Alert, picture: Bitmap?): Notification {
         // In the app's language when the alert carries a known loc hint (localized alerts spec §5.4).
         val body = AlertText.body(alert, context.resources)
-        val builder = NotificationCompat.Builder(context, alert.channel.id)
+        val builder = NotificationCompat.Builder(context, AlertChannels.channelId(alert.channel))
             .setSmallIcon(R.drawable.ic_stat_nidoo)
             .setColor(AlertChannels.accent(alert.channel))
             .setContentTitle(alert.title)

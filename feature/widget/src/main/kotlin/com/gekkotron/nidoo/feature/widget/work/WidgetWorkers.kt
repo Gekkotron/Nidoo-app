@@ -55,6 +55,7 @@ class WidgetCommandWorker(
             .setSmallIcon(R.drawable.ic_widget_switch)
             .setContentTitle(applicationContext.getString(R.string.widget_sending))
             .setOngoing(true)
+            .setSilent(true)
             .build(),
     )
 
@@ -68,8 +69,8 @@ class WidgetCommandWorker(
         const val MAX_DELAY_MS = TileSnapshot.PENDING_LIMIT_MS
         private const val NOTIFICATION_ID = 0x0D1C
 
-        /** `AlertChannel.SYSTEM.id` (`:core:alerts`), created at app start; a literal keeps this module off `:core:alerts`. */
-        const val CHANNEL_ID = "system"
+        /** `AlertChannels.channelId(AlertChannel.SYSTEM)` (`:core:push`), created at app start; a literal keeps this module off `:core:push`. */
+        const val CHANNEL_ID = "system_chime"
     }
 }
 

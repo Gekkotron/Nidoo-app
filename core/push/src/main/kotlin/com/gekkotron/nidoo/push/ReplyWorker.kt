@@ -54,10 +54,11 @@ class ReplyWorker(
     /** Android 9 to 11 run expedited work as a foreground service and need something to show. */
     override suspend fun getForegroundInfo(): ForegroundInfo {
         val label = inputData.getString(KEY_LABEL).orEmpty()
-        val notification = NotificationCompat.Builder(applicationContext, AlertChannel.SYSTEM.id)
+        val notification = NotificationCompat.Builder(applicationContext, AlertChannels.channelId(AlertChannel.SYSTEM))
             .setSmallIcon(R.drawable.ic_stat_nidoo)
             .setContentTitle(applicationContext.getString(R.string.push_sending, label))
             .setOngoing(true)
+            .setSilent(true)
             .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(NotificationIds.REPLY_PROGRESS, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)

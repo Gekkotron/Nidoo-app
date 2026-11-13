@@ -2,7 +2,7 @@ package com.gekkotron.nidoo.alerts
 
 import java.time.Instant
 
-/** The seven notification channels (push alerts spec §1); the id is also the Android channel id. */
+/** The seven notification channels (push alerts spec §1); `AlertChannels.channelId` maps the id to the Android channel. */
 enum class AlertChannel(val id: String) {
     ALARM("alarm"),
     SECURITY("security"),
