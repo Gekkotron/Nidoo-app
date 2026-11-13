@@ -3,6 +3,7 @@ package com.gekkotron.nidoo.push
 import android.util.Log
 import com.gekkotron.nidoo.alerts.AlertParser
 import com.gekkotron.nidoo.alerts.AlertRepository
+import kotlin.coroutines.cancellation.CancellationException
 
 /** What `onMessageReceived` does with an FCM data map (push alerts spec §5.2), apart from the Android plumbing. */
 class AlertIngestor(
@@ -32,7 +33,14 @@ class AlertIngestor(
             repository.markResolved(alert.id)
             return Outcome.Cancelled(alert.id)
         }
-        repository.upsert(alert)
+        // The alarm must reach the user even when the history cannot keep it (full disk, corrupt database).
+        try {
+            repository.upsert(alert)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("could not store alert ${alert.id}: ${e.javaClass.simpleName}")
+        }
         return if (notifier.post(alert)) Outcome.Shown(alert.id) else Outcome.StoredOnly(alert.id)
     }
 

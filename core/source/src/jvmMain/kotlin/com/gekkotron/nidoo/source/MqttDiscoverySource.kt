@@ -207,6 +207,11 @@ class MqttDiscoverySource(
         } catch (e: PublishFailed) {
             tracker.abort(uniqueId)
             return CommandResult.Rejected(e.message ?: "publish failed")
+        } catch (e: Throwable) {
+            // Cancelled mid-publish (the caller left) or an unexpected error: without this, an entity with no
+            // feedback (no timeout armed) would show its prediction as pending until its next state message.
+            tracker.abort(uniqueId)
+            throw e
         }
         if (!hasFeedback) store.confirmPending(uniqueId, predicted?.let { mapper.settle(command, it) })
         return CommandResult.Accepted

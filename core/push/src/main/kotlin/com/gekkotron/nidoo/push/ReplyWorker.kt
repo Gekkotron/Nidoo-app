@@ -26,7 +26,13 @@ class ReplyWorker(
         val actionId = inputData.getString(KEY_ACTION) ?: return Result.failure()
         val label = inputData.getString(KEY_LABEL) ?: actionId
         val ts = inputData.getLong(KEY_TS, 0L)
-        val installId = (targets.current() as? PushTarget.Ready)?.installId ?: return Result.success()
+        val installId = when (val target = targets.current()) {
+            is PushTarget.Ready -> target.installId
+            PushTarget.Demo -> return Result.success()
+            // Secrets locked (e.g. before the first unlock after a reboot) or the profile gone: the user
+            // tapped an action, so this is a failed attempt, never a silent success.
+            PushTarget.None -> return giveUpOrRetry(alertId, label)
+        }
         val payload = buildJsonObject {
             put("id", alertId)
             put("action", actionId)
@@ -41,15 +47,16 @@ class ReplyWorker(
         } catch (e: Exception) {
             e
         }
-        return when {
-            error == null || error is NotConfigured -> Result.success()
-            runAttemptCount + 1 < MAX_ATTEMPTS -> Result.retry()
-            else -> {
-                failures.couldNotSend(alertId, label)
-                Result.failure()
-            }
-        }
+        return if (error == null || error is NotConfigured) Result.success() else giveUpOrRetry(alertId, label)
     }
+
+    private fun giveUpOrRetry(alertId: String, label: String): Result =
+        if (runAttemptCount + 1 < MAX_ATTEMPTS) {
+            Result.retry()
+        } else {
+            failures.couldNotSend(alertId, label)
+            Result.failure()
+        }
 
     /** Android 9 to 11 run expedited work as a foreground service and need something to show. */
     override suspend fun getForegroundInfo(): ForegroundInfo {

@@ -92,6 +92,16 @@ class ReplyWorkerTest {
     }
 
     @Test
+    fun `a locked or missing profile is retried, then says Couldn't send instead of reporting success`() {
+        targets.target = PushTarget.None
+        for (attempt in 0..3) assertEquals(Result.retry(), run(attempt), "attempt ${attempt + 1}")
+        assertTrue(shadowOf(manager).allNotifications.isEmpty())
+        assertEquals(Result.failure(), run(attempt = 4))
+        assertEquals("Couldn't send Disarm", shadowOf(manager).allNotifications.single().extras.getString(android.app.Notification.EXTRA_TITLE))
+        assertNull(publisher.sent.firstOrNull())
+    }
+
+    @Test
     fun `missing input fails without publishing`() {
         assertEquals(Result.failure(), run(data = Data.EMPTY))
         assertNull(publisher.sent.firstOrNull())

@@ -83,6 +83,14 @@ class AlertIngestorTest {
     }
 
     @Test
+    fun `an alert is still posted when storing it fails`(): Unit = runBlocking {
+        db.close() // every write now throws, like a full disk or a corrupt database
+        assertEquals(AlertIngestor.Outcome.Shown("frigate-1"), ingestor.onMessage(data()))
+        assertTrue("frigate-1" in shown)
+        assertTrue(logged.single().startsWith("could not store alert"))
+    }
+
+    @Test
     fun `with notifications off the alert is still stored`(): Unit = runBlocking {
         allowed = false
         assertEquals(AlertIngestor.Outcome.StoredOnly("frigate-1"), ingestor.onMessage(data()))

@@ -237,6 +237,28 @@ class MqttDiscoverySourceTest {
     }
 
     @Test
+    fun `a send cancelled mid-publish leaves no pending prediction behind`() = runTest {
+        val t = GatedTransport()
+        val source = MqttDiscoverySource(t, backgroundScope)
+        runCurrent()
+        // Optimistic: no state topic, so no timeout would ever revert a stuck prediction.
+        t.inner.deliver("homeassistant/switch/o/config", """{"command_topic":"o/set","unique_id":"o"}""")
+        runCurrent()
+        t.gated = true
+        val send = launch { source.send("o", Command.TurnOn()) }
+        runCurrent()
+        assertTrue(source.states().first().getValue("o").pending)
+
+        send.cancel() // the user left the screen while the publish hung
+        runCurrent()
+        advanceTimeBy(60_000)
+        runCurrent()
+        val state = source.states().first().getValue("o")
+        assertFalse(state.pending)
+        assertEquals(StateValue.Unknown, state.value)
+    }
+
+    @Test
     fun `send rejects unknown, unavailable and unsupported`() = runTest {
         val h = start()
         h.transport.deliver("homeassistant/switch/u/config", switchConfig("u", ""","availability_topic":"sw/u/avail""""))
