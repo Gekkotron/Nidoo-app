@@ -1,4 +1,4 @@
-package com.gekkotron.nidoo.feature.home.ui
+package com.gekkotron.nidoo.designsystem.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,16 +19,15 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.nidoo.designsystem.NidooTheme
-import com.gekkotron.nidoo.designsystem.components.RoutePicker
-import com.gekkotron.nidoo.feature.home.R
+import com.gekkotron.nidoo.designsystem.R
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.Route
 import com.gekkotron.nidoo.transport.TransportMode
 
-/** Link status and the route choice when the profile has a gateway; everything else lives in Settings (settings spec §5.3). */
+/** Link status and the route choice when the profile has a gateway; everything else lives in Settings (settings spec §5.3). Opened from the [LinkPill] on every tab. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun LinkSheet(
+fun LinkSheet(
     link: LinkState,
     route: Route?,
     onRouteChange: (Route) -> Unit,

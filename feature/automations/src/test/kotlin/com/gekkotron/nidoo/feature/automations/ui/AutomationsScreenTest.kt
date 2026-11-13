@@ -2,6 +2,7 @@ package com.gekkotron.nidoo.feature.automations.ui
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -28,6 +29,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -168,5 +170,34 @@ class AutomationsScreenTest {
         val seen = HashSet<Int>()
         for (x in 0 until bitmap.width step 7) for (y in 0 until bitmap.height step 7) seen += bitmap.getPixel(x, y)
         assertTrue(seen.size > 1, "blank render")
+    }
+
+    /** The loading placeholders drawn now and again 450 ms later (half a pulse), with the clock frozen. */
+    private fun placeholderFrames(animatorScale: Float): Pair<IntArray, IntArray> {
+        Settings.Global.putFloat(compose.activity.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, animatorScale)
+        compose.mainClock.autoAdvance = false
+        show(state(isLoading = true, rows = emptyList()))
+        compose.mainClock.advanceTimeBy(100)
+        fun frame(): IntArray {
+            val view = compose.activity.window.decorView
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            view.draw(Canvas(bitmap))
+            return IntArray(bitmap.width * bitmap.height).also { bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height) }
+        }
+        val first = frame()
+        compose.mainClock.advanceTimeBy(450)
+        return first to frame()
+    }
+
+    @Test
+    fun `the loading placeholders pulse`() {
+        val (a, b) = placeholderFrames(animatorScale = 1f)
+        assertFalse(a.contentEquals(b), "the placeholders did not pulse: this test could not see motion")
+    }
+
+    @Test
+    fun `with animations off the loading placeholders are drawn still`() {
+        val (a, b) = placeholderFrames(animatorScale = 0f)
+        assertTrue(a.contentEquals(b), "the placeholders pulsed with animations off")
     }
 }

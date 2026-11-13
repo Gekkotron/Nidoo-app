@@ -2,11 +2,15 @@ package com.gekkotron.nidoo.feature.home.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -20,6 +24,7 @@ import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
 import com.gekkotron.nidoo.feature.home.testEntity
 import com.gekkotron.nidoo.model.Area
+import com.gekkotron.nidoo.model.Capabilities
 import com.gekkotron.nidoo.model.EnergyRole
 import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.model.Kind
@@ -231,5 +236,16 @@ class CustomizeSheetTest {
     fun `lights offer no Security switch`() {
         show(card(testEntity("lamp", Kind.LIGHT)))
         compose.onNodeWithText("Show on Security").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the light-on brightness slider shows its value and reads it to TalkBack`() {
+        show(card(testEntity("lamp", Kind.LIGHT, capabilities = Capabilities(brightness = true, colorModes = setOf("hs")))))
+        compose.onNodeWithText("Warm").performScrollTo().performClick()
+        val slider = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).performScrollTo()
+        compose.onNodeWithTag("brightness-value").assertTextEquals("78%")
+        val config = slider.fetchSemanticsNode().config
+        assertEquals(listOf("Brightness"), config[SemanticsProperties.ContentDescription])
+        assertEquals("78%", config[SemanticsProperties.StateDescription])
     }
 }

@@ -43,4 +43,20 @@
     <string name="route_auto">Automatic</string>
     <string name="route_direct">Home network</string>
     <string name="route_gateway">Gateway</string>
+    <string name="link_direct">Connected directly to your broker.</string>
+    <string name="link_gateway">Connected through the gateway.</string>
+    <string name="link_demo">You\'re exploring the demo house. Nothing leaves this phone.</string>
+    <string name="link_connecting">Connecting to your broker…</string>
+    <string name="link_reconnecting">Connection lost. Reconnecting (attempt %1$d)…</string>
+    <string name="link_rejected">The broker rejected the username or password.</string>
+    <string name="link_offline">Offline.</string>
+    <string name="link_offline_closed">The connection was closed.</string>
+    <string name="link_offline_paused">Paused while Nidoo is in the background.</string>
+    <string name="link_offline_not_configured">No connection is set up.</string>
+    <string name="link_offline_not_started">Not connected yet.</string>
+    <string name="link_offline_failed">Couldn\'t start the connection.</string>
+    <string name="link_key_rejected">The gateway didn\'t accept this phone\'s key. Set up the connection again with a new setup code.</string>
+    <string name="link_clock_skew">The gateway refused the request because this phone\'s clock is off. Turn on automatic date and time.</string>
+    <string name="link_gateway_refused">The gateway refused access to the broker.</string>
+    <string name="link_settings">Connection settings</string>
 </resources>

@@ -9,9 +9,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -19,20 +18,31 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.animationsEnabled
 import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
 import com.gekkotron.nidoo.designsystem.icons.StaticIcon
 import com.gekkotron.nidoo.feature.voice.R
 
 @Composable
 internal fun ColumnScope.ListeningView(partial: String) {
-    val pulse by rememberInfiniteTransition(label = "mic").animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-        label = "micAlpha",
-    )
+    // With animations off the mic is drawn still, at full strength.
+    val pulse = if (animationsEnabled()) {
+        rememberInfiniteTransition(label = "mic").animateFloat(
+            initialValue = 0.4f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+            label = "micAlpha",
+        )
+    } else {
+        null
+    }
     val cd = stringResource(R.string.voice_mic_cd)
-    StaticIcon(NidooGlyph.MIC, NidooTheme.colors.warning, Modifier.size(56.dp).alpha(pulse).semantics { contentDescription = cd })
+    // Read in the layer block, so each frame only re-runs the draw phase.
+    StaticIcon(
+        NidooGlyph.MIC,
+        NidooTheme.colors.warning,
+        Modifier.size(56.dp).graphicsLayer { alpha = pulse?.value ?: 1f }.semantics { contentDescription = cd },
+    )
     Text(
         partial.ifBlank { stringResource(R.string.voice_listening) },
         style = NidooTheme.type.display.copy(fontSize = 20.sp),

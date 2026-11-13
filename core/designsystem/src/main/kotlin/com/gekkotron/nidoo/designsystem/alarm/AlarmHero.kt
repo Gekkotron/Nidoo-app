@@ -1,6 +1,5 @@
 package com.gekkotron.nidoo.designsystem.alarm
 
-import android.provider.Settings
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -22,8 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -32,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gekkotron.nidoo.designsystem.animationsEnabled
 import com.gekkotron.nidoo.designsystem.NidooColors
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.R
@@ -118,9 +116,3 @@ internal fun alarmAccent(state: AlarmState?, available: Boolean, c: NidooColors)
     else -> c.grid
 }
 
-@Composable
-private fun animationsEnabled(): Boolean {
-    if (LocalInspectionMode.current) return true
-    val resolver = LocalContext.current.contentResolver
-    return remember { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f }
-}

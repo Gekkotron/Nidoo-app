@@ -179,6 +179,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
             onOpenHistory = { leave(); openHistory(HistoryTarget.Entity(it)) },
         )
     }
+    val openConnectionSettings = { linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)).forEach { push(backStack, it) } }
     val top = backStack.lastOrNull()
     val tabs = showsTabBar(top)
     // The demo has no hub: hide the tab, and leave it if the demo is switched on while it is open.
@@ -218,7 +219,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<HomeKey> {
                     HomeRoute(
                         onOpenSettings = { push(backStack, SettingsKey) },
-                        onOpenConnectionSettings = { linkDestinations(AppLink.Settings(SettingsPage.CONNECTION)).forEach { push(backStack, it) } },
+                        onOpenConnectionSettings = openConnectionSettings,
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         windowInsets = tabInsets,
@@ -258,6 +259,9 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         onOpenHome = { selectTab(backStack, HomeKey) },
                         windowInsets = tabInsets,
                         onOpenHistory = { id -> openHistory(id?.let(HistoryTarget::Entity) ?: HistoryTarget.House) },
+                        onOpenConnectionSettings = openConnectionSettings,
+                        route = route,
+                        onRouteChange = viewModel::setRoute,
                     )
                 }
                 entry<AutomationsKey> { AutomationsRoute(windowInsets = tabInsets) }
@@ -275,6 +279,9 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         alertsSection = { RecentAlertsRoute(onOpenAll = { push(backStack, AlertsKey) }, deviceSheet = deviceSheet) },
                         alertsEffects = { snackbar -> RecentAlertsEffects(snackbar) },
                         onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
+                        onOpenConnectionSettings = openConnectionSettings,
+                        route = route,
+                        onRouteChange = viewModel::setRoute,
                     )
                 }
             },

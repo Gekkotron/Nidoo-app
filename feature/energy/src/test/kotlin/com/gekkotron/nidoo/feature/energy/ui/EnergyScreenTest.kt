@@ -60,6 +60,24 @@ class EnergyScreenTest {
     }
 
     @Test
+    fun `the offline pill opens the link sheet, which links to connection settings`() {
+        var opened = 0
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                EnergyScreen(
+                    EnergyUiState(loading = false, empty = true, link = LinkState.Offline(LinkState.Offline.CLOSED)), {},
+                    locale = Locale.US, onOpenConnectionSettings = { opened++ },
+                )
+            }
+        }
+        compose.onNodeWithText("Offline").performClick()
+        compose.onNodeWithText("The connection was closed.").assertExists()
+        compose.onNodeWithText("Connection settings").performClick()
+        assertEquals(1, opened)
+        compose.onNodeWithText("The connection was closed.").assertDoesNotExist()
+    }
+
+    @Test
     fun `empty state explains and goes home`() {
         var home = 0
         show(EnergyUiState(loading = false, empty = true), onOpenHome = { home++ })

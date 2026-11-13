@@ -29,12 +29,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -51,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.animationsEnabled
 import com.gekkotron.nidoo.designsystem.components.ChipItem
 import com.gekkotron.nidoo.designsystem.components.NidooCard
 import com.gekkotron.nidoo.designsystem.components.RoomChips
@@ -178,16 +178,21 @@ private fun AutomationTile(row: AutomationRow, onToggle: (String, Boolean) -> Un
     }
 }
 
-/** Tile-shaped muted block with a gentle pulse; stands in for a row until the first snapshot lands. */
+/** Tile-shaped muted block with a gentle pulse (still with animations off); stands in for a row until the first snapshot lands. */
 @Composable
 private fun PlaceholderRow() {
-    val pulse by rememberInfiniteTransition(label = "automations-placeholder").animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "alpha",
-    )
-    NidooCard(Modifier.fillMaxWidth().testTag("automations-placeholder").alpha(pulse), minHeight = 0.dp) {
+    val pulse = if (animationsEnabled()) {
+        rememberInfiniteTransition(label = "automations-placeholder").animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.7f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "alpha",
+        )
+    } else {
+        null
+    }
+    // Read in the layer block, so each frame only re-runs the draw phase.
+    NidooCard(Modifier.fillMaxWidth().testTag("automations-placeholder").graphicsLayer { alpha = pulse?.value ?: PLACEHOLDER_STILL_ALPHA }, minHeight = 0.dp) {
         Box(Modifier.height(36.dp))
     }
 }
@@ -205,3 +210,5 @@ private fun EmptyState(modifier: Modifier) {
         )
     }
 }
+
+private const val PLACEHOLDER_STILL_ALPHA = 0.5f

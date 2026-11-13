@@ -20,7 +20,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,14 +78,14 @@ private fun CoverGroupControls(card: CardUi, onSendGroup: (String, Command) -> U
     }
     if (card.capabilities.position) {
         val start = GroupMath.meanPosition(card)
-        var value by remember(start) { mutableFloatStateOf(start.toFloat()) }
-        Row { Text(stringResource(R.string.sheet_all_to), Modifier.weight(1f)); Text(stringResource(R.string.value_percent, value.roundToInt())) }
+        val slider = rememberSliderValue(start.toFloat())
+        Row { Text(stringResource(R.string.sheet_all_to), Modifier.weight(1f)); Text(stringResource(R.string.value_percent, slider.value.roundToInt())) }
         Slider(
-            value = value,
-            onValueChange = { value = it },
+            value = slider.value,
+            onValueChange = slider::drag,
             valueRange = 0f..100f,
             steps = 19,
-            onValueChangeFinished = { send(Command.SetPosition(value.roundToInt())) },
+            onValueChangeFinished = { send(Command.SetPosition(slider.release().roundToInt())) },
             modifier = Modifier.testTag("group-slider-${card.id}"),
         )
     }
@@ -105,13 +104,11 @@ private fun LightGroupControls(card: CardUi, onSendGroup: (String, Command) -> U
     }
     if (card.capabilities.brightness) {
         val start = GroupMath.meanBrightness(card)
-        var value by remember(start) { mutableFloatStateOf(start.toFloat()) }
-        Text(stringResource(R.string.sheet_brightness))
-        Slider(
-            value = value,
-            onValueChange = { value = it },
-            valueRange = 1f..255f,
-            onValueChangeFinished = { onSendGroup(card.id, Command.TurnOn(brightness = value.roundToInt())) },
+        val slider = rememberSliderValue(start.toFloat())
+        BrightnessSlider(
+            value = slider.value,
+            onValueChange = slider::drag,
+            onValueChangeFinished = { onSendGroup(card.id, Command.TurnOn(brightness = slider.release().roundToInt())) },
             modifier = Modifier.testTag("group-slider-${card.id}"),
         )
     }
@@ -212,14 +209,12 @@ private fun MemberExpandedControls(member: CardUi, onSend: (String, Command) -> 
         Kind.LIGHT -> {
             val light = member.state as? StateValue.Light
             if (member.capabilities.brightness) {
-                var value by remember(light?.brightness) { mutableFloatStateOf((light?.brightness ?: 255).toFloat()) }
-                Text(stringResource(R.string.sheet_brightness))
-                Slider(
-                    value = value,
-                    onValueChange = { value = it },
-                    valueRange = 1f..255f,
+                val slider = rememberSliderValue((light?.brightness ?: 255).toFloat())
+                BrightnessSlider(
+                    value = slider.value,
+                    onValueChange = slider::drag,
                     enabled = member.available,
-                    onValueChangeFinished = { send(Command.TurnOn(brightness = value.roundToInt())) },
+                    onValueChangeFinished = { send(Command.TurnOn(brightness = slider.release().roundToInt())) },
                     modifier = Modifier.testTag("member-brightness-${member.id}"),
                 )
             }
@@ -250,15 +245,15 @@ private fun MemberExpandedControls(member: CardUi, onSend: (String, Command) -> 
         Kind.COVER -> {
             if (member.capabilities.position) {
                 val position = (member.state as? StateValue.Cover)?.position ?: 0
-                var value by remember(position) { mutableFloatStateOf(position.toFloat()) }
+                val slider = rememberSliderValue(position.toFloat())
                 Text(stringResource(R.string.sheet_position))
                 Slider(
-                    value = value,
-                    onValueChange = { value = it },
+                    value = slider.value,
+                    onValueChange = slider::drag,
                     valueRange = 0f..100f,
                     steps = 19,
                     enabled = member.available,
-                    onValueChangeFinished = { send(Command.SetPosition(value.roundToInt())) },
+                    onValueChangeFinished = { send(Command.SetPosition(slider.release().roundToInt())) },
                     modifier = Modifier.testTag("member-position-${member.id}"),
                 )
             }

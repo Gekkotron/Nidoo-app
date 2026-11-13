@@ -50,6 +50,7 @@ import com.gekkotron.nidoo.designsystem.rememberNow
 import java.time.Instant
 import com.gekkotron.nidoo.designsystem.alarm.AlarmHero
 import com.gekkotron.nidoo.designsystem.components.LinkPill
+import com.gekkotron.nidoo.designsystem.components.LinkSheet
 import com.gekkotron.nidoo.designsystem.components.NidooCard
 import com.gekkotron.nidoo.feature.security.R
 import com.gekkotron.nidoo.feature.security.presentation.PendingAction
@@ -62,6 +63,7 @@ import com.gekkotron.nidoo.feature.security.presentation.tap
 import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.SwitchType
+import com.gekkotron.nidoo.transport.Route
 import kotlinx.coroutines.launch
 
 /**
@@ -78,6 +80,10 @@ fun SecurityRoute(
     alertsEffects: (@Composable (snackbar: SnackbarHostState) -> Unit)? = null,
     /** Open the entity's history screen. Null hides the sheet's history link (history off / entity not recorded). */
     onOpenHistory: ((String) -> Unit)? = null,
+    /** Null shows the link pill as a plain status. */
+    onOpenConnectionSettings: (() -> Unit)? = null,
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
     viewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -111,6 +117,9 @@ fun SecurityRoute(
         alertsSection = alertsSection,
         snackbarHostState = snackbar,
         onOpenHistory = onOpenHistory,
+        onOpenConnectionSettings = onOpenConnectionSettings,
+        route = route,
+        onRouteChange = onRouteChange,
     )
 }
 
@@ -128,6 +137,10 @@ fun SecurityScreen(
     onOpenHistory: ((String) -> Unit)? = null,
     /** One minute-ticking clock for every tile and the sheet; tests pass a fixed one. */
     now: Instant = rememberNow().value,
+    /** The link sheet's "Connection settings"; null shows the link pill as a plain status. */
+    onOpenConnectionSettings: (() -> Unit)? = null,
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -136,6 +149,7 @@ fun SecurityScreen(
     // process death on purpose: a half-answered confirm shouldn't survive a kill.
     var confirmPending by remember { mutableStateOf<PendingAction?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
+    var linkSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = NidooTheme.colors.content,
@@ -156,7 +170,7 @@ fun SecurityScreen(
                 Column(Modifier.padding(top = 8.dp)) {
                     Text(stringResource(R.string.security_title), style = NidooTheme.type.display)
                     Spacer(Modifier.height(8.dp))
-                    LinkPill(state.link, onClick = null)
+                    LinkPill(state.link, onClick = onOpenConnectionSettings?.let { { linkSheet = true } })
                 }
             }
             when {
@@ -238,6 +252,13 @@ fun SecurityScreen(
     }
     // A sensor that left Security (hidden here or elsewhere) closes its sheet.
     val sheetRow = sheetId?.let { id -> state.sensors.firstOrNull { it.id == id } }
+    if (linkSheet && onOpenConnectionSettings != null) {
+        LinkSheet(
+            state.link, route = route, onRouteChange = onRouteChange,
+            onOpenSettings = { linkSheet = false; onOpenConnectionSettings() },
+            onDismiss = { linkSheet = false },
+        )
+    }
     if (sheetRow != null) {
         SensorSheet(
             sheetRow,
