@@ -136,11 +136,9 @@ private fun LightControls(card: CardUi, onSend: (String, Command) -> Unit) {
     }
     if (card.capabilities.brightness) {
         val slider = rememberSliderValue((light?.brightness ?: 255).toFloat())
-        Text(stringResource(R.string.sheet_brightness))
-        Slider(
+        BrightnessSlider(
             value = slider.value,
             onValueChange = slider::drag,
-            valueRange = 1f..255f,
             onValueChangeFinished = { send(Command.TurnOn(brightness = slider.release().roundToInt())) },
         )
     }

@@ -105,11 +105,9 @@ private fun LightGroupControls(card: CardUi, onSendGroup: (String, Command) -> U
     if (card.capabilities.brightness) {
         val start = GroupMath.meanBrightness(card)
         val slider = rememberSliderValue(start.toFloat())
-        Text(stringResource(R.string.sheet_brightness))
-        Slider(
+        BrightnessSlider(
             value = slider.value,
             onValueChange = slider::drag,
-            valueRange = 1f..255f,
             onValueChangeFinished = { onSendGroup(card.id, Command.TurnOn(brightness = slider.release().roundToInt())) },
             modifier = Modifier.testTag("group-slider-${card.id}"),
         )
@@ -212,11 +210,9 @@ private fun MemberExpandedControls(member: CardUi, onSend: (String, Command) -> 
             val light = member.state as? StateValue.Light
             if (member.capabilities.brightness) {
                 val slider = rememberSliderValue((light?.brightness ?: 255).toFloat())
-                Text(stringResource(R.string.sheet_brightness))
-                Slider(
+                BrightnessSlider(
                     value = slider.value,
                     onValueChange = slider::drag,
-                    valueRange = 1f..255f,
                     enabled = member.available,
                     onValueChangeFinished = { send(Command.TurnOn(brightness = slider.release().roundToInt())) },
                     modifier = Modifier.testTag("member-brightness-${member.id}"),

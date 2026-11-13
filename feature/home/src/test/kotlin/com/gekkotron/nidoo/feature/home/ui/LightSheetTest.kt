@@ -17,6 +17,7 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
@@ -230,5 +231,16 @@ class LightSheetTest {
         slider.performTouchInput { up() }
         val sent = sends.filter { it.first == "lamp" }.mapNotNull { (it.second as? Command.TurnOn)?.brightness }.single()
         assertTrue(sent > 240, "sent $sent, expected the dragged near-full brightness")
+    }
+
+    @Test
+    fun `the brightness slider shows its value and reads it to TalkBack`() {
+        show()
+        compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
+        val slider = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).performScrollTo()
+        compose.onNodeWithTag("brightness-value").assertTextEquals("78%")
+        val config = slider.fetchSemanticsNode().config
+        assertEquals(listOf("Brightness"), config[SemanticsProperties.ContentDescription])
+        assertEquals("78%", config[SemanticsProperties.StateDescription])
     }
 }

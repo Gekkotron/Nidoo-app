@@ -18,7 +18,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -180,12 +179,11 @@ internal fun CustomizeSheet(
                 if (activePreset != null && card.capabilities.brightness) {
                     val effective = lightOnBrightness ?: activePreset.brightness
                     var slider by remember(card.id, lightOnPreset) { mutableFloatStateOf(effective.toFloat()) }
-                    Text(stringResource(R.string.customize_light_on_brightness))
-                    Slider(
+                    BrightnessSlider(
                         value = slider,
                         onValueChange = { slider = it },
-                        valueRange = 1f..255f,
                         onValueChangeFinished = { lightOnBrightness = slider.roundToInt() },
+                        label = stringResource(R.string.customize_light_on_brightness),
                     )
                 }
             }
