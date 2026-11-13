@@ -50,6 +50,7 @@ import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.components.LinkPill
+import com.gekkotron.nidoo.designsystem.components.LinkSheet
 import com.gekkotron.nidoo.designsystem.components.NidooCard
 import com.gekkotron.nidoo.feature.energy.R
 import com.gekkotron.nidoo.feature.energy.presentation.EnergyEvent
@@ -62,6 +63,7 @@ import com.gekkotron.nidoo.feature.energy.presentation.Flow
 import com.gekkotron.nidoo.feature.energy.presentation.NodeKind
 import com.gekkotron.nidoo.feature.energy.presentation.NodeStatus
 import com.gekkotron.nidoo.feature.energy.presentation.SensorEdit
+import com.gekkotron.nidoo.transport.Route
 import java.util.Locale
 import com.gekkotron.nidoo.designsystem.R as DsR
 
@@ -71,6 +73,10 @@ fun EnergyRoute(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     /** An entity's history, or the derived house's for null. */
     onOpenHistory: (entityId: String?) -> Unit = {},
+    /** Null shows the link pill as a plain status. */
+    onOpenConnectionSettings: (() -> Unit)? = null,
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
     viewModel: EnergyViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -84,7 +90,10 @@ fun EnergyRoute(
             }
         }
     }
-    EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar, view = view)
+    EnergyScreen(
+        state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar, view = view,
+        onOpenConnectionSettings = onOpenConnectionSettings, route = route, onRouteChange = onRouteChange,
+    )
 }
 
 /** Room left above the diagram for the title, its subtitle and the link pill. */
@@ -103,9 +112,14 @@ fun EnergyScreen(
     onOpenHistory: (entityId: String?) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     view: EnergyViewPreference = EnergyViewPreference.CLASSIC,
+    /** The link sheet's "Connection settings"; null shows the link pill as a plain status. */
+    onOpenConnectionSettings: (() -> Unit)? = null,
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var consumersSheet by rememberSaveable { mutableStateOf(false) }
+    var linkSheet by rememberSaveable { mutableStateOf(false) }
     var detailId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         containerColor = Color.Transparent,
@@ -130,7 +144,9 @@ fun EnergyScreen(
                 horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { EnergyHeader(state) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
+                    EnergyHeader(state, onPillClick = onOpenConnectionSettings?.let { { linkSheet = true } })
+                }
                 when {
                     state.loading -> Unit
                     state.empty -> item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
@@ -172,6 +188,13 @@ fun EnergyScreen(
             }
         }
     }
+    if (linkSheet && onOpenConnectionSettings != null) {
+        LinkSheet(
+            state.link, route = route, onRouteChange = onRouteChange,
+            onOpenSettings = { linkSheet = false; onOpenConnectionSettings() },
+            onDismiss = { linkSheet = false },
+        )
+    }
     if (consumersSheet) {
         ConsumersSheet(state.consumers, locale, onSelect = { consumersSheet = false; detailId = it.id }, onDismiss = { consumersSheet = false })
     }
@@ -184,7 +207,7 @@ fun EnergyScreen(
 }
 
 @Composable
-private fun EnergyHeader(state: EnergyUiState) {
+private fun EnergyHeader(state: EnergyUiState, onPillClick: (() -> Unit)?) {
     Column(Modifier.padding(top = 8.dp)) {
         Text(stringResource(R.string.energy_title), style = NidooTheme.type.display)
         Text(
@@ -193,7 +216,7 @@ private fun EnergyHeader(state: EnergyUiState) {
             color = NidooTheme.colors.contentMuted,
         )
         Spacer(Modifier.height(8.dp))
-        LinkPill(state.link, onClick = null)
+        LinkPill(state.link, onClick = onPillClick)
     }
 }
 

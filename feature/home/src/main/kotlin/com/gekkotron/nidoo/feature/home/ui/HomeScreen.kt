@@ -71,6 +71,7 @@ import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.components.ChipItem
 import com.gekkotron.nidoo.designsystem.components.LinkPill
+import com.gekkotron.nidoo.designsystem.components.LinkSheet
 import com.gekkotron.nidoo.designsystem.components.RoomChips
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton

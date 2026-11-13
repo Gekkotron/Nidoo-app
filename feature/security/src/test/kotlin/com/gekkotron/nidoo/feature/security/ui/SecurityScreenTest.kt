@@ -58,6 +58,21 @@ class SecurityScreenTest {
     private val sent = mutableListOf<Pair<String, Command>>()
     private val actionSettings = mutableListOf<Triple<String, Boolean, Boolean>>()
 
+    @Test
+    fun `the offline pill opens the link sheet, which links to connection settings`() {
+        var opened = 0
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                SecurityScreen(SecurityUi(link = LinkState.Offline(LinkState.Offline.CLOSED), loading = false), now = now, onOpenConnectionSettings = { opened++ })
+            }
+        }
+        compose.onNodeWithText("Offline").performClick()
+        compose.onNodeWithText("The connection was closed.").assertExists()
+        compose.onNodeWithText("Connection settings").performClick()
+        assertEquals(1, opened)
+        compose.onNodeWithText("The connection was closed.").assertDoesNotExist()
+    }
+
     private fun show(state: SecurityUi, at: java.time.Instant = now) = compose.setContent {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             SecurityScreen(
