@@ -116,7 +116,16 @@ class ActiveTransport(
     }
 
     private suspend fun start(spec: TransportSpec) {
-        val transport = factory(spec)
+        val transport = try {
+            factory(spec)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Bad stored data (a port or URL the factory rejects) must not end the pipeline either:
+            // a corrected spec has to be able to start.
+            _link.value = LinkState.Offline(LinkState.Offline.FAILED)
+            return
+        }
         // Undispatched so both collectors are subscribed before start() or a replay can deliver anything.
         val jobs = listOf(
             scope.launch(start = CoroutineStart.UNDISPATCHED) { transport.messages().collect { out.emit(it) } },

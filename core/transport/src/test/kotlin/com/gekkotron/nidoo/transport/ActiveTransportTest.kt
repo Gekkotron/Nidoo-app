@@ -180,6 +180,28 @@ class ActiveTransportTest {
     }
 
     @Test
+    fun `a factory that throws on bad stored data surfaces offline and a later spec still starts`() = runTest {
+        val specs = MutableStateFlow<TransportSpec?>(TransportSpec.Demo)
+        var calls = 0
+        val t = ActiveTransport(
+            specs,
+            { spec ->
+                if (calls++ == 0) throw IllegalArgumentException("bad port")
+                FakeManagedTransport(spec).also(created::add)
+            },
+            backgroundScope,
+        ).also { it.setForeground(true) }
+        runCurrent()
+        assertTrue(created.isEmpty())
+        assertEquals(LinkState.Offline(LinkState.Offline.FAILED), t.link.value)
+
+        specs.value = direct
+        runCurrent()
+        assertEquals(direct, created.single().spec)
+        assertTrue(created.single().started)
+    }
+
+    @Test
     fun `a transport whose start throws surfaces offline and a later spec still starts`() = runTest {
         val specs = MutableStateFlow<TransportSpec?>(TransportSpec.Demo)
         val t = ActiveTransport(
