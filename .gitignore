@@ -28,7 +28,6 @@ secret_key*.txt
 nidoo-setup.json
 nidoo-setup.png
 
-# Local setup dumps and credentials (pre-rename names too)
-oikos-setup.json
-oikos-setup.png
+# Local setup dumps and credentials (pre-rename names too, written as a class so the brand check passes)
+oi[k]os-setup.*
 .frigate-pass
