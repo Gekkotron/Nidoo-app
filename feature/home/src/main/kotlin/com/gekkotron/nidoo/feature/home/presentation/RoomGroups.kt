@@ -7,7 +7,6 @@ import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.model.HubGroup
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
-import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.model.UiOverride
 
 /** Builds the group cards for the groups the hub sends; Home shows no other group (hub groups spec §2.3). */
@@ -51,16 +50,20 @@ object RoomGroups {
      * capabilities when it builds the discovery config. Groups whose entity is absent, whose kind
      * Home cannot render as a group (covers and lights only), or that have no renderable member on
      * Home are left untouched.
+     *
+     * Members resolve against [memberCards] first: [cards] is only what the current chip shows, and
+     * the hub lets a group take members from any room, hidden ones included. When the members
+     * disagree on a room, the card keeps the room the hub gave the group itself.
      */
-    fun foldHubGroups(cards: List<CardUi>, hubGroups: Map<String, HubGroup>): List<CardUi> {
+    fun foldHubGroups(cards: List<CardUi>, hubGroups: Map<String, HubGroup>, memberCards: Map<String, CardUi> = emptyMap()): List<CardUi> {
         if (hubGroups.isEmpty()) return cards
         val byId = cards.associateBy { it.id }
         val plan = hubGroups.values.mapNotNull { spec ->
             if (spec.kind !in GROUP_KINDS) return@mapNotNull null
             val groupCard = byId[groupEntityId(spec.id)] ?: return@mapNotNull null
-            val members = spec.members.mapNotNull { byId[it] }
+            val members = spec.members.mapNotNull { memberCards[it] ?: byId[it] }
             if (members.isEmpty()) return@mapNotNull null
-            val area = members.map { it.areaId }.distinct().singleOrNull() ?: UNASSIGNED_AREA
+            val area = members.map { it.areaId }.distinct().singleOrNull() ?: groupCard.areaId
             val folded = group(groupCard.id, area, spec.kind, members, if (groupCard.ui.name != null) groupCard.name else spec.name, favorite = groupCard.ui.favorite)
                 .copy(isHubGroup = true, ui = groupCard.ui, capabilities = groupCard.capabilities)
             val hidden = if (spec.hideMembers) members.map { it.id }.toSet() else emptySet()
