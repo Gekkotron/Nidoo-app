@@ -262,18 +262,18 @@ private fun ClimateIcon(running: Boolean, fanMode: String?, animate: Boolean, mo
         StaticIcon(NidooGlyph.SNOWFLAKE, null, modifier)
         return
     }
-    val angle = if (animate) {
-        val transition = rememberInfiniteTransition(label = "fan")
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(animation = tween(fanPeriodMs(fanMode), easing = LinearEasing)),
-            label = "angle",
-        ).value
-    } else {
-        0f
+    if (!animate) {
+        StaticIcon(NidooGlyph.FAN, null, modifier)
+        return
     }
-    StaticIcon(NidooGlyph.FAN, null, modifier.graphicsLayer { rotationZ = angle })
+    val angle = rememberInfiniteTransition(label = "fan").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(animation = tween(fanPeriodMs(fanMode), easing = LinearEasing)),
+        label = "angle",
+    )
+    // The angle is read inside the layer block, so each frame only re-runs the draw phase.
+    StaticIcon(NidooGlyph.FAN, null, modifier.graphicsLayer { rotationZ = angle.value })
 }
 
 /** A siren pulses its glyph (scale and fade) while sounding; idle or with reduced motion it is drawn still. */
