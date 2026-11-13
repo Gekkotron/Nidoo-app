@@ -69,7 +69,7 @@ class ReplyWorkerTest {
         publisher.result = kotlin.Result.failure(IOException("offline"))
         assertEquals(Result.failure(), run(attempt = 4))
         val notification = shadowOf(manager).allNotifications.single()
-        assertEquals("system", notification.channelId)
+        assertEquals("system_chime", notification.channelId)
         assertEquals("Couldn't send Disarm", notification.extras.getString(android.app.Notification.EXTRA_TITLE))
     }
 

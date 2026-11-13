@@ -1,6 +1,9 @@
 package com.gekkotron.nidoo.push
 
+import android.content.ContentResolver
 import android.content.Context
+import android.media.AudioAttributes
+import android.net.Uri
 import androidx.annotation.ColorInt
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationChannelCompat
@@ -18,17 +21,43 @@ object NotificationIds {
 class AlertChannels(private val context: Context) {
     fun ensure() {
         val manager = NotificationManagerCompat.from(context)
+        val chime = chimeUri(context)
         AlertChannel.entries.forEach { channel ->
-            manager.createNotificationChannel(
-                NotificationChannelCompat.Builder(channel.id, importance(channel))
-                    .setName(context.getString(nameRes(channel)))
-                    .setDescription(context.getString(descriptionRes(channel)))
-                    .build(),
-            )
+            val builder = NotificationChannelCompat.Builder(channelId(channel), importance(channel))
+                .setName(context.getString(nameRes(channel)))
+                .setDescription(context.getString(descriptionRes(channel)))
+            if (chimes(channel)) builder.setSound(chime, CHIME_ATTRIBUTES)
+            manager.createNotificationChannel(builder.build())
+            // The channel it replaces still rings the phone's default sound; Android never changes it in place.
+            if (channelId(channel) != channel.id) manager.deleteNotificationChannel(channel.id)
         }
     }
 
     companion object {
+        private const val CHIME_SUFFIX = "_chime"
+
+        private val CHIME_ATTRIBUTES: AudioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        /** Every channel rings the Nidoo chime (the web logo's songbird call) but the alarm, which keeps the phone's louder sound. */
+        fun chimes(channel: AlertChannel): Boolean = channel != AlertChannel.ALARM
+
+        /**
+         * The Android channel id. A channel's sound is fixed once it exists, so the chiming channels live under new ids
+         * and [ensure] deletes the old ones; [AlertChannel.id] stays the wire and database id.
+         */
+        fun channelId(channel: AlertChannel): String = if (chimes(channel)) channel.id + CHIME_SUFFIX else channel.id
+
+        /** By name, not by resource id: a channel keeps this URI across updates, and ids can move between builds. */
+        fun chimeUri(context: Context): Uri = Uri.Builder()
+            .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+            .authority(context.packageName)
+            .appendPath(context.resources.getResourceTypeName(R.raw.nidoo_chime))
+            .appendPath(context.resources.getResourceEntryName(R.raw.nidoo_chime))
+            .build()
+
         /** HIGH for the alarm, security and camera channels; DEFAULT for the rest. */
         fun importance(channel: AlertChannel): Int = when (channel) {
             AlertChannel.ALARM, AlertChannel.SECURITY, AlertChannel.CAMERA -> NotificationManagerCompat.IMPORTANCE_HIGH

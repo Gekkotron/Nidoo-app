@@ -14,7 +14,7 @@ class ReplyFailureNotifier(
     @SuppressLint("MissingPermission") // canPost() is the permission check
     fun couldNotSend(alertId: String, label: String) {
         if (!canPost()) return
-        val notification = NotificationCompat.Builder(context, AlertChannel.SYSTEM.id)
+        val notification = NotificationCompat.Builder(context, AlertChannels.channelId(AlertChannel.SYSTEM))
             .setSmallIcon(R.drawable.ic_stat_nidoo)
             .setColor(AlertChannels.accent(AlertChannel.SYSTEM))
             .setContentTitle(context.getString(R.string.push_reply_failed, label))
