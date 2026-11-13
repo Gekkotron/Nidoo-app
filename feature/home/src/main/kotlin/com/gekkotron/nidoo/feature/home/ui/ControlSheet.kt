@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -136,13 +135,13 @@ private fun LightControls(card: CardUi, onSend: (String, Command) -> Unit) {
         Switch(checked = light?.on == true, onCheckedChange = { send(if (it) Command.TurnOn() else Command.TurnOff) })
     }
     if (card.capabilities.brightness) {
-        var value by remember(light?.brightness) { mutableFloatStateOf((light?.brightness ?: 255).toFloat()) }
+        val slider = rememberSliderValue((light?.brightness ?: 255).toFloat())
         Text(stringResource(R.string.sheet_brightness))
         Slider(
-            value = value,
-            onValueChange = { value = it },
+            value = slider.value,
+            onValueChange = slider::drag,
             valueRange = 1f..255f,
-            onValueChangeFinished = { send(Command.TurnOn(brightness = value.roundToInt())) },
+            onValueChangeFinished = { send(Command.TurnOn(brightness = slider.release().roundToInt())) },
         )
     }
     if (card.capabilities.effects.isNotEmpty()) {
@@ -185,14 +184,14 @@ private fun CoverControls(card: CardUi, onSend: (Command) -> Unit) {
     }
     if (card.capabilities.position) {
         val position = (card.state as? StateValue.Cover)?.position ?: 0
-        var value by remember(position) { mutableFloatStateOf(position.toFloat()) }
+        val slider = rememberSliderValue(position.toFloat())
         Text(stringResource(R.string.sheet_position))
         Slider(
-            value = value,
-            onValueChange = { value = it },
+            value = slider.value,
+            onValueChange = slider::drag,
             valueRange = 0f..100f,
             steps = 19,
-            onValueChangeFinished = { onSend(Command.SetPosition(value.roundToInt())) },
+            onValueChangeFinished = { onSend(Command.SetPosition(slider.release().roundToInt())) },
         )
     }
 }
@@ -354,19 +353,19 @@ private fun NumberControls(card: CardUi, onSend: (Command) -> Unit) {
     val max = caps.max ?: 100.0
     val step = caps.step ?: 1.0
     val current = (card.state as? StateValue.Numeric)?.value ?: min
-    var value by remember(current) { mutableFloatStateOf(current.toFloat()) }
+    val slider = rememberSliderValue(current.toFloat())
     val steps = ((max - min) / step).roundToInt() - 1
     val locale = LocalConfiguration.current.locales[0]
     Text(
-        listOfNotNull(CardFormatter.number(StepMath.snap(value.toDouble(), min, step), locale), card.unit).joinToString(" "),
+        listOfNotNull(CardFormatter.number(StepMath.snap(slider.value.toDouble(), min, step), locale), card.unit).joinToString(" "),
         style = NidooTheme.type.display,
     )
     Slider(
-        value = value,
-        onValueChange = { value = it },
+        value = slider.value,
+        onValueChange = slider::drag,
         valueRange = min.toFloat()..max.toFloat(),
         steps = if (steps in 0..200) steps else 0,
-        onValueChangeFinished = { onSend(Command.SetNumber(StepMath.snap(value.toDouble(), min, step))) },
+        onValueChangeFinished = { onSend(Command.SetNumber(StepMath.snap(slider.release().toDouble(), min, step))) },
     )
 }
 

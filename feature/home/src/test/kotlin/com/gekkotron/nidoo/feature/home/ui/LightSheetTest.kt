@@ -3,6 +3,10 @@ package com.gekkotron.nidoo.feature.home.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.down
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.centerLeft
+import androidx.compose.ui.test.centerRight
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.up
 import androidx.compose.ui.test.assertIsNotSelected
@@ -198,5 +202,33 @@ class LightSheetTest {
         wheel.performTouchInput { up() }
         val color = sends.mapNotNull { (it.second as? Command.TurnOn)?.color }.single()
         assertTrue(color.hue < 5.0 || color.hue > 355.0, "sent ${color.hue}, expected the dragged red")
+    }
+
+    @Test
+    fun `a brightness echo arriving mid-drag does not snap the slider back`() {
+        val lamp = mutableStateOf(states.getValue("lamp"))
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(entities, states + ("lamp" to lamp.value), emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
+                    now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
+        val slider = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).performScrollTo()
+        slider.performTouchInput {
+            down(center)
+            moveTo(center + Offset(10f, 0f))
+            moveTo(centerRight - Offset(2f, 0f))
+        }
+        lamp.value = EntityState("lamp", StateValue.Light(true, 60))
+        compose.waitForIdle()
+        val shown = slider.fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
+        assertTrue(shown > 240f, "the thumb jumped to $shown mid-drag")
+        slider.performTouchInput { up() }
+        val sent = sends.filter { it.first == "lamp" }.mapNotNull { (it.second as? Command.TurnOn)?.brightness }.single()
+        assertTrue(sent > 240, "sent $sent, expected the dragged near-full brightness")
     }
 }
