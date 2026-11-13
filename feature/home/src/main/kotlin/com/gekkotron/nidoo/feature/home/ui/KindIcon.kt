@@ -1,6 +1,5 @@
 package com.gekkotron.nidoo.feature.home.ui
 
-import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -22,9 +21,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.gekkotron.nidoo.designsystem.animationsEnabled
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.icons.DoorIcon
 import com.gekkotron.nidoo.designsystem.icons.GarageIcon
@@ -366,9 +364,3 @@ private fun fanPeriodMs(fanMode: String?): Int = when (fanMode?.lowercase()) {
     else -> 1800
 }
 
-@Composable
-private fun animationsEnabled(): Boolean {
-    if (LocalInspectionMode.current) return true
-    val resolver = LocalContext.current.contentResolver
-    return remember { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f }
-}
