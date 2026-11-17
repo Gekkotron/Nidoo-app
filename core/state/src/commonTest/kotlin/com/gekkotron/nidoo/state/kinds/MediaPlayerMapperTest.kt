@@ -129,4 +129,31 @@ class MediaPlayerMapperTest {
         assertNull(MediaPlayerMapper.predict(Command.MediaAction("previous"), playing))
         assertNull(MediaPlayerMapper.predict(Command.PlayMedia("x"), playing))
     }
+
+    private val now = 1_793_960_400_000L
+    private fun at(state: String, atMs: Long?) = MediaPlayer(state, "A", null, null, null, null, 200.0, 40.0, atMs)
+
+    @Test
+    fun `pause guess holds the position at the tap`() {
+        val guess = MediaPlayerMapper.predict(Command.MediaAction("pause"), at("playing", now - 3_000), now) as MediaPlayer
+        assertEquals("paused", guess.state)
+        assertEquals(43.0, guess.positionS)
+        assertEquals(now, guess.positionAtMs)
+    }
+
+    @Test
+    fun `play guess after a long pause holds still instead of jumping`() {
+        val guess = MediaPlayerMapper.predict(Command.MediaAction("play"), at("paused", now - 600_000), now) as MediaPlayer
+        assertEquals("playing", guess.state)
+        assertEquals(40.0, guess.positionS)
+        assertNull(guess.positionAtMs)
+    }
+
+    @Test
+    fun `guess keeps the position without a duration`() {
+        val guess = MediaPlayerMapper.predict(
+            Command.MediaAction("pause"), at("playing", now - 3_000).copy(durationS = null), now,
+        ) as MediaPlayer
+        assertEquals(40.0, guess.positionS)
+    }
 }

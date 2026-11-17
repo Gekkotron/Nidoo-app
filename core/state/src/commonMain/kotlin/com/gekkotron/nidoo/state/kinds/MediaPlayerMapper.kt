@@ -3,6 +3,7 @@ package com.gekkotron.nidoo.state.kinds
 import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.state.mqtt.MqttBindings
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.serialization.SerializationException
@@ -95,12 +96,34 @@ object MediaPlayerMapper : KindMapper {
     override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = emptySet()
 
     /** Play and pause flip the state; next, previous and a search show no guess (the title is unknown). */
-    override fun predict(command: Command, previous: StateValue): StateValue? {
+    @OptIn(ExperimentalTime::class)
+    override fun predict(command: Command, previous: StateValue): StateValue? =
+        predict(command, previous, Clock.System.now().toEpochMilliseconds())
+
+    /**
+     * The position is re-based on the tap ([nowMs]): the last report's `position_s`/`position_at` would put the bar
+     * back where that report was (pause), or count the whole pause as played time (play). A play holds the bar still
+     * (`position_at` null, as while loading): the player's answer says when the speakers start.
+     */
+    internal fun predict(command: Command, previous: StateValue, nowMs: Long): StateValue? {
         val prev = previous as? StateValue.MediaPlayer ?: return null
-        return when ((command as? Command.MediaAction)?.action) {
-            "play" -> prev.copy(state = "playing")
-            "pause" -> prev.copy(state = "paused")
-            else -> null
+        val play = when ((command as? Command.MediaAction)?.action) {
+            "play" -> true
+            "pause" -> false
+            else -> return null
         }
+        return prev.copy(
+            state = if (play) "playing" else "paused",
+            positionS = elapsedS(prev, nowMs) ?: prev.positionS,
+            positionAtMs = if (play) null else nowMs,
+        )
+    }
+
+    /** Seconds into the song at [nowMs], within the song; null without a duration (as the card's progress bar). */
+    private fun elapsedS(p: StateValue.MediaPlayer, nowMs: Long): Double? {
+        val duration = p.durationS?.takeIf { it > 0.0 } ?: return null
+        val at = p.positionAtMs
+        val since = if (p.state == "playing" && at != null) maxOf(0L, nowMs - at) / 1000.0 else 0.0
+        return ((p.positionS ?: 0.0) + since).coerceIn(0.0, duration)
     }
 }
