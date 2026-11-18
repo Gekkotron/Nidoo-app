@@ -33,6 +33,7 @@ class PresenceWorkerTest {
 
     private val context = RuntimeEnvironment.getApplication()
     private val publisher = Recorder()
+    private var fix: LocationFix? = null
     private lateinit var prefs: AppPreferences
 
     private fun prefs(enabled: Boolean = true, alias: String = "pixel"): AppPreferences {
@@ -48,7 +49,7 @@ class PresenceWorkerTest {
     private fun run(state: PresenceState, attempt: Int = 0, pub: TopicPublisher = publisher, p: AppPreferences = prefs): Result = runBlocking {
         val factory = object : WorkerFactory() {
             override fun createWorker(appContext: android.content.Context, workerClassName: String, workerParameters: WorkerParameters) =
-                if (workerClassName == PresenceWorker::class.java.name) PresenceWorker(appContext, workerParameters, pub, p) else null
+                if (workerClassName == PresenceWorker::class.java.name) PresenceWorker(appContext, workerParameters, pub, p) { fix } else null
         }
         val input = workDataOf(PresenceWorker.KEY_STATE to state.name)
         TestListenableWorkerBuilder<PresenceWorker>(context).setWorkerFactory(factory).setInputData(input).setRunAttemptCount(attempt).build().doWork()
@@ -73,6 +74,30 @@ class PresenceWorkerTest {
         assertEquals(Result.success(), run(PresenceState.HOME))
         assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
         publisher.sent.clear()
+        assertEquals(Result.success(), run(PresenceState.AWAY))
+        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an EXIT while the phone is still at home publishes home`() {
+        prefs = prefs()
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.AWAY))
+        assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an ENTER that runs once the phone has left again publishes not_home`() {
+        prefs = prefs()
+        fix = LocationFix(48.01, 2.01, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.HOME))
+        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `a fix too imprecise to tell follows the transition`() {
+        prefs = prefs()
+        fix = LocationFix(48.002, 2.0, accuracyM = 200f)
         assertEquals(Result.success(), run(PresenceState.AWAY))
         assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }

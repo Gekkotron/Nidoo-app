@@ -15,7 +15,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 class FusedCurrentLocationSource(private val context: Context) : CurrentLocationSource {
     private val client: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
 
-    override suspend fun current(): Pair<Double, Double>? {
+    override suspend fun current(): LocationFix? {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
         val cancel = CancellationTokenSource()
         return suspendCancellableCoroutine { cont ->
@@ -23,7 +23,7 @@ class FusedCurrentLocationSource(private val context: Context) : CurrentLocation
             try {
                 @Suppress("MissingPermission")
                 client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancel.token)
-                    .addOnSuccessListener { loc -> cont.resume(loc?.let { it.latitude to it.longitude }) }
+                    .addOnSuccessListener { loc -> cont.resume(loc?.let { LocationFix(it.latitude, it.longitude, if (it.hasAccuracy()) it.accuracy else 0f) }) }
                     .addOnFailureListener { cont.resume(null) }
                     .addOnCanceledListener { cont.resume(null) }
             } catch (_: SecurityException) {

@@ -13,7 +13,8 @@ import kotlinx.coroutines.flow.first
 /**
  * Reacts to a silent FCM "presence_refresh" command: requests a fresh fix, decides HOME / AWAY from the configured home,
  * and re-publishes the three retained MQTT messages. A no-op when presence is disabled, the alias is blank, no home is
- * configured, or no fix is available (the next real geofence transition will correct the broker in that case).
+ * configured, no fix is available, or the fix is too imprecise to decide (the next real geofence transition will correct
+ * the broker in that case).
  */
 class PresenceRefreshWorker(
     context: Context,
@@ -26,7 +27,7 @@ class PresenceRefreshWorker(
         val config = preferences.presence.filterNotNull().first()
         if (!config.enabled || config.alias.isBlank() || config.homeLat == null || config.homeLng == null) return Result.success()
         val fix = fixSource.current() ?: return Result.success()
-        val state = PresenceDecision.stateOf(fix.first, fix.second, config) ?: return Result.success()
+        val state = PresenceDecision.stateOf(fix, config) ?: return Result.success()
         return publishAll(config, state)
     }
 

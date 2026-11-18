@@ -11,6 +11,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
 /**
+ * Runs after a geofence transition. The transition is only a hint: Play services reports a false EXIT when an indoor
+ * position jumps, and the work can wait hours for a network (an EXIT seen offline runs once the phone is back home).
+ * So the state published is where the phone is when the work runs, from a fresh fix; the hint is used when there is no
+ * fix or the fix cannot tell.
+ *
  * Publishes HA MQTT Discovery for the device_tracker and the new presence state. Retained so a late HA pick-up still sees
  * the right value. Three publishes: discovery config, availability online, state (home / not_home).
  */
@@ -19,12 +24,14 @@ class PresenceWorker(
     params: WorkerParameters,
     private val publisher: TopicPublisher,
     private val preferences: AppPreferences,
+    private val fixSource: CurrentLocationSource,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val stateName = inputData.getString(KEY_STATE) ?: return Result.failure()
-        val state = runCatching { PresenceState.valueOf(stateName) }.getOrNull() ?: return Result.failure()
+        val hint = runCatching { PresenceState.valueOf(stateName) }.getOrNull() ?: return Result.failure()
         val config = preferences.presence.filterNotNull().first()
         if (!config.enabled || config.alias.isBlank()) return Result.success()
+        val state = fixSource.current()?.let { PresenceDecision.stateOf(it, config) } ?: hint
         return publishAll(config, state)
     }
 
