@@ -3,6 +3,7 @@ package com.gekkotron.nidoo.presence
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
 import androidx.work.ListenableWorker
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
@@ -22,13 +23,13 @@ class PresenceWorkerFactory(
 ) : WorkerFactory() {
     override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters): ListenableWorker? =
         when (workerClassName) {
-            PresenceWorker::class.java.name -> PresenceWorker(appContext, workerParameters, publisher, preferences)
+            PresenceWorker::class.java.name -> PresenceWorker(appContext, workerParameters, publisher, preferences, fixSource)
             PresenceRefreshWorker::class.java.name -> PresenceRefreshWorker(appContext, workerParameters, publisher, preferences, fixSource)
             else -> null
         }
 }
 
-/** Enqueues one publish per transition, replacing an unfinished one for the same state (debounce). */
+/** Enqueues one publish per transition. A newer transition replaces an unfinished older one, so a stale state never lands last. */
 object PresenceWork {
     fun enqueue(context: Context, state: PresenceState) {
         val request = OneTimeWorkRequestBuilder<PresenceWorker>()
@@ -38,7 +39,7 @@ object PresenceWork {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        WorkManager.getInstance(context).enqueue(request)
+        WorkManager.getInstance(context).enqueueUniqueWork(PresenceWorker.TAG, ExistingWorkPolicy.REPLACE, request)
     }
 }
 
@@ -51,6 +52,6 @@ object PresenceRefreshWork {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        WorkManager.getInstance(context).enqueue(request)
+        WorkManager.getInstance(context).enqueueUniqueWork(PresenceRefreshWorker.TAG, ExistingWorkPolicy.REPLACE, request)
     }
 }

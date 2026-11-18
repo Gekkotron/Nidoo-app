@@ -53,7 +53,7 @@ class PresenceRefreshWorkerTest {
     @Test
     fun `a disabled config publishes nothing and succeeds`() {
         prefs = prefs(enabled = false)
-        fixSource.fix = 48.0 to 2.0
+        fixSource.fix = LocationFix(48.0, 2.0)
         assertEquals(Result.success(), run())
         assertTrue(publisher.sent.isEmpty())
     }
@@ -61,7 +61,7 @@ class PresenceRefreshWorkerTest {
     @Test
     fun `a config without a home publishes nothing and succeeds`() {
         prefs = prefs(home = null)
-        fixSource.fix = 48.0 to 2.0
+        fixSource.fix = LocationFix(48.0, 2.0)
         assertEquals(Result.success(), run())
         assertTrue(publisher.sent.isEmpty())
     }
@@ -69,7 +69,7 @@ class PresenceRefreshWorkerTest {
     @Test
     fun `a blank alias publishes nothing and succeeds`() {
         prefs = prefs(alias = "")
-        fixSource.fix = 48.0 to 2.0
+        fixSource.fix = LocationFix(48.0, 2.0)
         assertEquals(Result.success(), run())
         assertTrue(publisher.sent.isEmpty())
     }
@@ -85,7 +85,7 @@ class PresenceRefreshWorkerTest {
     @Test
     fun `a fix inside the radius publishes home`() {
         prefs = prefs()
-        fixSource.fix = 48.0005 to 2.0005
+        fixSource.fix = LocationFix(48.0005, 2.0005)
         assertEquals(Result.success(), run())
         assertEquals(3, publisher.sent.size)
         assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
@@ -94,15 +94,24 @@ class PresenceRefreshWorkerTest {
     @Test
     fun `a fix outside the radius publishes not_home`() {
         prefs = prefs()
-        fixSource.fix = 48.01 to 2.01
+        fixSource.fix = LocationFix(48.01, 2.01)
         assertEquals(Result.success(), run())
         assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test
+    fun `a fix too imprecise to rule out home publishes nothing`() {
+        prefs = prefs()
+        // ~220 m north of home, radius 150 m, accuracy 200 m: the phone may well be inside.
+        fixSource.fix = LocationFix(48.002, 2.0, accuracyM = 200f)
+        assertEquals(Result.success(), run())
+        assertTrue(publisher.sent.isEmpty())
+    }
+
+    @Test
     fun `a failing publish retries then fails at the max`() {
         prefs = prefs()
-        fixSource.fix = 48.0 to 2.0
+        fixSource.fix = LocationFix(48.0, 2.0)
         publisher.result = kotlin.Result.failure(java.io.IOException("offline"))
         for (attempt in 0 until PresenceRefreshWorker.MAX_ATTEMPTS - 1) {
             publisher.sent.clear()
@@ -123,7 +132,7 @@ class PresenceRefreshWorkerTest {
     }
 
     private class FakeFixSource : CurrentLocationSource {
-        var fix: Pair<Double, Double>? = null
-        override suspend fun current(): Pair<Double, Double>? = fix
+        var fix: LocationFix? = null
+        override suspend fun current(): LocationFix? = fix
     }
 }
