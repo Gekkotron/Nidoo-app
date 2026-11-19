@@ -79,19 +79,38 @@ class PresenceWorkerTest {
     }
 
     @Test
-    fun `an EXIT while the phone is still at home publishes home`() {
+    fun `an EXIT while the phone is still at home publishes home and checks again later`() {
         prefs = prefs()
         fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
-        assertEquals(Result.success(), run(PresenceState.AWAY))
+        assertEquals(Result.retry(), run(PresenceState.AWAY))
         assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test
-    fun `an ENTER that runs once the phone has left again publishes not_home`() {
+    fun `an EXIT the fix denies on a first run publishes not_home once a later fix is outside`() {
+        prefs = prefs()
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
+        assertEquals(Result.retry(), run(PresenceState.AWAY))
+        publisher.sent.clear()
+        fix = LocationFix(48.01, 2.01, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = 1))
+        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an EXIT still denied at the last attempt stays home and ends`() {
+        prefs = prefs()
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
+        assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an ENTER publishes home even when a fix at the edge still reads outside`() {
         prefs = prefs()
         fix = LocationFix(48.01, 2.01, accuracyM = 20f)
         assertEquals(Result.success(), run(PresenceState.HOME))
-        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+        assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test

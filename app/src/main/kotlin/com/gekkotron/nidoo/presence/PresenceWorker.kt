@@ -11,10 +11,14 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
 /**
- * Runs after a geofence transition. The transition is only a hint: Play services reports a false EXIT when an indoor
- * position jumps, and the work can wait hours for a network (an EXIT seen offline runs once the phone is back home).
- * So the state published is where the phone is when the work runs, from a fresh fix; the hint is used when there is no
- * fix or the fix cannot tell.
+ * Runs after a geofence transition.
+ *
+ * An ENTER is published as home at once: coming home must not wait for a fix, and a fix taken at the edge of the radius
+ * can still read outside, after which no other transition would come to correct it.
+ *
+ * An EXIT is checked against a fresh fix, because Play services reports a false EXIT when an indoor position jumps.
+ * A fix inside the radius publishes home and the work runs again later: either the EXIT was false and the fix stays
+ * inside, or the fix was taken before the phone crossed the edge and a later one reads away.
  *
  * Publishes HA MQTT Discovery for the device_tracker and the new presence state. Retained so a late HA pick-up still sees
  * the right value. Three publishes: discovery config, availability online, state (home / not_home).
@@ -31,8 +35,13 @@ class PresenceWorker(
         val hint = runCatching { PresenceState.valueOf(stateName) }.getOrNull() ?: return Result.failure()
         val config = preferences.presence.filterNotNull().first()
         if (!config.enabled || config.alias.isBlank()) return Result.success()
-        val state = fixSource.current()?.let { PresenceDecision.stateOf(it, config) } ?: hint
-        return publishAll(config, state)
+        val state = when (hint) {
+            PresenceState.HOME -> PresenceState.HOME
+            PresenceState.AWAY -> fixSource.current()?.let { PresenceDecision.stateOf(it, config) } ?: PresenceState.AWAY
+        }
+        val result = publishAll(config, state)
+        val exitDenied = hint == PresenceState.AWAY && state == PresenceState.HOME
+        return if (exitDenied && result is Result.Success && runAttemptCount + 1 < MAX_ATTEMPTS) Result.retry() else result
     }
 
     private suspend fun publishAll(config: PresenceConfig, state: PresenceState): Result {
