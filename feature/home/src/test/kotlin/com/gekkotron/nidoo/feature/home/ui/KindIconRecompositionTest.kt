@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.designsystem.icons.AcMode
+import com.gekkotron.nidoo.designsystem.icons.VacuumMotion
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -46,5 +47,17 @@ class KindIconRecompositionTest {
         assertTrue(settled > 0, "the tracer saw no AcIcon: the test would pass vacuously")
         repeat(30) { compose.mainClock.advanceTimeByFrame() }
         assertEquals(settled, composed.size, "AcIcon recomposed ${composed.size - settled} times in 30 frames")
+    }
+
+    @Test
+    fun `the cleaning robot drives without recomposing every frame`() {
+        trace("VacuumIcon")
+        compose.mainClock.autoAdvance = false
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { KindIcon(IconSpec.Vacuum(VacuumMotion.CLEANING, "turbo")) } }
+        compose.mainClock.advanceTimeByFrame()
+        val settled = composed.size
+        assertTrue(settled > 0, "the tracer saw no VacuumIcon: the test would pass vacuously")
+        repeat(30) { compose.mainClock.advanceTimeByFrame() }
+        assertEquals(settled, composed.size, "VacuumIcon recomposed ${composed.size - settled} times in 30 frames")
     }
 }

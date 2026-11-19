@@ -60,7 +60,7 @@ internal sealed interface IconSpec {
     /** Climate tile: a wall unit blowing air in [mode]'s colour, still when [mode] is null (off or unavailable); airflow speed follows [fanMode]. */
     data class Climate(val mode: AcMode?, val fanMode: String?) : IconSpec
 
-    /** Vacuum tile: the side brush spins while cleaning (dust puffs trail) and the robot nudges home while returning. */
+    /** Vacuum tile: the robot cleans its room in rows, drives into its dock while returning, and charges while docked; still when idle or unavailable. */
     data class Vacuum(val motion: VacuumMotion, val fanSpeed: String?) : IconSpec
 
     /** A siren switch or an alarm panel: [active] only while it is sounding or triggered; the glyph pulses then. */
@@ -95,7 +95,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.SELECT -> IconSpec.Static(NidooGlyph.LIST, on = false)
     Kind.BUTTON -> IconSpec.Static(NidooGlyph.PLAY, on = false)
     Kind.VACUUM -> (card.state as? StateValue.Vacuum).let { s ->
-        IconSpec.Vacuum(motion = vacuumMotion(s?.state), fanSpeed = s?.fanSpeed)
+        IconSpec.Vacuum(motion = vacuumMotion(s?.state, card.available), fanSpeed = s?.fanSpeed)
     }
     Kind.MEDIA_PLAYER -> IconSpec.Static(NidooGlyph.MUSIC, card.on)
 }
@@ -123,9 +123,12 @@ internal fun acMode(hvacMode: String?): AcMode = when (hvacMode?.lowercase()) {
     else -> AcMode.AUTO
 }
 
-private fun vacuumMotion(state: String?): VacuumMotion = when (state) {
-    "cleaning" -> VacuumMotion.CLEANING
-    "returning" -> VacuumMotion.RETURNING
+/** An unavailable robot is drawn idle, whatever it last reported. */
+private fun vacuumMotion(state: String?, available: Boolean): VacuumMotion = when {
+    !available -> VacuumMotion.IDLE
+    state == "cleaning" -> VacuumMotion.CLEANING
+    state == "returning" -> VacuumMotion.RETURNING
+    state == "docked" -> VacuumMotion.DOCKED
     else -> VacuumMotion.IDLE
 }
 
@@ -260,7 +263,7 @@ internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
         is IconSpec.Siren -> SirenIcon(spec, if (c.isDark) c.warning else neutral, animate, m)
         is IconSpec.Light -> LightIcon(spec, if (c.isDark) c.warning else neutral, animate, m)
         is IconSpec.Vacuum -> {
-            val active = spec.motion != VacuumMotion.IDLE
+            val active = spec.motion == VacuumMotion.CLEANING || spec.motion == VacuumMotion.RETURNING
             VacuumIcon(spec.motion, spec.fanSpeed, if (active) (if (c.isDark) c.warning else neutral) else null, animate, m)
         }
     }

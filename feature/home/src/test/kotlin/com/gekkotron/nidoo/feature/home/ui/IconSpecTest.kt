@@ -110,7 +110,9 @@ class IconSpecTest {
         assertEquals(IconSpec.Static(NidooGlyph.LIST, false), spec(Kind.SELECT, null))
         assertEquals(IconSpec.Static(NidooGlyph.PLAY, false), spec(Kind.BUTTON, null))
         assertEquals(IconSpec.Vacuum(motion = VacuumMotion.IDLE, fanSpeed = null), spec(Kind.VACUUM, null))
-        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.IDLE, fanSpeed = "balanced"), spec(Kind.VACUUM, StateValue.Vacuum("docked", 80, "balanced")))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.DOCKED, fanSpeed = "balanced"), spec(Kind.VACUUM, StateValue.Vacuum("docked", 80, "balanced")))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.IDLE, fanSpeed = null), spec(Kind.VACUUM, StateValue.Vacuum("paused", 50, null)))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.IDLE, fanSpeed = "turbo"), spec(Kind.VACUUM, StateValue.Vacuum("cleaning", 60, "turbo"), available = false))
         assertEquals(IconSpec.Vacuum(motion = VacuumMotion.CLEANING, fanSpeed = "turbo"), spec(Kind.VACUUM, StateValue.Vacuum("cleaning", 60, "turbo")))
         assertEquals(IconSpec.Vacuum(motion = VacuumMotion.RETURNING, fanSpeed = "max"), spec(Kind.VACUUM, StateValue.Vacuum("returning", 40, "max")))
     }
