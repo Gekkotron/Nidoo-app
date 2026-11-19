@@ -45,7 +45,7 @@ fun VacuumIcon(
     animate: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val rowPhase = if (animate && motion == VacuumMotion.CLEANING) loopPhase("vacuum-rows", rowPeriodMs(fanSpeed)) else STILL_ROWS
+    val rowPhase = if (animate && motion == VacuumMotion.CLEANING) rememberLoopPhase(rowPeriodMs(fanSpeed)) else STILL_ROWS
     val dockPhase = if (animate && motion == VacuumMotion.RETURNING) returnPhase() else STILL_RETURN
     val boltAlpha = if (animate && motion == VacuumMotion.DOCKED) boltPhase() else STILL_BOLT
     val connected = NidooTheme.colors.connected
@@ -93,15 +93,6 @@ private const val ROBOT_RADIUS = 3.1f
 private val BOLT_PATH: Path by lazy {
     PathParser().parsePathString("M12.3 8 L10 12 h2.5 l-.8 3.8 L14.4 11.5 H11.9 L12.8 8z").toPath()
 }
-
-@Composable
-private fun loopPhase(label: String, periodMs: Int, easing: Easing = LinearEasing): State<Float> =
-    rememberInfiniteTransition(label = label).animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(periodMs, easing = easing)),
-        label = "phase",
-    )
 
 /** 0 to 1 as the robot drives into its dock, then holds there until the loop restarts. */
 @Composable

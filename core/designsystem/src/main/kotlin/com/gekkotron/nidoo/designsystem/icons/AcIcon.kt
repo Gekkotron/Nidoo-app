@@ -1,16 +1,9 @@
 package com.gekkotron.nidoo.designsystem.icons
 
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -26,12 +19,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import com.gekkotron.nidoo.designsystem.NidooColors
 import com.gekkotron.nidoo.designsystem.NidooTheme
-import kotlin.math.cos
+import kotlin.math.PI
+import kotlin.math.sin
 
 /** What an air conditioner is doing; the icon's colour and airflow follow it. */
 enum class AcMode { COOL, HEAT, DRY, FAN, AUTO }
@@ -64,15 +57,16 @@ fun airflowPeriodMs(fanMode: String?): Int = when (fanMode?.lowercase()) {
 fun AcIcon(mode: AcMode?, fanMode: String? = null, animate: Boolean = true, modifier: Modifier = Modifier) {
     val running = mode != null
     val moving = running && animate
-    val vanePhase = if (moving) loopPhase("ac-vane", 3200) else STILL_VANE
-    val flowPhase = if (moving && mode != AcMode.DRY) loopPhase("ac-flow", airflowPeriodMs(fanMode)) else STILL_FLOW
-    val dropPhase = if (moving && mode == AcMode.DRY) loopPhase("ac-drops", 1400) else STILL_DROPS
+    val vanePhase = if (moving) rememberLoopPhase(3200) else STILL_VANE
+    val flowPhase = if (moving && mode != AcMode.DRY) rememberLoopPhase(airflowPeriodMs(fanMode)) else STILL_FLOW
+    val dropPhase = if (moving && mode == AcMode.DRY) rememberLoopPhase(1400) else STILL_DROPS
     val colors = NidooTheme.colors
     IconCanvas(modifier) { neutral ->
         val tint = if (mode == null) neutral else acModeColor(mode, colors, neutral)
         drawUnit(neutral, tint, running)
+        // Off: the vane hangs closed, neutral. Running: it swings in the mode's colour (still when animations are off).
+        drawVane(if (mode == null) neutral else tint, if (mode != null && animate) vaneY(vanePhase.value) else VANE_REST_Y)
         if (mode == null) return@IconCanvas
-        drawVane(neutral, if (animate) cos(2f * Math.PI.toFloat() * vanePhase.value) else 1f)
         if (mode == AcMode.DRY) drawDrops(tint, dropPhase.value, animate) else drawAirflow(tint, flowPhase.value, animate)
     }
 }
@@ -80,15 +74,6 @@ fun AcIcon(mode: AcMode?, fanMode: String? = null, animate: Boolean = true, modi
 private val STILL_VANE: State<Float> = mutableFloatStateOf(0f)
 private val STILL_FLOW: State<Float> = mutableFloatStateOf(0f)
 private val STILL_DROPS: State<Float> = mutableFloatStateOf(0f)
-
-@Composable
-private fun loopPhase(label: String, periodMs: Int, easing: Easing = LinearEasing): State<Float> =
-    rememberInfiniteTransition(label = label).animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(periodMs, easing = easing)),
-        label = "phase",
-    )
 
 private const val UNIT_LEFT = 2.5f
 private const val UNIT_TOP = 4f
@@ -124,11 +109,17 @@ private fun DrawScope.drawUnit(neutral: Color, tint: Color, running: Boolean) {
     drawCircle(tint, radius = 0.85f, center = Offset(18.2f, 7.3f), alpha = if (running) 1f else 0.3f)
 }
 
-/** [flip] is the vane's vertical scale: 1 flat-down, -1 flipped up; it swings about the unit's lower edge. */
-private fun DrawScope.drawVane(color: Color, flip: Float) {
-    scale(scaleX = 1f, scaleY = flip, pivot = Offset(12f, 12.6f)) {
-        drawLine(color, Offset(6f, UNIT_BOTTOM), Offset(18f, UNIT_BOTTOM), strokeWidth = 1.3f, cap = StrokeCap.Round)
-    }
+/**
+ * The vane's height for a swing [phase] in 0..1: it hangs just below the unit (clear of its 1.6-wide
+ * bottom outline) and swings 0.4 unit down and up, like a louvre sweeping the air.
+ */
+internal fun vaneY(phase: Float): Float = VANE_REST_Y + VANE_SWING * sin(2f * PI.toFloat() * phase)
+
+private const val VANE_REST_Y = 14.3f
+private const val VANE_SWING = 0.4f
+
+private fun DrawScope.drawVane(color: Color, y: Float) {
+    drawLine(color, Offset(6f, y), Offset(18f, y), strokeWidth = 1.3f, cap = StrokeCap.Round)
 }
 
 /** Three wavy streams fading toward the bottom; solid when [animate] is false, dashes marching down otherwise. */

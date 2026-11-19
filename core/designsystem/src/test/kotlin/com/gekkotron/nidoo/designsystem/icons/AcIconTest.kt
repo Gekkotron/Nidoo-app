@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.gekkotron.nidoo.designsystem.NightGlassColors
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AcIconTest {
     @Test
@@ -28,5 +29,14 @@ class AcIconTest {
         assertEquals(1800, airflowPeriodMs(null))
         assertEquals(1800, airflowPeriodMs("auto"))
         assertEquals(1800, airflowPeriodMs("Standard"))
+    }
+
+    @Test
+    fun `the vane hangs below the unit and swings clear of its outline`() {
+        assertEquals(14.3f, vaneY(0f), 1e-4f)
+        assertEquals(14.7f, vaneY(0.25f), 1e-4f)
+        assertEquals(13.9f, vaneY(0.75f), 1e-4f)
+        // The unit's bottom outline ends at 12.4 + 0.8: the vane stroke (1.3 wide) never sits on it.
+        assertTrue(vaneY(0.75f) - 0.65f > 12.4f + 0.8f)
     }
 }
