@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.designsystem.icons.AcMode
+import com.gekkotron.nidoo.designsystem.icons.VacuumMotion
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -36,14 +38,26 @@ class KindIconRecompositionTest {
     fun stopTracing() = Composer.setTracer(null)
 
     @Test
-    fun `the running AC fan spins without recomposing every frame`() {
-        trace("ClimateIcon")
+    fun `the running AC airflow animates without recomposing every frame`() {
+        trace("AcIcon")
         compose.mainClock.autoAdvance = false
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { KindIcon(IconSpec.Climate(running = true, fanMode = "high")) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { KindIcon(IconSpec.Climate(mode = AcMode.COOL, fanMode = "high")) } }
         compose.mainClock.advanceTimeByFrame()
         val settled = composed.size
-        assertTrue(settled > 0, "the tracer saw no ClimateIcon: the test would pass vacuously")
+        assertTrue(settled > 0, "the tracer saw no AcIcon: the test would pass vacuously")
         repeat(30) { compose.mainClock.advanceTimeByFrame() }
-        assertEquals(settled, composed.size, "ClimateIcon recomposed ${composed.size - settled} times in 30 frames")
+        assertEquals(settled, composed.size, "AcIcon recomposed ${composed.size - settled} times in 30 frames")
+    }
+
+    @Test
+    fun `the cleaning robot drives without recomposing every frame`() {
+        trace("VacuumIcon")
+        compose.mainClock.autoAdvance = false
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { KindIcon(IconSpec.Vacuum(VacuumMotion.CLEANING, "turbo")) } }
+        compose.mainClock.advanceTimeByFrame()
+        val settled = composed.size
+        assertTrue(settled > 0, "the tracer saw no VacuumIcon: the test would pass vacuously")
+        repeat(30) { compose.mainClock.advanceTimeByFrame() }
+        assertEquals(settled, composed.size, "VacuumIcon recomposed ${composed.size - settled} times in 30 frames")
     }
 }

@@ -10,6 +10,15 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 
 > **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The Android app is the one that ships today. The domain core (`:core:model`, `:core:state`, `:core:source`, the hub clients) is already Kotlin Multiplatform, and the iOS targets and app are being built on top of it. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
 
+## Living icons
+
+<p align="center">
+  <img src="docs/images/ac.svg" width="49%" alt="The AC icon blowing cool, warm and dry air, then switching off">
+  <img src="docs/images/robot.svg" width="49%" alt="The robot vacuum cleaning a room row by row, returning to its dock and charging">
+</p>
+
+Home cards are drawn, not emoji: the AC's airflow takes its mode's colour, the robot cleans its room row by row and charges in its dock.
+
 ## Modules
 
 | Module | Role |

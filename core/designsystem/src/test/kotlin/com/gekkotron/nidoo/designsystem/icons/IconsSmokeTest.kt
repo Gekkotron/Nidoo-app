@@ -68,4 +68,20 @@ class IconsSmokeTest {
         }
         compose.waitForIdle()
     }
+
+    @Test
+    fun `the AC draws off and in every mode, still and animated, in both themes`() {
+        compose.setContent {
+            Row {
+                for (theme in listOf(ThemeChoice.NIGHT_GLASS, ThemeChoice.IVOIRE)) NidooTheme(theme) {
+                    AcIcon(null)
+                    AcMode.entries.forEach {
+                        AcIcon(it, "high")
+                        AcIcon(it, null, animate = false)
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
 }

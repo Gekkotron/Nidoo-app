@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.gekkotron.nidoo.designsystem.animationsEnabled
 import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.icons.AcIcon
+import com.gekkotron.nidoo.designsystem.icons.AcMode
 import com.gekkotron.nidoo.designsystem.icons.DoorIcon
 import com.gekkotron.nidoo.designsystem.icons.GarageIcon
 import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
@@ -55,10 +57,10 @@ internal sealed interface IconSpec {
 
     data class Static(val glyph: NidooGlyph, val on: Boolean) : IconSpec
 
-    /** Climate tile: a spinning fan while [running], SNOWFLAKE otherwise; period follows [fanMode]. */
-    data class Climate(val running: Boolean, val fanMode: String?) : IconSpec
+    /** Climate tile: a wall unit blowing air in [mode]'s colour, still when [mode] is null (off or unavailable); airflow speed follows [fanMode]. */
+    data class Climate(val mode: AcMode?, val fanMode: String?) : IconSpec
 
-    /** Vacuum tile: the side brush spins while cleaning (dust puffs trail) and the robot nudges home while returning. */
+    /** Vacuum tile: the robot cleans its room in rows, drives into its dock while returning, and charges while docked; still when idle or unavailable. */
     data class Vacuum(val motion: VacuumMotion, val fanSpeed: String?) : IconSpec
 
     /** A siren switch or an alarm panel: [active] only while it is sounding or triggered; the glyph pulses then. */
@@ -81,7 +83,9 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.LIGHT -> IconSpec.Light(card.on, (card.state as? StateValue.Light)?.color, card.available)
     Kind.SWITCH -> switchIconSpec(card)
     Kind.WATER_HEATER -> IconSpec.Static(NidooGlyph.WATER_HEATER, card.on)
-    Kind.CLIMATE -> IconSpec.Climate(running = card.available && card.on, fanMode = (card.state as? StateValue.Climate)?.fanMode)
+    Kind.CLIMATE -> (card.state as? StateValue.Climate).let { c ->
+        IconSpec.Climate(mode = if (card.available && card.on) acMode(c?.mode) else null, fanMode = c?.fanMode)
+    }
     Kind.SENSOR -> IconSpec.Static(sensorGlyph(card.deviceClass), on = false)
     Kind.ALARM_PANEL -> IconSpec.Siren(
         NidooGlyph.SHIELD,
@@ -91,7 +95,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.SELECT -> IconSpec.Static(NidooGlyph.LIST, on = false)
     Kind.BUTTON -> IconSpec.Static(NidooGlyph.PLAY, on = false)
     Kind.VACUUM -> (card.state as? StateValue.Vacuum).let { s ->
-        IconSpec.Vacuum(motion = vacuumMotion(s?.state), fanSpeed = s?.fanSpeed)
+        IconSpec.Vacuum(motion = vacuumMotion(s?.state, card.available), fanSpeed = s?.fanSpeed)
     }
     Kind.MEDIA_PLAYER -> IconSpec.Static(NidooGlyph.MUSIC, card.on)
 }
@@ -110,9 +114,21 @@ private fun switchIconSpec(card: CardUi): IconSpec = when (SwitchType.of(card.pr
     SwitchType.LIGHT -> IconSpec.Light(card.on, color = null, available = card.available)
 }
 
-private fun vacuumMotion(state: String?): VacuumMotion = when (state) {
-    "cleaning" -> VacuumMotion.CLEANING
-    "returning" -> VacuumMotion.RETURNING
+/** An AC that is on but reports no mode, or one we do not know (heat_cool, auto), still runs, as AUTO. */
+internal fun acMode(hvacMode: String?): AcMode = when (hvacMode?.lowercase()) {
+    "cool" -> AcMode.COOL
+    "heat" -> AcMode.HEAT
+    "dry" -> AcMode.DRY
+    "fan_only" -> AcMode.FAN
+    else -> AcMode.AUTO
+}
+
+/** An unavailable robot is drawn idle, whatever it last reported. */
+private fun vacuumMotion(state: String?, available: Boolean): VacuumMotion = when {
+    !available -> VacuumMotion.IDLE
+    state == "cleaning" -> VacuumMotion.CLEANING
+    state == "returning" -> VacuumMotion.RETURNING
+    state == "docked" -> VacuumMotion.DOCKED
     else -> VacuumMotion.IDLE
 }
 
@@ -243,35 +259,14 @@ internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
         }
         // Ivoire's on-card is pale amber: the bright amber warning would vanish, so a lit glyph uses the card's content color there.
         is IconSpec.Static -> StaticIcon(spec.glyph, if (spec.on) (if (c.isDark) c.warning else neutral) else null, m)
-        is IconSpec.Climate -> ClimateIcon(spec.running, spec.fanMode, animate, m)
+        is IconSpec.Climate -> AcIcon(spec.mode, spec.fanMode, animate, m)
         is IconSpec.Siren -> SirenIcon(spec, if (c.isDark) c.warning else neutral, animate, m)
         is IconSpec.Light -> LightIcon(spec, if (c.isDark) c.warning else neutral, animate, m)
         is IconSpec.Vacuum -> {
-            val active = spec.motion != VacuumMotion.IDLE
+            val active = spec.motion == VacuumMotion.CLEANING || spec.motion == VacuumMotion.RETURNING
             VacuumIcon(spec.motion, spec.fanSpeed, if (active) (if (c.isDark) c.warning else neutral) else null, animate, m)
         }
     }
-}
-
-/** On the AC tile: SNOWFLAKE when idle, a spinning FAN while running; period follows fan mode. */
-@Composable
-private fun ClimateIcon(running: Boolean, fanMode: String?, animate: Boolean, modifier: Modifier) {
-    if (!running) {
-        StaticIcon(NidooGlyph.SNOWFLAKE, null, modifier)
-        return
-    }
-    if (!animate) {
-        StaticIcon(NidooGlyph.FAN, null, modifier)
-        return
-    }
-    val angle = rememberInfiniteTransition(label = "fan").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(animation = tween(fanPeriodMs(fanMode), easing = LinearEasing)),
-        label = "angle",
-    )
-    // The angle is read inside the layer block, so each frame only re-runs the draw phase.
-    StaticIcon(NidooGlyph.FAN, null, modifier.graphicsLayer { rotationZ = angle.value })
 }
 
 /** A siren pulses its glyph (scale and fade) while sounding; idle or with reduced motion it is drawn still. */
@@ -354,13 +349,3 @@ internal fun glowAlpha(lit: Boolean, t: Float): Float = if (lit) 0.22f + 0.2f * 
 /** The glow follows the light's own colour when it reports one, else the on-tint. */
 internal fun glowColor(color: Hs?, fallback: Color): Color =
     color?.let { Color.hsv(it.hue.toFloat(), it.saturation.toFloat(), 1f) } ?: fallback
-
-private fun fanPeriodMs(fanMode: String?): Int = when (fanMode?.lowercase()) {
-    "silence", "silent", "quiet", "low", "1" -> 2400
-    "2" -> 2000
-    "medium", "med", "3" -> 1600
-    "4" -> 1300
-    "high", "5" -> 1000
-    else -> 1800
-}
-

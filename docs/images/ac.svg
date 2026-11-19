@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="360" height="200">
+  <title>Nidoo AC icon: a wall unit blowing cool, warm and dry air, then switching off</title>
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; fill: #E8ECFF; }
+    .name { font-size: 30px; font-weight: 700; }
+    .state { font-size: 18px; opacity: .72; }
+    .w { opacity: 0; animation-duration: 12s; animation-iteration-count: infinite; animation-timing-function: linear; }
+    .cool { animation-name: cool; }
+    .heat { animation-name: heat; }
+    .dry { animation-name: dry; }
+    .off { animation-name: off; }
+    .tint { animation-name: tint; }
+    @keyframes cool { 0% { opacity: 1; } 23.75% { opacity: 1; } 26.25% { opacity: 0; } 98.75% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes heat { 0% { opacity: 0; } 23.75% { opacity: 0; } 26.25% { opacity: 1; } 48.75% { opacity: 1; } 51.25% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes dry { 0% { opacity: 0; } 48.75% { opacity: 0; } 51.25% { opacity: 1; } 73.75% { opacity: 1; } 76.25% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes off { 0% { opacity: 0; } 73.75% { opacity: 0; } 76.25% { opacity: 1; } 98.75% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes tint { 0% { opacity: 1; } 73.75% { opacity: 1; } 76.25% { opacity: 0; } 98.75% { opacity: 0; } 100% { opacity: 1; } }
+    .flow { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 2.6 2.4; animation: flow 1.8s linear infinite; }
+    .d2 { animation-delay: -.6s; }
+    .d3 { animation-delay: -1.2s; }
+    @keyframes flow { to { stroke-dashoffset: -10; } }
+    .vane { fill: none; stroke-width: 1.3; stroke-linecap: round; animation: vane 3s ease-in-out infinite; }
+    @keyframes vane { 0%, 50%, 100% { transform: translateY(0); } 25% { transform: translateY(.4px); } 75% { transform: translateY(-.4px); } }
+    .drop { animation: fall 1.4s ease-in infinite; }
+    .drop.d2 { animation-delay: -.47s; }
+    .drop.d3 { animation-delay: -.93s; }
+    @keyframes fall { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(7px); opacity: 0; } }
+  </style>
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1D2B55"/>
+      <stop offset="1" stop-color="#0B1020"/>
+    </linearGradient>
+    <linearGradient id="on" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC457" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#FFC457" stop-opacity=".04"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <mask id="air" maskUnits="userSpaceOnUse" x="0" y="13" width="24" height="12">
+      <rect x="0" y="13" width="24" height="11" fill="url(#fade)"/>
+    </mask>
+  </defs>
+  <rect x=".5" y=".5" width="359" height="199" rx="24" fill="url(#card)"/>
+  <rect class="w tint" x=".5" y=".5" width="359" height="199" rx="24" fill="url(#on)"/>
+  <rect x=".5" y=".5" width="359" height="199" rx="24" fill="none" stroke="rgba(255,255,255,.09)"/>
+
+  <g transform="translate(30 40) scale(5)">
+    <rect x="2.5" y="4" width="19" height="8.4" rx="2.6" fill="#E8ECFF" fill-opacity=".22" stroke="#E8ECFF" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M5.5 7.3h9" fill="none" stroke="#E8ECFF" stroke-width="1" stroke-linecap="round" opacity=".55"/>
+
+    <g class="w cool">
+      <circle cx="18.2" cy="7.3" r=".85" fill="#58E1FF"/>
+      <path class="vane" d="M6 14.3h12" stroke="#58E1FF"/>
+      <g mask="url(#air)" stroke="#58E1FF">
+        <path class="flow" d="M7 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
+        <path class="flow d2" d="M12 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
+        <path class="flow d3" d="M17 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
+      </g>
+    </g>
+    <g class="w heat">
+      <circle cx="18.2" cy="7.3" r=".85" fill="#FF7A9A"/>
+      <path class="vane" d="M6 14.3h12" stroke="#FF7A9A"/>
+      <g mask="url(#air)" stroke="#FF7A9A">
+        <path class="flow" d="M7 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
+        <path class="flow d2" d="M12 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
+        <path class="flow d3" d="M17 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
+      </g>
+    </g>
+    <g class="w dry">
+      <circle cx="18.2" cy="7.3" r=".85" fill="#58E1FF"/>
+      <path class="vane" d="M6 14.3h12" stroke="#58E1FF"/>
+      <g fill="#58E1FF">
+        <path class="drop" d="M7 14.6c.8 1.1 1.3 1.8 1.3 2.4a1.3 1.3 0 0 1-2.6 0c0-.6.5-1.3 1.3-2.4z"/>
+        <path class="drop d2" d="M12 14.6c.8 1.1 1.3 1.8 1.3 2.4a1.3 1.3 0 0 1-2.6 0c0-.6.5-1.3 1.3-2.4z"/>
+        <path class="drop d3" d="M17 14.6c.8 1.1 1.3 1.8 1.3 2.4a1.3 1.3 0 0 1-2.6 0c0-.6.5-1.3 1.3-2.4z"/>
+      </g>
+    </g>
+    <g class="w off">
+      <circle cx="18.2" cy="7.3" r=".85" fill="#E8ECFF" opacity=".3"/>
+      <path d="M6 14.3h12" fill="none" stroke="#E8ECFF" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+    </g>
+  </g>
+
+  <text class="name" x="180" y="95">Salon</text>
+  <g class="state">
+    <text class="w cool" x="180" y="128">Cooling</text>
+    <text class="w heat" x="180" y="128">Heating</text>
+    <text class="w dry" x="180" y="128">Drying</text>
+    <text class="w off" x="180" y="128">Off</text>
+  </g>
+</svg>
