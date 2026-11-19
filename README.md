@@ -42,6 +42,7 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 | `:feature:controls` | Device controls in the Android status-bar panel |
 | `:feature:settings` | Settings sub-pages: connection, notifications, presence, voice, room order, licences |
 | `:app` | Hilt graph, Navigation 3, demo-mode wiring |
+| `iosApp/` | iOS shell (XcodeGen spec, SwiftUI host) that runs the shared Compose root from the `Nidoo` framework built by `:shared` |
 
 ## Try the demo
 
@@ -55,6 +56,37 @@ adb shell am start -n com.gekkotron.nidoo.debug/com.gekkotron.nidoo.MainActivity
 The debug build talks to a built-in demo house, so no broker is needed.
 
 Build and test: `./gradlew check koverXmlReport`.
+
+## Run on your iPhone
+
+The iOS app is at its first step: it shows a placeholder screen built from the shared Kotlin code. It installs from Xcode with a free Apple ID; no paid developer account is needed.
+
+1. Install the tools: Xcode, then `brew install xcodegen`. In Xcode → Settings → Accounts, add your Apple ID (a Personal Team is enough).
+2. Set up signing, once:
+
+   ```bash
+   cp iosApp/Configuration/Local.xcconfig.example iosApp/Configuration/Local.xcconfig
+   ```
+
+   Fill in `DEVELOPMENT_TEAM` (your team ID, shown in Xcode → Settings → Accounts). If Xcode later says the bundle id is not available, uncomment `PRODUCT_BUNDLE_IDENTIFIER` there and pick your own.
+3. Generate and open the project:
+
+   ```bash
+   xcodegen generate --spec iosApp/project.yml && open iosApp/Nidoo.xcodeproj
+   ```
+
+   The first build compiles the shared Kotlin code for iOS and takes several minutes.
+4. On the iPhone: turn on Developer Mode (Settings → Privacy & Security → Developer Mode), connect it to the Mac, pick it as the run destination in Xcode and press Run. The first time, trust your developer profile in Settings → General → VPN & Device Management.
+
+### Keeping it past 7 days
+
+With a free Apple ID, Apple signs the app for 7 days. [SideStore](https://docs.sidestore.io) renews that signature from the phone itself, so the app keeps working without the Mac:
+
+1. Install SideStore once, following its [installation guide](https://docs.sidestore.io/docs/installation/prerequisites): the LocalDevVPN app on the iPhone, then iloader on the Mac to install SideStore.
+2. Build an `.ipa` of Nidoo: in Xcode, Product → Archive, then Distribute App → Custom → Debugging, and copy the `.ipa` to the iPhone (AirDrop or Files).
+3. Open it with SideStore. SideStore refreshes it before the 7 days run out; keep LocalDevVPN connected when it does.
+
+Free Apple ID limits still apply: at most 3 sideloaded apps at once (SideStore counts as one) and no push notifications.
 
 ## Screenshot tests
 
