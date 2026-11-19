@@ -4,11 +4,11 @@
 [![codecov](https://codecov.io/gh/Gekkotron/Nidoo-app/graph/badge.svg)](https://codecov.io/gh/Gekkotron/Nidoo-app)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack Compose).
+A beautiful, self-discovering home-automation app for Android and iOS, built with Kotlin Multiplatform (Jetpack Compose on Android).
 
 Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Nidoo-gateway](https://github.com/Gekkotron/Nidoo-gateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
-> **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
+> **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The Android app is the one that ships today. The domain core (`:core:model`, `:core:state`, `:core:source`, the hub clients) is already Kotlin Multiplatform, and the iOS targets and app are being built on top of it. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
 
 ## Modules
 
@@ -29,7 +29,7 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 | `:core:push` | Firebase messaging: token registration, alert notifications, replies, presence refresh |
 | `:core:demo` | In-process demo broker with a fake house (discovery, state, echoed commands, live power) |
 | `:core:designsystem` | Night Glass / Ivoire tokens, bundled Inter + Manrope, cards, pills, chips, icons, charts |
-| `:shared` | Kotlin Multiplatform module (migration in progress) |
+| `:shared` | Kotlin Multiplatform module shared by the Android and iOS apps (migration in progress) |
 | `:feature:onboarding` | Welcome, QR scan or manual setup, connection test, notification permission |
 | `:feature:home` | Home and dashboards: rooms, favorites, cards, groups, control and customize sheets, Climat banner |
 | `:feature:energy` | Live power flow (Flux and Orbite views), today's totals, consumers |
