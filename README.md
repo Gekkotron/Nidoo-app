@@ -57,6 +57,8 @@ The debug build talks to a built-in demo house, so no broker is needed.
 
 Build and test: `./gradlew check koverXmlReport`.
 
+The shared modules' tests also run on iOS, but only on CI: they need the iOS Simulator, which `check` does not boot on your Mac. To run them locally, add `-Pnidoo.iosTests` (this boots a Simulator).
+
 ## Run on your iPhone
 
 The iOS app is at its first step: it shows a placeholder screen built from the shared Kotlin code. It installs from Xcode with a free Apple ID; no paid developer account is needed.

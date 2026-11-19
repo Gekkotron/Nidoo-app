@@ -1,11 +1,12 @@
 // Kotlin Multiplatform library with a plain JVM target (no Android — this is for pure-data
 // modules that must not pull in the Android SDK). Parallel to nidoo.jvm.library. Also compiles
-// commonMain for iOS (iosArm64 for the phone, iosSimulatorArm64 for tests); jvmMain stays JVM-only.
+// commonMain for iOS (see nidoo.kmp.ios); jvmMain stays JVM-only.
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     id("org.jetbrains.kotlinx.kover")
+    id("nidoo.kmp.ios")
 }
 
 val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
@@ -24,8 +25,6 @@ kotlin {
             executionTask.configure { useJUnitPlatform() }
         }
     }
-    iosArm64()
-    iosSimulatorArm64()
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
