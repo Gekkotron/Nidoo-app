@@ -9,14 +9,14 @@
     .ret { animation-name: ret; }
     .dock { animation-name: dock; }
     .tint { animation-name: tint; }
-    @keyframes clean { 0% { opacity: 1; } 56.07% { opacity: 1; } 58.21% { opacity: 0; } 98.93% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes clean { 0% { opacity: 0; } 2.14% { opacity: 1; } 56.07% { opacity: 1; } 58.21% { opacity: 0; } 100% { opacity: 0; } }
     @keyframes ret { 0% { opacity: 0; } 56.07% { opacity: 0; } 58.21% { opacity: 1; } 77.5% { opacity: 1; } 79.64% { opacity: 0; } 100% { opacity: 0; } }
-    @keyframes dock { 0% { opacity: 0; } 77.5% { opacity: 0; } 79.64% { opacity: 1; } 98.93% { opacity: 1; } 100% { opacity: 0; } }
-    @keyframes tint { 0% { opacity: 1; } 77.5% { opacity: 1; } 79.64% { opacity: 0; } 98.93% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes dock { 0% { opacity: 1; } 2.14% { opacity: 0; } 77.5% { opacity: 0; } 79.64% { opacity: 1; } 100% { opacity: 1; } }
+    @keyframes tint { 0% { opacity: 0; } 2.14% { opacity: 1; } 77.5% { opacity: 1; } 79.64% { opacity: 0; } 100% { opacity: 0; } }
     .trail { animation: trail 14s linear infinite; }
-    @keyframes trail { 0% { stroke-dashoffset: 70; } 57.14% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+    @keyframes trail { 0%, 2.14% { stroke-dashoffset: 70; } 57.14% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
     .drive { offset-path: path('M5 5.5H19V10H5V14.5H19V19H5'); offset-rotate: auto; animation: drive 14s linear infinite; }
-    @keyframes drive { 0% { offset-distance: 0%; } 57.14% { offset-distance: 100%; } 100% { offset-distance: 100%; } }
+    @keyframes drive { 0%, 2.14% { offset-distance: 0%; } 57.14% { offset-distance: 100%; } 100% { offset-distance: 100%; } }
     .home { animation: home 14s linear infinite; }
     @keyframes home {
       0%, 57.14% { transform: translate(0px, 0px); animation-timing-function: cubic-bezier(.45, 0, .55, 1); }

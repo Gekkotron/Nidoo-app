@@ -19,8 +19,8 @@
     .d2 { animation-delay: -.6s; }
     .d3 { animation-delay: -1.2s; }
     @keyframes flow { to { stroke-dashoffset: -10; } }
-    .vane { fill: none; stroke-width: 1.3; stroke-linecap: round; transform-box: view-box; transform-origin: 12px 12.6px; animation: vane 3s ease-in-out infinite; }
-    @keyframes vane { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(-1); } }
+    .vane { fill: none; stroke-width: 1.3; stroke-linecap: round; animation: vane 3s ease-in-out infinite; }
+    @keyframes vane { 0%, 50%, 100% { transform: translateY(0); } 25% { transform: translateY(.4px); } 75% { transform: translateY(-.4px); } }
     .drop { animation: fall 1.4s ease-in infinite; }
     .drop.d2 { animation-delay: -.47s; }
     .drop.d3 { animation-delay: -.93s; }
@@ -53,7 +53,7 @@
 
     <g class="w cool">
       <circle cx="18.2" cy="7.3" r=".85" fill="#58E1FF"/>
-      <path class="vane" d="M6 12.4h12" stroke="#58E1FF"/>
+      <path class="vane" d="M6 14.3h12" stroke="#58E1FF"/>
       <g mask="url(#air)" stroke="#58E1FF">
         <path class="flow" d="M7 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
         <path class="flow d2" d="M12 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
@@ -62,7 +62,7 @@
     </g>
     <g class="w heat">
       <circle cx="18.2" cy="7.3" r=".85" fill="#FF7A9A"/>
-      <path class="vane" d="M6 12.4h12" stroke="#FF7A9A"/>
+      <path class="vane" d="M6 14.3h12" stroke="#FF7A9A"/>
       <g mask="url(#air)" stroke="#FF7A9A">
         <path class="flow" d="M7 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
         <path class="flow d2" d="M12 14.2c-1.1 1.6 1.1 3.2 0 4.8s1.1 3.2 0 4.8"/>
@@ -71,7 +71,7 @@
     </g>
     <g class="w dry">
       <circle cx="18.2" cy="7.3" r=".85" fill="#58E1FF"/>
-      <path class="vane" d="M6 12.4h12" stroke="#58E1FF"/>
+      <path class="vane" d="M6 14.3h12" stroke="#58E1FF"/>
       <g fill="#58E1FF">
         <path class="drop" d="M7 14.6c.8 1.1 1.3 1.8 1.3 2.4a1.3 1.3 0 0 1-2.6 0c0-.6.5-1.3 1.3-2.4z"/>
         <path class="drop d2" d="M12 14.6c.8 1.1 1.3 1.8 1.3 2.4a1.3 1.3 0 0 1-2.6 0c0-.6.5-1.3 1.3-2.4z"/>
@@ -80,7 +80,7 @@
     </g>
     <g class="w off">
       <circle cx="18.2" cy="7.3" r=".85" fill="#E8ECFF" opacity=".3"/>
-      <path d="M6 12.4h12" fill="none" stroke="#E8ECFF" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M6 14.3h12" fill="none" stroke="#E8ECFF" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
     </g>
   </g>
 
