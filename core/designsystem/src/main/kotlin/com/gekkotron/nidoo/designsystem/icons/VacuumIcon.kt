@@ -45,10 +45,9 @@ fun VacuumIcon(
     animate: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val moving = animate
-    val rowPhase = if (moving && motion == VacuumMotion.CLEANING) loopPhase("vacuum-rows", rowPeriodMs(fanSpeed)) else STILL_ROWS
-    val dockPhase = if (moving && motion == VacuumMotion.RETURNING) returnPhase() else STILL_RETURN
-    val boltAlpha = if (moving && motion == VacuumMotion.DOCKED) boltPhase() else STILL_BOLT
+    val rowPhase = if (animate && motion == VacuumMotion.CLEANING) loopPhase("vacuum-rows", rowPeriodMs(fanSpeed)) else STILL_ROWS
+    val dockPhase = if (animate && motion == VacuumMotion.RETURNING) returnPhase() else STILL_RETURN
+    val boltAlpha = if (animate && motion == VacuumMotion.DOCKED) boltPhase() else STILL_BOLT
     val connected = NidooTheme.colors.connected
     IconCanvas(modifier) { neutral ->
         drawRoom(neutral)
