@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.feature.home.ui
 
+import com.gekkotron.nidoo.designsystem.icons.AcMode
 import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
 import com.gekkotron.nidoo.designsystem.icons.VacuumMotion
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiBuilder
@@ -96,10 +97,14 @@ class IconSpecTest {
         assertEquals(IconSpec.Static(NidooGlyph.WALKER, false), spec(Kind.BINARY_SENSOR, StateValue.OnOff(true), "motion"))
         assertEquals(IconSpec.Static(NidooGlyph.FLAME, false), spec(Kind.BINARY_SENSOR, StateValue.OnOff(false), "smoke"))
         assertEquals(IconSpec.Static(NidooGlyph.DOT, false), spec(Kind.BINARY_SENSOR, StateValue.OnOff(false), "vibration"))
-        assertEquals(IconSpec.Climate(running = false, fanMode = null), spec(Kind.CLIMATE, null))
-        assertEquals(IconSpec.Climate(running = false, fanMode = "silence"), spec(Kind.CLIMATE, StateValue.Climate(mode = "off", target = 21.0, current = 22.0, fanMode = "silence")))
-        assertEquals(IconSpec.Climate(running = true, fanMode = "high"), spec(Kind.CLIMATE, StateValue.Climate(mode = "cool", target = 21.0, current = 22.0, fanMode = "high")))
-        assertEquals(IconSpec.Climate(running = false, fanMode = "high"), spec(Kind.CLIMATE, StateValue.Climate(mode = "cool", target = 21.0, current = 22.0, fanMode = "high"), available = false))
+        assertEquals(IconSpec.Climate(mode = null, fanMode = null), spec(Kind.CLIMATE, null))
+        assertEquals(IconSpec.Climate(mode = null, fanMode = "silence"), spec(Kind.CLIMATE, StateValue.Climate(mode = "off", target = 21.0, current = 22.0, fanMode = "silence")))
+        assertEquals(IconSpec.Climate(mode = AcMode.COOL, fanMode = "high"), spec(Kind.CLIMATE, StateValue.Climate(mode = "cool", target = 21.0, current = 22.0, fanMode = "high")))
+        assertEquals(IconSpec.Climate(mode = null, fanMode = "high"), spec(Kind.CLIMATE, StateValue.Climate(mode = "cool", target = 21.0, current = 22.0, fanMode = "high"), available = false))
+        assertEquals(IconSpec.Climate(mode = AcMode.HEAT, fanMode = null), spec(Kind.CLIMATE, StateValue.Climate(mode = "heat", target = 21.0, current = 19.0)))
+        assertEquals(IconSpec.Climate(mode = AcMode.DRY, fanMode = null), spec(Kind.CLIMATE, StateValue.Climate(mode = "dry", target = null, current = null)))
+        assertEquals(IconSpec.Climate(mode = AcMode.FAN, fanMode = null), spec(Kind.CLIMATE, StateValue.Climate(mode = "fan_only", target = null, current = null)))
+        assertEquals(IconSpec.Climate(mode = AcMode.AUTO, fanMode = null), spec(Kind.CLIMATE, StateValue.Climate(mode = "heat_cool", target = 21.0, current = 21.0)))
         assertEquals(IconSpec.Siren(NidooGlyph.SHIELD, active = false), spec(Kind.ALARM_PANEL, null))
         assertEquals(IconSpec.Static(NidooGlyph.SLIDER, false), spec(Kind.NUMBER, null))
         assertEquals(IconSpec.Static(NidooGlyph.LIST, false), spec(Kind.SELECT, null))
@@ -138,5 +143,12 @@ class IconSpecTest {
         val playing = StateValue.MediaPlayer("playing", "Song", null, null, null, null, null, null, null)
         assertEquals(IconSpec.Static(NidooGlyph.MUSIC, on = true), spec(Kind.MEDIA_PLAYER, playing))
         assertEquals(IconSpec.Static(NidooGlyph.MUSIC, on = false), spec(Kind.MEDIA_PLAYER, playing.copy(state = "paused")))
+    }
+
+    @Test
+    fun `an AC that is on without a mode still runs, as auto`() {
+        assertEquals(AcMode.AUTO, acMode(null))
+        assertEquals(AcMode.AUTO, acMode("auto"))
+        assertEquals(AcMode.COOL, acMode("COOL"))
     }
 }
