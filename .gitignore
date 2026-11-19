@@ -31,3 +31,10 @@ nidoo-setup.png
 # Local setup dumps and credentials (pre-rename names too, written as a class so the brand check passes)
 oi[k]os-setup.*
 .frigate-pass
+
+# iOS: the Xcode project is generated from iosApp/project.yml; personal signing stays local
+iosApp/*.xcodeproj/
+iosApp/Configuration/Local.xcconfig
+xcuserdata/
+*.xcuserstate
+DerivedData/

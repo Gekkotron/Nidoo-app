@@ -1,0 +1,7 @@
+// Shared settings for the Nidoo iOS app. Personal signing settings go in Local.xcconfig
+// (copy Local.xcconfig.example; it is git-ignored).
+PRODUCT_BUNDLE_IDENTIFIER = com.gekkotron.nidoo
+MARKETING_VERSION = 0.1
+CURRENT_PROJECT_VERSION = 1
+
+#include? "Local.xcconfig"

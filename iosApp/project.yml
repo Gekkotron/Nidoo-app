@@ -1,0 +1,48 @@
+# XcodeGen spec for the iOS shell. Generate the project with:
+#   xcodegen generate --spec iosApp/project.yml
+# The generated Nidoo.xcodeproj is not committed.
+name: Nidoo
+options:
+  bundleIdPrefix: com.gekkotron
+  deploymentTarget:
+    # Compose Multiplatform's bundled ICU is built for iOS 18.5.
+    iOS: "18.5"
+configFiles:
+  Debug: Configuration/Config.xcconfig
+  Release: Configuration/Config.xcconfig
+settings:
+  base:
+    ORGANIZATION_NAME: Gekkotron
+targets:
+  Nidoo:
+    type: application
+    platform: iOS
+    sources:
+      - path: Nidoo
+    info:
+      path: Nidoo/Info.plist
+      properties:
+        CFBundleDisplayName: Nidoo
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CADisableMinimumFrameDurationOnPhone: true
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+    settings:
+      base:
+        PRODUCT_NAME: Nidoo
+        # The Kotlin framework is the `Nidoo` module; the app's own Swift module needs another name.
+        PRODUCT_MODULE_NAME: NidooApp
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        # Apple Silicon only: the shared framework has no iosX64 target.
+        EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+        # The Gradle build phase writes outside the sandbox (shared/build).
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        OTHER_LDFLAGS: "$(inherited) -framework Nidoo"
+    preBuildScripts:
+      - name: Build the shared Kotlin framework
+        script: '"$SRCROOT/Scripts/build-shared.sh"'
+        basedOnDependencyAnalysis: false

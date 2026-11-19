@@ -1,0 +1,6 @@
+// Copy to Local.xcconfig (git-ignored) and fill in.
+// Your team ID: Xcode → Settings → Accounts → your Apple ID → Team (Personal Team works).
+DEVELOPMENT_TEAM =
+
+// With a free Apple ID, if Xcode says the bundle id is not available, pick your own:
+// PRODUCT_BUNDLE_IDENTIFIER = com.gekkotron.nidoo.yourname
