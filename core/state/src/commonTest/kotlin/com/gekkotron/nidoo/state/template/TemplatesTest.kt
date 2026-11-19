@@ -25,7 +25,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `bracket access with spaces and unicode, mixed with dots`() {
+    fun `bracket access with spaces and unicode - mixed with dots`() {
         assertEquals(22.5, v("{{ value_json['température_int.'] }}", """{"température_int.":22.5}"""))
         assertEquals("x", v("""{{ value_json.data["k k"].v }}""", """{"data":{"k k":{"v":"x"}}}"""))
         assertEquals(20L, v("{{ value_json.list[1] }}", """{"list":[10,20]}"""))
@@ -140,7 +140,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `unsupported syntax is reported, not thrown`() {
+    fun `unsupported syntax is reported - not thrown`() {
         listOf(
             "{% if value_json.a %}x",
             "{% else %}x{% endif %}",
@@ -159,7 +159,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `'in' checks key membership, false unless the target is a JSON object`() {
+    fun `'in' checks key membership - false unless the target is a JSON object`() {
         val t = """{% if "a" in value_json %}yes{% else %}no{% endif %}"""
         assertEquals("yes", v(t, """{"a":1}"""))
         assertEquals("no", v(t, """{"b":1}"""))
@@ -176,7 +176,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `'==' compares strings and numbers, never undefined`() {
+    fun `'==' compares strings and numbers - never undefined`() {
         val t = """{% if value_json["a"] == value_json["b"] %}eq{% else %}neq{% endif %}"""
         assertEquals("eq", v(t, """{"a":"x","b":"x"}"""))
         assertEquals("neq", v(t, """{"a":"x","b":"y"}"""))
@@ -186,7 +186,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `elif chain picks the first true branch, else is the fallback`() {
+    fun `elif chain picks the first true branch - else is the fallback`() {
         val t = """{% if value_json.a == 1 %}one{% elif value_json.a == 2 %}two{% elif value_json.a == 3 %}three{% else %}other{% endif %}"""
         assertEquals("one", v(t, """{"a":1}"""))
         assertEquals("two", v(t, """{"a":2}"""))
@@ -273,7 +273,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `evaluation errors are reported, not thrown`() {
+    fun `evaluation errors are reported - not thrown`() {
         assertIs<TemplateResult.Error>(Templates.renderValue("{{ value_json.state }}", "online"))
         assertIs<TemplateResult.Error>(Templates.renderValue("{{ value | round(1) }}", "abc"))
     }
@@ -345,7 +345,7 @@ class TemplatesTest {
     }
 
     @Test
-    fun `tojson serializes scalars, null and booleans`() {
+    fun `tojson serializes scalars - null and booleans`() {
         assertEquals("\"a\"", v("{{ 'a' | tojson }}", "{}"))
         assertEquals("1.5", v("{{ 1.5 | tojson }}", "{}"))
         assertEquals("true", v("{{ true | tojson }}", "{}"))

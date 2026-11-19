@@ -61,7 +61,7 @@ class DashboardsRepositoryTest {
     }
 
     @Test
-    fun `not settled before the source reports its replay, even with dashboards received`() = runTest {
+    fun `not settled before the source reports its replay - even with dashboards received`() = runTest {
         val r = repo()
         r.markLinkUp()
         r.onRetained("a", payload("a"))

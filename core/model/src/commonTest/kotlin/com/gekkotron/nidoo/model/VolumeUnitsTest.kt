@@ -12,7 +12,7 @@ class VolumeUnitsTest {
     }
 
     @Test
-    fun `only m3, ft3 and CCF are meter scale`() {
+    fun `only m3 - ft3 and CCF are meter scale`() {
         listOf("m³", "M3", "ft³", "ccf").forEach { assertTrue(VolumeUnits.isMeterScale(it), it) }
         listOf("L", "mL", "gal", null).forEach { assertFalse(VolumeUnits.isMeterScale(it), it.toString()) }
     }

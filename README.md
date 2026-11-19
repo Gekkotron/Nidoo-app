@@ -4,11 +4,11 @@
 [![codecov](https://codecov.io/gh/Gekkotron/Nidoo-app/graph/badge.svg)](https://codecov.io/gh/Gekkotron/Nidoo-app)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack Compose).
+A beautiful, self-discovering home-automation app for Android and iOS, built with Kotlin Multiplatform (Jetpack Compose on Android).
 
 Nidoo talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Nidoo-gateway](https://github.com/Gekkotron/Nidoo-gateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
-> **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
+> **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The Android app is the one that ships today. The domain core (`:core:model`, `:core:state`, `:core:source`, the hub clients) is already Kotlin Multiplatform, and the iOS targets and app are being built on top of it. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
 
 ## Modules
 
@@ -29,7 +29,7 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 | `:core:push` | Firebase messaging: token registration, alert notifications, replies, presence refresh |
 | `:core:demo` | In-process demo broker with a fake house (discovery, state, echoed commands, live power) |
 | `:core:designsystem` | Night Glass / Ivoire tokens, bundled Inter + Manrope, cards, pills, chips, icons, charts |
-| `:shared` | Kotlin Multiplatform module (migration in progress) |
+| `:shared` | Kotlin Multiplatform module shared by the Android and iOS apps (migration in progress) |
 | `:feature:onboarding` | Welcome, QR scan or manual setup, connection test, notification permission |
 | `:feature:home` | Home and dashboards: rooms, favorites, cards, groups, control and customize sheets, Climat banner |
 | `:feature:energy` | Live power flow (Flux and Orbite views), today's totals, consumers |
@@ -42,6 +42,7 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 | `:feature:controls` | Device controls in the Android status-bar panel |
 | `:feature:settings` | Settings sub-pages: connection, notifications, presence, voice, room order, licences |
 | `:app` | Hilt graph, Navigation 3, demo-mode wiring |
+| `iosApp/` | iOS shell (XcodeGen spec, SwiftUI host) that runs the shared Compose root from the `Nidoo` framework built by `:shared` |
 
 ## Try the demo
 
@@ -55,6 +56,39 @@ adb shell am start -n com.gekkotron.nidoo.debug/com.gekkotron.nidoo.MainActivity
 The debug build talks to a built-in demo house, so no broker is needed.
 
 Build and test: `./gradlew check koverXmlReport`.
+
+The shared modules' tests also run on iOS, but only on CI: they need the iOS Simulator, which `check` does not boot on your Mac. To run them locally, add `-Pnidoo.iosTests` (this boots a Simulator).
+
+## Run on your iPhone
+
+The iOS app is at its first step: it shows a placeholder screen built from the shared Kotlin code. It installs from Xcode with a free Apple ID; no paid developer account is needed.
+
+1. Install the tools: Xcode, then `brew install xcodegen`. In Xcode → Settings → Accounts, add your Apple ID (a Personal Team is enough).
+2. Set up signing, once:
+
+   ```bash
+   cp iosApp/Configuration/Local.xcconfig.example iosApp/Configuration/Local.xcconfig
+   ```
+
+   Fill in `DEVELOPMENT_TEAM` (your team ID, shown in Xcode → Settings → Accounts). If Xcode later says the bundle id is not available, uncomment `PRODUCT_BUNDLE_IDENTIFIER` there and pick your own.
+3. Generate and open the project:
+
+   ```bash
+   xcodegen generate --spec iosApp/project.yml && open iosApp/Nidoo.xcodeproj
+   ```
+
+   The first build compiles the shared Kotlin code for iOS and takes several minutes.
+4. On the iPhone: turn on Developer Mode (Settings → Privacy & Security → Developer Mode), connect it to the Mac, pick it as the run destination in Xcode and press Run. The first time, trust your developer profile in Settings → General → VPN & Device Management.
+
+### Keeping it past 7 days
+
+With a free Apple ID, Apple signs the app for 7 days. [SideStore](https://docs.sidestore.io) renews that signature from the phone itself, so the app keeps working without the Mac:
+
+1. Install SideStore once, following its [installation guide](https://docs.sidestore.io/docs/installation/prerequisites): the LocalDevVPN app on the iPhone, then iloader on the Mac to install SideStore.
+2. Build an `.ipa` of Nidoo: in Xcode, Product → Archive, then Distribute App → Custom → Debugging, and copy the `.ipa` to the iPhone (AirDrop or Files).
+3. Open it with SideStore. SideStore refreshes it before the 7 days run out; keep LocalDevVPN connected when it does.
+
+Free Apple ID limits still apply: at most 3 sideloaded apps at once (SideStore counts as one) and no push notifications.
 
 ## Screenshot tests
 

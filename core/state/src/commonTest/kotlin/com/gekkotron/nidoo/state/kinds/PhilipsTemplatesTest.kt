@@ -51,7 +51,7 @@ class PhilipsTemplatesTest {
     }
 
     @Test
-    fun `null fields are ignored, never unsupported or an error`() {
+    fun `null fields are ignored - never unsupported or an error`() {
         assertEquals(Decoded.State(OnOff(false)), SwitchMapper.decode(power, "philips/status", nulls, Unknown))
         assertEquals(Decoded.State(OnOff(false)), SwitchMapper.decode(muted, "philips/status", nulls, Unknown))
         assertEquals(Decoded.Ignored, NumberMapper.decode(volume, "philips/status", nulls, Unknown))

@@ -38,7 +38,7 @@ class LightAttachmentTest {
     }
 
     @Test
-    fun `only numbers and selects fold, and only on the same device`() {
+    fun `only numbers and selects fold - and only on the same device`() {
         val all = listOf(
             entity("leds", Kind.LIGHT, "strip"),
             entity("occupancy", Kind.BINARY_SENSOR, "strip"),
