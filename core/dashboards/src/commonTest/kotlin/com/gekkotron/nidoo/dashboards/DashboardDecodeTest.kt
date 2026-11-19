@@ -73,7 +73,7 @@ class DashboardDecodeTest {
     }
 
     @Test
-    fun `a malformed widget is dropped, the others survive`() {
+    fun `a malformed widget is dropped - the others survive`() {
         val d = DashboardJson.decode(
             "a",
             """{"name":"N","order":0,"widgets":[42,{"id":"ok","kind":"sensor","span":"1x1","config":{}}]}""",
@@ -82,7 +82,7 @@ class DashboardDecodeTest {
     }
 
     @Test
-    fun `a widget without id gets its index, blank title is null, non-object config is empty`() {
+    fun `a widget without id gets its index - blank title is null - non-object config is empty`() {
         val d = DashboardJson.decode(
             "a",
             """{"name":"N","widgets":[{"kind":"sensor","span":"1x1","config":{"title":"  "}},{"id":"z","kind":"lock","span":"1x1","config":5}]}""",

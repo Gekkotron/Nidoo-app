@@ -23,7 +23,7 @@ class SensorMapperTest {
     }
 
     @Test
-    fun `missing, blank and unknown become Unknown`() {
+    fun `missing - blank and unknown become Unknown`() {
         assertEquals(Decoded.State(Unknown), SensorMapper.decode(temp, "z", """{"humidity":40}""", Unknown))
         assertEquals(Decoded.State(Unknown), SensorMapper.decode(raw, "s", "", Unknown))
         assertEquals(Decoded.State(Unknown), SensorMapper.decode(raw, "s", "unavailable", Unknown))

@@ -39,7 +39,7 @@ class SwitchMapperTest {
     }
 
     @Test
-    fun `commands use payloads, retain and qos`() {
+    fun `commands use payloads - retain and qos`() {
         val b = bindings("switch", """{"command_topic":"c","payload_on":"1","payload_off":"0","retain":true,"qos":1}""")
         assertEquals(Encoded.Publish(listOf(Outgoing("c", "1", true, 1))), SwitchMapper.encode(b, Command.TurnOn(), Unknown))
         assertEquals(Encoded.Publish(listOf(Outgoing("c", "0", true, 1))), SwitchMapper.encode(b, Command.TurnOff, Unknown))

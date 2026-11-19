@@ -124,7 +124,7 @@ class LightMapperTest {
     }
 
     @Test
-    fun `hs payloads in either key style, wrapping at 360`() {
+    fun `hs payloads in either key style - wrapping at 360`() {
         val a = (LightMapper.decode(zigled, "z/leds", """{"color":{"h":120,"s":50}}""", Unknown) as Decoded.State).value as Light
         assertEquals(Hs(120.0, 0.5), a.color)
         val b = (LightMapper.decode(zigled, "z/leds", """{"color":{"hue":360,"saturation":100}}""", Unknown) as Decoded.State).value as Light
@@ -183,7 +183,7 @@ class LightMapperTest {
     }
 
     @Test
-    fun `non-finite colour numbers are ignored, not thrown`() {
+    fun `non-finite colour numbers are ignored - not thrown`() {
         val prev = Light(true, 200, "solid", Hs(10.0, 1.0))
         assertEquals(Decoded.Ignored, LightMapper.decode(zigled, "z/leds", """{"color":{"h":"Infinity","s":50}}""", Unknown))
         assertEquals(Decoded.State(prev.copy(on = false)), LightMapper.decode(zigled, "z/leds", """{"state":"OFF","color":{"x":"NaN","y":0.3}}""", prev))

@@ -28,7 +28,7 @@ class PlacementTest {
     }
 
     @Test
-    fun `Home shows what is not hidden and lives nowhere else, unless pinned`() {
+    fun `Home shows what is not hidden and lives nowhere else - unless pinned`() {
         assertTrue(Placement.onHome(Kind.LIGHT, null, UiOverride()))
         assertFalse(Placement.onHome(Kind.LIGHT, null, UiOverride(hidden = true)))
         assertFalse(Placement.onHome(Kind.BINARY_SENSOR, "door", UiOverride()))

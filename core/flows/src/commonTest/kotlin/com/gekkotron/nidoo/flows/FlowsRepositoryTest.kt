@@ -139,7 +139,7 @@ class FlowsRepositoryTest {
     }
 
     @Test
-    fun `a throwing client reverts, clears in-flight and returns failure`() = runTest {
+    fun `a throwing client reverts - clears in-flight and returns failure`() = runTest {
         val client = object : FlowsClient {
             override suspend fun setEnabled(id: String, enabled: Boolean): Result<Unit> = throw IllegalStateException("boom")
         }

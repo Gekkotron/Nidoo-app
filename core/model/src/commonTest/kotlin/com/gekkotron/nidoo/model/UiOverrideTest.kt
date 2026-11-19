@@ -21,7 +21,7 @@ class UiOverrideTest {
         )
         val json = UiOverrides.encode(o)
         assertEquals(o, UiOverrides.decode(json))
-        assert("\"energyRole\":\"consumer\"" in json) { json }
+        assertTrue("\"energyRole\":\"consumer\"" in json, json)
     }
 
     @Test
@@ -77,7 +77,7 @@ class UiOverrideTest {
     }
 
     @Test
-    fun `only grid and battery are signed, only water is not power`() {
+    fun `only grid and battery are signed - only water is not power`() {
         assertEquals(setOf(EnergyRole.GRID, EnergyRole.BATTERY), EnergyRole.entries.filter { it.signed }.toSet())
         assertEquals(setOf(EnergyRole.WATER), EnergyRole.entries.filterNot { it.power }.toSet())
     }
@@ -155,7 +155,7 @@ class UiOverrideTest {
     }
 
     @Test
-    fun `ClimatePresets parse drops blanks, caps at MAX and keeps order`() {
+    fun `ClimatePresets parse drops blanks - caps at MAX and keeps order`() {
         assertEquals(listOf(19.0, 21.0, 23.0), ClimatePresets.parse("19, 21, 23"))
         assertEquals(listOf(19.5, 22.0), ClimatePresets.parse("19.5 ; 22"))
         assertEquals(emptyList(), ClimatePresets.parse(null))
