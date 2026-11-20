@@ -1,6 +1,7 @@
 package com.gekkotron.nidoo.feature.automations.presentation
 
 import androidx.annotation.StringRes
+import com.gekkotron.nidoo.flows.WakeUpTime
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 
 const val ALL_KEY = "__all__"
@@ -36,6 +37,31 @@ data class AutomationRow(
     val toggleEnabled: Boolean,
 )
 
+/** The two halves of the Routines tab. */
+enum class RoutineSection { Flows, WakeUp }
+
+/** A wake-up alarm; [time] is null when the hub's `wake_up` could not be read (the row is then not editable). */
+data class AlarmRow(
+    val id: String,
+    val name: String,
+    val time: WakeUpTime?,
+    val enabled: Boolean,
+    val toggleEnabled: Boolean,
+)
+
+/** What the edit sheet shows; a copy taken when the row was tapped. [days] is 0 = Sunday .. 6 = Saturday. */
+data class AlarmEditor(
+    val id: String,
+    val name: String,
+    val hour: Int,
+    val minute: Int,
+    val days: Set<Int>,
+    val saving: Boolean = false,
+    @StringRes val error: Int? = null,
+) {
+    val canSave get() = days.isNotEmpty() && !saving
+}
+
 data class AutomationsUiState(
     val isLoading: Boolean,
     val isOffline: Boolean,
@@ -43,4 +69,7 @@ data class AutomationsUiState(
     val selectedChipKey: String,
     val rows: List<AutomationRow>,
     @StringRes val toast: Int?,
+    val section: RoutineSection = RoutineSection.Flows,
+    val alarms: List<AlarmRow> = emptyList(),
+    val editor: AlarmEditor? = null,
 )
