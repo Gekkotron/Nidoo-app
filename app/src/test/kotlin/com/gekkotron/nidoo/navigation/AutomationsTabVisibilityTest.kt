@@ -42,28 +42,28 @@ class AutomationsTabVisibilityTest {
     @Test
     fun `the Automations tab shows when the profile allows it`() {
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = {}, showAutomations = true) } }
-        compose.onNodeWithText("Flows").assertIsDisplayed()
+        compose.onNodeWithText("Routines").assertIsDisplayed()
     }
 
     @Test
     fun `the Automations tab is hidden under the demo`() {
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = {}, showAutomations = false) } }
         compose.onNodeWithText("Security").assertIsDisplayed()
-        assertEquals(0, compose.onAllNodesWithTextCount("Flows"))
+        assertEquals(0, compose.onAllNodesWithTextCount("Routines"))
     }
 
     @Test
     fun `tapping Automations selects it`() {
         val picked = mutableListOf<NavKey>()
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = { picked += it }) } }
-        compose.onNodeWithText("Flows").performClick()
+        compose.onNodeWithText("Routines").performClick()
         assertEquals(listOf<NavKey>(AutomationsKey), picked)
     }
 
     @Test
     fun `tab bar order is Home, Energy, Security, Automations`() {
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = {}) } }
-        val lefts = listOf("Home", "Energy", "Security", "Flows")
+        val lefts = listOf("Home", "Energy", "Security", "Routines")
             .map { compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot.left }
         assertEquals(lefts.sorted(), lefts)
         assertEquals(4, lefts.toSet().size)
@@ -108,11 +108,11 @@ class AutomationsTabVisibilityTest {
     @Config(qualifiers = "fr-w360dp-h640dp-xxhdpi")
     fun `the French tab bar fits four labels at 360dp`() {
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { NidooBackground { MainTabBar(selected = HomeKey, onSelect = {}, showAutomations = true) } } }
-        val label = compose.onNodeWithText("Flows", useUnmergedTree = true).fetchSemanticsNode()
+        val label = compose.onNodeWithText("Routines", useUnmergedTree = true).fetchSemanticsNode()
         val other = compose.onNodeWithText("Sécurité", useUnmergedTree = true).fetchSemanticsNode()
         assertEquals(other.boundsInRoot.height, label.boundsInRoot.height, 0.5f)
         assertTrue(label.boundsInRoot.right <= 360f * compose.activity.resources.displayMetrics.density)
-        for (text in listOf("Accueil", "Énergie", "Sécurité", "Flows")) {
+        for (text in listOf("Accueil", "Énergie", "Sécurité", "Routines")) {
             val layouts = mutableListOf<TextLayoutResult>()
             compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action!!(layouts)
             assertFalse(layouts.single().isLineEllipsized(0), "$text is ellipsized")

@@ -10,6 +10,9 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,7 +22,11 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.automations.R
 import com.gekkotron.nidoo.feature.automations.presentation.ALL_KEY
 import com.gekkotron.nidoo.feature.automations.presentation.AreaLabel
+import com.gekkotron.nidoo.feature.automations.presentation.AlarmEditor
+import com.gekkotron.nidoo.feature.automations.presentation.AlarmRow
 import com.gekkotron.nidoo.feature.automations.presentation.AutomationChip
+import com.gekkotron.nidoo.feature.automations.presentation.RoutineSection
+import com.gekkotron.nidoo.flows.WakeUpTime
 import com.gekkotron.nidoo.feature.automations.presentation.AutomationRow
 import com.gekkotron.nidoo.feature.automations.presentation.AutomationsUiState
 import org.junit.Rule
@@ -42,6 +49,10 @@ class AutomationsScreenTest {
     private val selected = mutableListOf<String>()
     private val toggled = mutableListOf<Pair<String, Boolean>>()
     private var toastShown = 0
+    private val sections = mutableListOf<RoutineSection>()
+    private val tapped = mutableListOf<String>()
+    private val dayToggles = mutableListOf<Int>()
+    private var saves = 0
 
     private val chips = listOf(AutomationChip.All, AutomationChip.Room("living", "Living room"), AutomationChip.Unassigned)
 
@@ -56,7 +67,10 @@ class AutomationsScreenTest {
         isOffline: Boolean = false,
         rows: List<AutomationRow> = this.rows,
         toast: Int? = null,
-    ) = AutomationsUiState(isLoading, isOffline, chips, ALL_KEY, rows, toast)
+        section: RoutineSection = RoutineSection.Flows,
+        alarms: List<AlarmRow> = emptyList(),
+        editor: AlarmEditor? = null,
+    ) = AutomationsUiState(isLoading, isOffline, chips, ALL_KEY, rows, toast, section, alarms, editor)
 
     private fun show(state: AutomationsUiState, dark: Boolean = true) = compose.setContent {
         NidooTheme(if (dark) ThemeChoice.NIGHT_GLASS else ThemeChoice.IVOIRE) {
@@ -66,12 +80,84 @@ class AutomationsScreenTest {
                     onChipSelected = { selected += it },
                     onToggle = { id, on -> toggled += id to on },
                     onToastShown = { toastShown++ },
+                    onSectionSelected = { sections += it },
+                    onAlarmTapped = { tapped += it },
+                    onEditorTime = { _, _ -> },
+                    onEditorDayToggled = { dayToggles += it },
+                    onEditorDismissed = {},
+                    onEditorSave = { saves++ },
                 )
             }
         }
     }
 
     private fun text(res: Int) = compose.activity.getString(res)
+
+    private val weekdays = WakeUpTime(7, 5, listOf(1, 2, 3, 4, 5))
+    private val alarms = listOf(
+        AlarmRow("w1", "Weekdays", weekdays, enabled = true, toggleEnabled = true),
+        AlarmRow("w2", "Broken", null, enabled = false, toggleEnabled = true),
+    )
+
+    @Test
+    fun `the section switch shows both sections and reports the choice`() {
+        show(state())
+        compose.onNodeWithTag("routines_section_flows").assertExists()
+        compose.onNodeWithTag("routines_section_wake_up").performClick()
+        assertEquals(listOf(RoutineSection.WakeUp), sections)
+    }
+
+    @Test
+    fun `the wake-up section shows an alarm with its time and days`() {
+        show(state(section = RoutineSection.WakeUp, alarms = alarms))
+        compose.onNodeWithText("Weekdays").assertExists()
+        compose.onNodeWithText("07:05 · Mon–Fri").assertExists()
+        compose.onNodeWithText("Evening lights").assertDoesNotExist()
+    }
+
+    @Test
+    fun `an alarm switch toggles and the row opens the editor`() {
+        show(state(section = RoutineSection.WakeUp, alarms = alarms))
+        compose.onNodeWithTag("alarm_switch_w1").performClick()
+        assertEquals(listOf("w1" to false), toggled)
+        compose.onNodeWithTag("alarm_row_w1").performClick()
+        assertEquals(listOf("w1"), tapped)
+    }
+
+    @Test
+    fun `an unreadable alarm says so`() {
+        show(state(section = RoutineSection.WakeUp, alarms = alarms))
+        compose.onNodeWithText(text(R.string.wake_up_unreadable)).assertExists()
+    }
+
+    @Test
+    fun `no alarms shows the empty copy`() {
+        show(state(section = RoutineSection.WakeUp))
+        compose.onNodeWithText(text(R.string.wake_up_empty_title)).assertExists()
+        compose.onNodeWithText(text(R.string.wake_up_empty_body)).assertExists()
+    }
+
+    @Test
+    fun `the editor sheet shows the days and reports a toggle`() {
+        val editor = AlarmEditor("w1", "Weekdays", 7, 5, setOf(1, 2, 3, 4, 5))
+        show(state(section = RoutineSection.WakeUp, alarms = alarms, editor = editor))
+        compose.onNodeWithTag("alarm_editor").assertExists()
+        for (d in 1..5) compose.onNodeWithTag("alarm_day_$d").assertIsSelected()
+        compose.onNodeWithTag("alarm_day_0").assertIsNotSelected()
+        compose.onNodeWithTag("alarm_day_6").performClick()
+        assertEquals(listOf(6), dayToggles)
+        compose.onNodeWithTag("alarm_save").assertIsEnabled().performClick()
+        assertEquals(1, saves)
+    }
+
+    @Test
+    fun `save is disabled with no day and an error is shown`() {
+        val editor = AlarmEditor("w1", "Weekdays", 7, 5, emptySet(), error = R.string.wake_up_save_failed)
+        show(state(section = RoutineSection.WakeUp, alarms = alarms, editor = editor))
+        compose.onNodeWithTag("alarm_save").assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.wake_up_pick_a_day)).assertExists()
+        compose.onNodeWithText(text(R.string.wake_up_save_failed)).assertExists()
+    }
 
     @Test
     fun `placeholders while loading and no empty copy`() {

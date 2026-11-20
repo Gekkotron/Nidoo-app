@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.feature.automations.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -22,6 +23,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -59,9 +63,10 @@ import com.gekkotron.nidoo.feature.automations.presentation.AreaLabel
 import com.gekkotron.nidoo.feature.automations.presentation.AutomationChip
 import com.gekkotron.nidoo.feature.automations.presentation.AutomationRow
 import com.gekkotron.nidoo.feature.automations.presentation.AutomationsUiState
+import com.gekkotron.nidoo.feature.automations.presentation.RoutineSection
 import kotlinx.coroutines.launch
 
-private const val PLACEHOLDER_ROWS = 4
+internal const val PLACEHOLDER_ROWS = 4
 
 @Composable
 fun AutomationsScreen(
@@ -69,6 +74,12 @@ fun AutomationsScreen(
     onChipSelected: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onToastShown: () -> Unit,
+    onSectionSelected: (RoutineSection) -> Unit,
+    onAlarmTapped: (String) -> Unit,
+    onEditorTime: (Int, Int) -> Unit,
+    onEditorDayToggled: (Int) -> Unit,
+    onEditorDismissed: () -> Unit,
+    onEditorSave: () -> Unit,
     modifier: Modifier = Modifier,
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
 ) {
@@ -107,10 +118,21 @@ fun AutomationsScreen(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            AutomationChips(state, onChipSelected, Modifier.padding(horizontal = 16.dp))
+            SectionSwitch(state.section, onSectionSelected, Modifier.padding(start = start, end = end))
+            Spacer(Modifier.height(8.dp))
+            if (state.section == RoutineSection.Flows) {
+                AutomationChips(state, onChipSelected, Modifier.padding(horizontal = 16.dp))
+            }
             val loadingLabel = stringResource(R.string.automations_loading)
             val listPadding = PaddingValues(start = start, end = end, top = 12.dp, bottom = padding.calculateBottomPadding() + 24.dp)
             when {
+                state.section == RoutineSection.WakeUp -> WakeUpSection(
+                    state = state,
+                    onToggle = onToggle,
+                    onAlarmTapped = onAlarmTapped,
+                    contentPadding = listPadding,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 state.isLoading && state.rows.isEmpty() -> LazyColumn(
                     modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = loadingLabel },
                     contentPadding = listPadding,
@@ -123,6 +145,27 @@ fun AutomationsScreen(
                     verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 ) { items(state.rows, key = { it.id }) { row -> AutomationTile(row, onToggle) } }
             }
+            state.editor?.let { editor ->
+                AlarmEditorSheet(editor, onEditorTime, onEditorDayToggled, onEditorDismissed, onEditorSave)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionSwitch(selected: RoutineSection, onSelect: (RoutineSection) -> Unit, modifier: Modifier) {
+    val sections = listOf(
+        Triple(RoutineSection.Flows, R.string.routines_section_flows, "routines_section_flows"),
+        Triple(RoutineSection.WakeUp, R.string.routines_section_wake_up, "routines_section_wake_up"),
+    )
+    SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth()) {
+        sections.forEachIndexed { index, (section, label, tag) ->
+            SegmentedButton(
+                selected = selected == section,
+                onClick = { onSelect(section) },
+                shape = SegmentedButtonDefaults.itemShape(index, sections.size),
+                modifier = Modifier.testTag(tag),
+            ) { Text(stringResource(label)) }
         }
     }
 }
@@ -180,7 +223,7 @@ private fun AutomationTile(row: AutomationRow, onToggle: (String, Boolean) -> Un
 
 /** Tile-shaped muted block with a gentle pulse (still with animations off); stands in for a row until the first snapshot lands. */
 @Composable
-private fun PlaceholderRow() {
+internal fun PlaceholderRow() {
     val pulse = if (animationsEnabled()) {
         rememberInfiniteTransition(label = "automations-placeholder").animateFloat(
             initialValue = 0.35f,
@@ -198,12 +241,15 @@ private fun PlaceholderRow() {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier) {
+private fun EmptyState(modifier: Modifier) = EmptyCopy(R.string.automations_empty_title, R.string.automations_empty_body, modifier)
+
+@Composable
+internal fun EmptyCopy(@StringRes title: Int, @StringRes body: Int, modifier: Modifier) {
     Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(stringResource(R.string.automations_empty_title), style = NidooTheme.type.cardName, textAlign = TextAlign.Center)
+        Text(stringResource(title), style = NidooTheme.type.cardName, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(
-            stringResource(R.string.automations_empty_body),
+            stringResource(body),
             style = NidooTheme.type.body,
             color = NidooTheme.colors.contentMuted,
             textAlign = TextAlign.Center,
