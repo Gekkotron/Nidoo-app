@@ -19,6 +19,12 @@ fun AutomationsRoute(
         onChipSelected = viewModel::onChipSelected,
         onToggle = viewModel::onToggle,
         onToastShown = viewModel::onToastShown,
+        onSectionSelected = viewModel::onSectionSelected,
+        onAlarmTapped = viewModel::onAlarmTapped,
+        onEditorTime = viewModel::onEditorTime,
+        onEditorDayToggled = viewModel::onEditorDayToggled,
+        onEditorDismissed = viewModel::onEditorDismissed,
+        onEditorSave = viewModel::onEditorSave,
         windowInsets = windowInsets,
     )
 }

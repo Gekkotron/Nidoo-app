@@ -213,6 +213,20 @@ class FlowsRepository(
         }
     }.await()
 
+    /**
+     * Re-times wake-up alarm [id] on the hub. Changes no state: the new time arrives through the
+     * retained payload. Lives in the repository's scope like [run].
+     */
+    suspend fun setWakeUp(id: String, hour: Int, minute: Int, days: List<Int>): Result<Unit> = scope.async {
+        try {
+            client.setWakeUp(id, hour, minute, days)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }.await()
+
     private fun finish(id: String, enabled: Boolean, succeeded: Boolean) = update { s ->
         val inFlight = s.inFlight - id
         val echoes = s.echoes - id
