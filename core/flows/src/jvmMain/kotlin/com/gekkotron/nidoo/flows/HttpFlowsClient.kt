@@ -12,7 +12,10 @@ class FlowsHttpError(val status: Int) : Exception("the hub answered HTTP $status
 @Serializable
 private class EnabledBody(val enabled: Boolean)
 
-/** Over the hub's `POST /api/v1/flows/<id>/enabled` and `/run` routes. */
+@Serializable
+private class WakeUpBody(val hour: Int, val minute: Int, val days: List<Int>)
+
+/** Over the hub's `POST /api/v1/flows/<id>/enabled`, `/run` and `/wake-up` routes. */
 class HttpFlowsClient(
     private val baseUrl: suspend () -> String?,
     private val post: suspend (url: String, json: String) -> HttpPostResult,
@@ -21,6 +24,9 @@ class HttpFlowsClient(
         postTo(id, "enabled", flowsJson.encodeToString(EnabledBody(enabled)))
 
     override suspend fun run(id: String): Result<Unit> = postTo(id, "run", "{}")
+
+    override suspend fun setWakeUp(id: String, hour: Int, minute: Int, days: List<Int>): Result<Unit> =
+        postTo(id, "wake-up", flowsJson.encodeToString(WakeUpBody(hour, minute, days)))
 
     private suspend fun postTo(id: String, action: String, body: String): Result<Unit> {
         val base = baseUrl() ?: return Result.failure(IllegalStateException("no hub url"))

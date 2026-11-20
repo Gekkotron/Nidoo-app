@@ -27,6 +27,13 @@ class FlowsRepositoryTest {
             return gate?.await() ?: result
         }
 
+        val wakeUps = mutableListOf<List<Any>>()
+
+        override suspend fun setWakeUp(id: String, hour: Int, minute: Int, days: List<Int>): Result<Unit> {
+            wakeUps += listOf(id, hour, minute, days)
+            return result
+        }
+
         override suspend fun run(id: String): Result<Unit> {
             runs += id
             return runGate?.await() ?: result
@@ -328,5 +335,32 @@ class FlowsRepositoryTest {
             override suspend fun run(id: String): Result<Unit> = throw IllegalStateException("boom")
         }
         assertTrue(repo(boom).run("b").isFailure)
+    }
+
+    @Test
+    fun `a retained alarm with a malformed wake_up still appears in flows`() = runTest {
+        val r = repo()
+        r.onRetained("w", """{"id":"w","name":"Alarm","labels":["wake-up"],"wake_up":"x"}""")
+        assertEquals(listOf("w"), r.flows.value.flows.map { it.id })
+        assertTrue(r.flows.value.flows.single().isWakeUp)
+    }
+
+    @Test
+    fun `setWakeUp forwards to the client and returns its result`() = runTest {
+        val client = FakeClient()
+        assertTrue(repo(client).setWakeUp("w", 6, 15, listOf(1, 5)).isSuccess)
+        assertEquals(listOf<List<Any>>(listOf("w", 6, 15, listOf(1, 5))), client.wakeUps)
+        client.result = Result.failure(RuntimeException("no"))
+        assertTrue(repo(client).setWakeUp("w", 6, 15, listOf(1)).isFailure)
+    }
+
+    @Test
+    fun `setWakeUp turns a client exception into a failure`() = runTest {
+        val boom = object : FlowsClient {
+            override suspend fun setEnabled(id: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
+            override suspend fun setWakeUp(id: String, hour: Int, minute: Int, days: List<Int>): Result<Unit> =
+                throw IllegalStateException("boom")
+        }
+        assertTrue(repo(boom).setWakeUp("w", 6, 15, listOf(1)).isFailure)
     }
 }

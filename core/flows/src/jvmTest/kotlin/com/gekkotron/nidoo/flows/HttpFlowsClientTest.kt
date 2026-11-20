@@ -24,6 +24,22 @@ class HttpFlowsClientTest {
     }
 
     @Test
+    fun `setWakeUp posts hour minute and days to the wake-up route`(): Unit = runBlocking {
+        assertTrue(client().setWakeUp("wake-up-1", 6, 15, listOf(1, 5)).isSuccess)
+        assertEquals(
+            "http://192.168.1.91:8081/api/v1/flows/wake-up-1/wake-up" to """{"hour":6,"minute":15,"days":[1,5]}""",
+            posts.single(),
+        )
+    }
+
+    @Test
+    fun `setWakeUp answered 404 is a FlowsHttpError`(): Unit = runBlocking {
+        answer = HttpPostResult.Response(404, emptyMap())
+        val e = assertIs<FlowsHttpError>(client().setWakeUp("w", 6, 15, listOf(1)).exceptionOrNull())
+        assertEquals(404, e.status)
+    }
+
+    @Test
     fun `disabling posts enabled false`(): Unit = runBlocking {
         assertTrue(client().setEnabled("night", false).isSuccess)
         assertEquals("""{"enabled":false}""", posts.single().second)
