@@ -58,7 +58,7 @@ class PresenceWorkerTest {
     @Test
     fun `it publishes discovery, availability online, and state as retained for an enabled config`() {
         prefs = prefs()
-        assertEquals(Result.success(), run(PresenceState.AWAY))
+        assertEquals(Result.success(), run(PresenceState.HOME))
         val sent = publisher.sent
         assertEquals(3, sent.size, "expected discovery + availability + state, got ${sent.map { it.topic }}")
         val topics = sent.map { it.topic }
@@ -69,13 +69,43 @@ class PresenceWorkerTest {
     }
 
     @Test
-    fun `the state payload is home when ENTER and not_home when EXIT`() {
+    fun `an ENTER with no fix publishes home at once`() {
         prefs = prefs()
         assertEquals(Result.success(), run(PresenceState.HOME))
         assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
-        publisher.sent.clear()
+    }
+
+    @Test
+    fun `an EXIT with a clear fix outside the radius publishes not_home at once`() {
+        prefs = prefs()
+        fix = LocationFix(48.01, 2.01, accuracyM = 20f)
         assertEquals(Result.success(), run(PresenceState.AWAY))
         assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an EXIT with no fix retries without publishing until the last attempt`() {
+        prefs = prefs()
+        for (attempt in 0 until PresenceWorker.MAX_ATTEMPTS - 1) {
+            assertEquals(Result.retry(), run(PresenceState.AWAY, attempt = attempt), "attempt ${attempt + 1}")
+            assertTrue(publisher.sent.isEmpty(), "nothing may be published on attempt ${attempt + 1}")
+        }
+    }
+
+    @Test
+    fun `an EXIT with no fix on the last attempt follows the transition`() {
+        prefs = prefs()
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
+        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an EXIT whose retry finds the phone at home publishes home`() {
+        prefs = prefs()
+        assertEquals(Result.retry(), run(PresenceState.AWAY, attempt = 0))
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = 1))
+        assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test
@@ -95,11 +125,21 @@ class PresenceWorkerTest {
     }
 
     @Test
-    fun `a fix too imprecise to tell follows the transition`() {
+    fun `an EXIT with a fix too imprecise to tell retries, then follows the transition on the last attempt`() {
         prefs = prefs()
         fix = LocationFix(48.002, 2.0, accuracyM = 200f)
-        assertEquals(Result.success(), run(PresenceState.AWAY))
+        assertEquals(Result.retry(), run(PresenceState.AWAY, attempt = 0))
+        assertTrue(publisher.sent.isEmpty())
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
         assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an ENTER with a fix too imprecise to tell follows the transition at once`() {
+        prefs = prefs()
+        fix = LocationFix(48.002, 2.0, accuracyM = 200f)
+        assertEquals(Result.success(), run(PresenceState.HOME))
+        assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test
@@ -129,10 +169,11 @@ class PresenceWorkerTest {
         publisher.result = kotlin.Result.failure(IOException("offline"))
         for (attempt in 0 until PresenceWorker.MAX_ATTEMPTS - 1) {
             publisher.sent.clear()
-            assertEquals(Result.retry(), run(PresenceState.AWAY, attempt = attempt), "attempt ${attempt + 1}")
+            assertEquals(Result.retry(), run(PresenceState.HOME, attempt = attempt), "attempt ${attempt + 1}")
+            assertTrue(publisher.sent.isNotEmpty(), "attempt ${attempt + 1} must have tried to publish")
         }
         publisher.sent.clear()
-        assertEquals(Result.failure(), run(PresenceState.AWAY, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
+        assertEquals(Result.failure(), run(PresenceState.HOME, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
     }
 
     @Test
