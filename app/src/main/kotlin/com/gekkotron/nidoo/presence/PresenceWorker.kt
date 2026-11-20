@@ -13,8 +13,12 @@ import kotlinx.coroutines.flow.first
 /**
  * Runs after a geofence transition. The transition is only a hint: Play services reports a false EXIT when an indoor
  * position jumps, and the work can wait hours for a network (an EXIT seen offline runs once the phone is back home).
- * So the state published is where the phone is when the work runs, from a fresh fix; the hint is used when there is no
- * fix or the fix cannot tell.
+ * So the state published is where the phone is when the work runs, from a fresh fix.
+ *
+ * When there is no fix, or the fix cannot tell, an EXIT is not trusted yet: the work retries (backoff 30 s, 60 s,
+ * 120 s, 240 s) and publishes AWAY on the last attempt only, about 7 minutes later, if no fix has settled it by then.
+ * A wrong AWAY arms whatever the hub ties to presence, and an indoor phone often has no clear fix for a while. An ENTER
+ * with no clear fix is published at once, since a late HOME is the costlier mistake there.
  *
  * Publishes HA MQTT Discovery for the device_tracker and the new presence state. Retained so a late HA pick-up still sees
  * the right value. Three publishes: discovery config, availability online, state (home / not_home).
@@ -31,9 +35,16 @@ class PresenceWorker(
         val hint = runCatching { PresenceState.valueOf(stateName) }.getOrNull() ?: return Result.failure()
         val config = preferences.presence.filterNotNull().first()
         if (!config.enabled || config.alias.isBlank()) return Result.success()
-        val state = fixSource.current()?.let { PresenceDecision.stateOf(it, config) } ?: hint
+        val located = fixSource.current()?.let { PresenceDecision.stateOf(it, config) }
+        val state = when {
+            located != null -> located
+            hint == PresenceState.AWAY && !isLastAttempt() -> return Result.retry()
+            else -> hint
+        }
         return publishAll(config, state)
     }
+
+    private fun isLastAttempt(): Boolean = runAttemptCount + 1 >= MAX_ATTEMPTS
 
     private suspend fun publishAll(config: PresenceConfig, state: PresenceState): Result {
         val alias = config.alias
@@ -56,7 +67,7 @@ class PresenceWorker(
     }
 
     private fun retryOrFail(): Result =
-        if (runAttemptCount + 1 < MAX_ATTEMPTS) Result.retry() else Result.failure()
+        if (isLastAttempt()) Result.failure() else Result.retry()
 
     companion object {
         const val TAG = "presence"
