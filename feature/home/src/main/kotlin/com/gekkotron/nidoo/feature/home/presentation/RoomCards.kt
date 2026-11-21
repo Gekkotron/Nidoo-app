@@ -97,8 +97,9 @@ internal fun lightOnCommand(ui: UiOverride, capabilities: Capabilities): Command
 /** The Rooms view's cards (rooms design §6.2), from the entities Home shows. */
 object RoomCards {
     /**
-     * [entities] are filtered here to what a room owns: standalone, on Home, not a hub group entity
-     * (its members are the devices). Rooms come in [areas] order, Unassigned last.
+     * [entities] are filtered here to what a room shows: standalone and on Home. A hub group entity
+     * counts as one of the room's devices (it is a card there) but is never a target: its members
+     * are. Rooms come in [areas] order, Unassigned last.
      */
     fun build(
         entities: Collection<Entity>,
@@ -108,7 +109,7 @@ object RoomCards {
         locale: Locale,
     ): List<RoomCardUi> {
         val byArea = entities
-            .filter { it.partOf == null && it.deviceId != HUB_GROUP_DEVICE_ID && Placement.onHome(it.kind, it.deviceClass, it.ui) }
+            .filter { it.partOf == null && Placement.onHome(it.kind, it.deviceClass, it.ui) }
             .sortedWith(compareBy({ it.ui.order ?: Int.MAX_VALUE }, { (names[it.uniqueId] ?: it.name).lowercase(locale) }, { it.uniqueId }))
             .groupBy { it.area }
         if (byArea.isEmpty()) return emptyList()
@@ -160,8 +161,8 @@ object RoomCards {
             icon = RoomIcon.of(icon, name),
             temperature = measurement("temperature"),
             humidity = measurement("humidity"),
-            lights = entities.filter { it.kind == Kind.LIGHT }.map(::target),
-            shutters = entities.filter { it.kind == Kind.COVER }.map(::target),
+            lights = entities.filter { it.kind == Kind.LIGHT && it.deviceId != HUB_GROUP_DEVICE_ID }.map(::target),
+            shutters = entities.filter { it.kind == Kind.COVER && it.deviceId != HUB_GROUP_DEVICE_ID }.map(::target),
             deviceCount = entities.size,
             buttons = id != UNASSIGNED_AREA,
         )

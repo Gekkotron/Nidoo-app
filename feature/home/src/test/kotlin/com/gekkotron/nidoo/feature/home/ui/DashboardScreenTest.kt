@@ -89,10 +89,10 @@ class DashboardScreenTest {
     }
 
     @Test
-    fun `a dashboard with a header shows the greeting and room chips`() {
+    fun `a dashboard with a header shows the greeting and the top-level pills`() {
         show(shown(listOf(tile("a", TileContent.Entity(card("lamp")))), showHeader = true))
         compose.onNodeWithText("Good afternoon").assertExists()
-        compose.onNodeWithText("Living room").assertExists()
+        compose.onNodeWithText("Rooms").assertExists()
     }
 
     @Test

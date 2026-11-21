@@ -91,15 +91,15 @@ class HomeScreenTest {
     private val customized = mutableListOf<Pair<String, UiOverride>>()
     private val histories = mutableListOf<String>()
 
-    private fun state(): HomeUiState =
-        HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
+    private fun state(selected: RoomFilter = RoomFilter.All): HomeUiState =
+        HomeUiBuilder.build(entities, states, areas, selected, LinkState.Connected(TransportMode.DEMO), Locale.US)
 
-    private fun show(insets: WindowInsets? = null, fontScale: () -> Float = { 1f }) = compose.setContent {
+    private fun show(insets: WindowInsets? = null, ui: HomeUiState = state(), fontScale: () -> Float = { 1f }) = compose.setContent {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale())) {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
-                    state = state(),
+                    state = ui,
                     onSelect = { selects += it },
                     onTap = { taps += it.id },
                     onSend = { id, c -> sends += id to c },
@@ -305,10 +305,20 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `room chip selects its area`() {
-        show()
+    fun `inside a room the pills are back to Rooms then every room, and select sideways`() {
+        show(ui = state(RoomFilter.Area("living")))
+        compose.onNodeWithText("All").assertDoesNotExist()
         compose.onNodeWithText("Kitchen").performClick()
-        assertEquals(listOf<RoomFilter>(RoomFilter.Area("kitchen")), selects)
+        compose.onNodeWithText("‹ Rooms").performClick()
+        assertEquals(listOf(RoomFilter.Area("kitchen"), RoomFilter.Rooms), selects)
+    }
+
+    @Test
+    fun `outside a room the pills are the top-level views, without the rooms`() {
+        show()
+        compose.onNodeWithText("Kitchen").assertDoesNotExist()
+        compose.onNodeWithText("Rooms").performClick()
+        assertEquals(listOf<RoomFilter>(RoomFilter.Rooms), selects)
     }
 
     @Test
@@ -413,10 +423,10 @@ class HomeScreenTest {
         compose.onNode(hasSetTextAction()).performTextInput("coffee")
         compose.onNodeWithText("Coffee machine").assertExists()
         compose.onNodeWithText("Floor lamp").assertDoesNotExist()
-        compose.onNodeWithText("Kitchen").assertDoesNotExist() // the chips row is replaced by the field
+        compose.onNodeWithText("Rooms").assertDoesNotExist() // the chips row is replaced by the field
         compose.onNodeWithContentDescription("Close search").performClick()
         compose.onNodeWithText("Floor lamp").assertExists()
-        compose.onNodeWithText("Kitchen").assertExists()
+        compose.onNodeWithText("Rooms").assertExists()
     }
 
     @Test

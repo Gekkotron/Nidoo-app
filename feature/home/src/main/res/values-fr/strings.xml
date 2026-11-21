@@ -4,6 +4,8 @@
     <string name="greeting_evening">Bonsoir</string>
     <string name="home_discovering">Recherche des appareils…</string>
     <string name="chip_all">Tout</string>
+    <string name="chip_rooms">Pièces</string>
+    <string name="chip_back_rooms">‹ Pièces</string>
     <string name="chip_favorites">Favoris</string>
     <string name="area_unassigned">Non assigné</string>
     <string name="card_description">%1$s, %2$s, %3$s</string>

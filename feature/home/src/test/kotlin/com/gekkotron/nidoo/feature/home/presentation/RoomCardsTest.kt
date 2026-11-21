@@ -64,7 +64,8 @@ class RoomCardsTest {
             ),
         ).single()
         assertEquals(listOf("as_light", "lamp"), room.lights.map { it.id })
-        assertEquals(3, room.deviceCount)
+        // The hub group entity is a card in the room, so it counts as a device, but it is never a target.
+        assertEquals(4, room.deviceCount)
     }
 
     @Test

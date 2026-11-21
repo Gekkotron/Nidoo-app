@@ -56,17 +56,92 @@ class HomeUiBuilderTest {
     }
 
     @Test
-    fun `chips list Favourites first when any, then All, then only areas with visible cards in area order`() {
+    fun `top-level pills are Favourites when any, Rooms, All, Hidden when any, and rooms move to roomChips`() {
         val s = build(
             testEntity("coffee", Kind.SWITCH, area = "kitchen"),
             testEntity("lamp", Kind.LIGHT, area = "living", ui = UiOverride(favorite = true)),
-            testEntity("x", Kind.SWITCH),
+            testEntity("secret", Kind.SWITCH, area = "garage", ui = UiOverride(hidden = true)),
         )
-        assertEquals(
-            listOf(RoomFilter.Favorites, RoomFilter.All, RoomFilter.Area("living"), RoomFilter.Area("kitchen")),
-            s.chips.map { it.filter },
+        assertEquals(listOf(RoomFilter.Favorites, RoomFilter.Rooms, RoomFilter.All, RoomFilter.Hidden), s.chips.map { it.filter })
+        assertEquals(listOf<RoomFilter>(RoomFilter.Area("living"), RoomFilter.Area("kitchen")), s.roomChips.map { it.filter })
+        assertEquals("Living room", s.roomChips.first().label)
+        assertEquals(listOf("living", "kitchen"), s.roomCards.map { it.areaId })
+    }
+
+    @Test
+    fun `without favourites the fallback is Rooms`() {
+        val s = build(testEntity("coffee", Kind.SWITCH, area = "kitchen"), selected = RoomFilter.Favorites)
+        assertEquals(RoomFilter.Rooms, s.selected)
+        assertEquals(listOf(RoomFilter.Rooms, RoomFilter.All), s.chips.map { it.filter })
+    }
+
+    @Test
+    fun `the Rooms view has room cards and no device cards`() {
+        val s = build(testEntity("coffee", Kind.SWITCH, area = "kitchen"), selected = RoomFilter.Rooms)
+        assertEquals(RoomFilter.Rooms, s.selected)
+        assertTrue(s.cards.isEmpty())
+        assertTrue(s.strip.isEmpty())
+        assertTrue(s.sections.isEmpty())
+        assertEquals(listOf("kitchen"), s.roomCards.map { it.areaId })
+    }
+
+    private val mixedRoom = arrayOf(
+        testEntity("lamp", Kind.LIGHT, area = "living"),
+        testEntity("temp", Kind.SENSOR, area = "living", deviceClass = "temperature"),
+        testEntity("plug", Kind.SWITCH, area = "living"),
+        testEntity("shutter", Kind.COVER, area = "living"),
+    )
+
+    @Test
+    fun `a room view has a strip and sections that together are exactly its cards`() {
+        val s = build(*mixedRoom, selected = RoomFilter.Area("living"))
+        assertEquals(RoomFilter.Area("living"), s.selected)
+        assertEquals(listOf("temp"), s.strip.map { it.id })
+        assertEquals(listOf(HomeSection.LIGHTS, HomeSection.SHUTTERS_CLIMATE, HomeSection.PLUGS_MEDIA), s.sections.map { it.section })
+        assertEquals(s.cards.map { it.id }.sorted(), (s.strip + s.sections.flatMap { it.cards }).map { it.id }.sorted())
+        assertEquals(4, s.cards.size)
+    }
+
+    @Test
+    fun `All devices has sections with sensors last and no strip`() {
+        val s = build(*mixedRoom, selected = RoomFilter.All)
+        assertTrue(s.strip.isEmpty())
+        assertEquals(HomeSection.SENSORS, s.sections.last().section)
+        assertEquals(4, s.sections.sumOf { it.cards.size })
+    }
+
+    @Test
+    fun `searching is flat`() {
+        val all = mixedRoom.associateBy { it.uniqueId }
+        val s = HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.Area("living"), link, Locale.US, query = "lamp")
+        assertEquals(listOf("lamp"), s.cards.map { it.id })
+        assertTrue(s.strip.isEmpty())
+        assertTrue(s.sections.isEmpty())
+        assertEquals(listOf("living"), s.roomCards.map { it.areaId })
+    }
+
+    @Test
+    fun `Favorites and Hidden stay flat`() {
+        val entities = arrayOf(
+            testEntity("lamp", Kind.LIGHT, area = "living", ui = UiOverride(favorite = true)),
+            testEntity("secret", Kind.SWITCH, area = "living", ui = UiOverride(hidden = true)),
         )
-        assertEquals("Living room", s.chips[2].label)
+        for (filter in listOf(RoomFilter.Favorites, RoomFilter.Hidden)) {
+            val s = build(*entities, selected = filter)
+            assertEquals(filter, s.selected)
+            assertEquals(1, s.cards.size)
+            assertTrue(s.sections.isEmpty())
+            assertTrue(s.strip.isEmpty())
+        }
+    }
+
+    @Test
+    fun `the weather hero is neither a room device nor a room of its own`() {
+        val s = build(
+            testEntity("lamp", Kind.LIGHT, area = "living"),
+            testEntity("outdoor", Kind.SENSOR, area = "garage", ui = UiOverride(cardStyle = HomeUiBuilder.HERO_WEATHER)),
+        )
+        assertEquals(listOf("living"), s.roomCards.map { it.areaId })
     }
 
     @Test
@@ -83,7 +158,7 @@ class HomeUiBuilderTest {
     @Test
     fun `unassigned chip has a null label for localisation`() {
         val s = build(testEntity("x", Kind.SWITCH), areaList = areas + Area(UNASSIGNED_AREA, UNASSIGNED_AREA))
-        assertEquals(ChipUi(RoomFilter.Area(UNASSIGNED_AREA), null), s.chips.last())
+        assertEquals(ChipUi(RoomFilter.Area(UNASSIGNED_AREA), null), s.roomChips.last())
         assertNull(s.cards.single().areaName)
     }
 
@@ -98,12 +173,11 @@ class HomeUiBuilderTest {
     }
 
     @Test
-    fun `selection of a vanished area falls back to All`() {
+    fun `a saved room without devices falls back to Rooms`() {
         val s = build(testEntity("coffee", Kind.SWITCH, area = "kitchen"), selected = RoomFilter.Area("garage"))
-        assertEquals(RoomFilter.All, s.selected)
-        assertEquals(listOf("coffee"), s.cards.map { it.id })
-        val noFavourites = build(testEntity("coffee", Kind.SWITCH, area = "kitchen"), selected = RoomFilter.Favorites)
-        assertEquals(RoomFilter.All, noFavourites.selected)
+        assertEquals(RoomFilter.Rooms, s.selected)
+        assertTrue(s.cards.isEmpty())
+        assertEquals(listOf("kitchen"), s.roomCards.map { it.areaId })
     }
 
     @Test
@@ -162,7 +236,7 @@ class HomeUiBuilderTest {
 
     @Test
     fun `room filter keys round-trip`() {
-        for (f in listOf(RoomFilter.All, RoomFilter.Favorites, RoomFilter.Area("living room"))) {
+        for (f in listOf(RoomFilter.All, RoomFilter.Favorites, RoomFilter.Rooms, RoomFilter.Area("living room"))) {
             assertEquals(f, RoomFilter.fromKey(f.key))
         }
         assertEquals(RoomFilter.All, RoomFilter.fromKey("garbage"))
@@ -183,9 +257,9 @@ class HomeUiBuilderTest {
     }
 
     @Test
-    fun `Hidden selection falls back to All when nothing is hidden any more`() {
+    fun `Hidden selection falls back to Rooms when nothing is hidden any more`() {
         val s = build(testEntity("lamp", Kind.LIGHT), selected = RoomFilter.Hidden)
-        assertEquals(RoomFilter.All, s.selected)
+        assertEquals(RoomFilter.Rooms, s.selected)
         assertEquals(0, s.hiddenCount)
         assertFalse(s.chips.any { it.filter == RoomFilter.Hidden })
     }
@@ -232,7 +306,8 @@ class HomeUiBuilderTest {
             testEntity("alarm", Kind.ALARM_PANEL, area = "kitchen"),
         )
         assertEquals(listOf("lamp"), s.cards.map { it.id })
-        assertEquals(listOf(RoomFilter.All, RoomFilter.Area("living")), s.chips.map { it.filter })
+        assertEquals(listOf(RoomFilter.Rooms, RoomFilter.All), s.chips.map { it.filter })
+        assertEquals(listOf<RoomFilter>(RoomFilter.Area("living")), s.roomChips.map { it.filter })
         assertEquals(0, s.hiddenCount)
     }
 

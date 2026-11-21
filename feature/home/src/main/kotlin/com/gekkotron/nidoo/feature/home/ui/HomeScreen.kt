@@ -507,18 +507,24 @@ private fun SearchField(query: String, onSearch: (String) -> Unit, onClose: () -
 private fun HomeChips(state: HomeUiState, onSelect: (RoomFilter) -> Unit) {
     val all = stringResource(R.string.chip_all)
     val favorites = stringResource(R.string.chip_favorites)
+    val rooms = stringResource(R.string.chip_rooms)
     val unassigned = stringResource(R.string.area_unassigned)
     val hidden = stringResource(R.string.chip_hidden, state.hiddenCount)
-    val items = state.chips.map { chip ->
+    // Inside a room the row is "‹ Rooms" then every room (rooms design §6.4); elsewhere the top-level views.
+    val inRoom = state.selected is RoomFilter.Area
+    val back = stringResource(R.string.chip_back_rooms)
+    val items = (if (inRoom) state.roomChips else state.chips).map { chip ->
         val label = chip.label ?: when (chip.filter) {
             RoomFilter.All -> all
             RoomFilter.Favorites -> favorites
+            RoomFilter.Rooms -> rooms
             RoomFilter.Hidden -> hidden
             is RoomFilter.Area -> unassigned
         }
         ChipItem(chip.filter.key, label)
     }
-    RoomChips(items, state.selected.key, onSelect = { onSelect(RoomFilter.fromKey(it)) })
+    val row = if (inRoom) listOf(ChipItem(RoomFilter.Rooms.key, back)) + items else items
+    RoomChips(row, state.selected.key, onSelect = { onSelect(RoomFilter.fromKey(it)) })
 }
 
 @Composable
