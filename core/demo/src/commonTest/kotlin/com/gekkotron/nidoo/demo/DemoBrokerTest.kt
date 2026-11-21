@@ -161,7 +161,7 @@ class DemoBrokerTest {
     }
 
     @Test
-    fun `cover, climate, number, select and alarm commands are echoed`() = runTest {
+    fun `cover - climate - number - select and alarm commands are echoed`() = runTest {
         val h = start()
         h.source.send("demo_living_shutter", Command.SetPosition(25))
         h.source.send("demo_living_ac", Command.SetTemperature(21.5))

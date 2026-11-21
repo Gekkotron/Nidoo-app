@@ -17,7 +17,7 @@ class DemoHouseTest {
     private val strip = "demo/bedroom/strip"
 
     @Test
-    fun `the LED strip announces effects, a colour mode and two numbers on its device`() {
+    fun `the LED strip announces effects - a colour mode and two numbers on its device`() {
         val configs = DemoHouse().retainedMessages().filter { it.topic.endsWith("/config") }
         val light = configs.single { it.topic == "homeassistant/light/nidoo_demo/demo_bedroom_strip/config" }
         assertTrue(""""effect_list":["solid","breathe","rainbow","candle"]""" in light.payload, light.payload)
@@ -60,7 +60,7 @@ class DemoHouseTest {
     }
 
     @Test
-    fun `disarm needs the right code, a wrong one republishes the state`() {
+    fun `disarm needs the right code - a wrong one republishes the state`() {
         val house = DemoHouse()
         house.onCommand("demo/alarm/set", """{"action":"ARM_HOME","code":""}""")
         house.tick()

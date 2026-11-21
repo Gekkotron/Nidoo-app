@@ -1,5 +1,8 @@
 package com.gekkotron.nidoo.demo
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+import kotlin.time.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
@@ -24,10 +27,11 @@ import kotlin.random.Random
 class DemoHouse(
     private val random: Random = Random(7),
     /** Wall-clock Unix seconds, for a boost's end. */
-    private val clock: () -> Long = { System.currentTimeMillis() / 1_000 },
+    private val clock: () -> Long = { Clock.System.now().epochSeconds },
 ) {
     private class Echo(val stateTopic: String, val patch: (String) -> JsonObject?)
 
+    private val lock = SynchronizedObject()
     private val configs = mutableListOf<DemoMessage>()
     private val extras = mutableListOf<DemoMessage>()
     private val docs = linkedMapOf<String, JsonObject>()
@@ -98,26 +102,24 @@ class DemoHouse(
     }
 
     /** Configs first, then overrides and areas, then state: the order a real broker replays retained messages. */
-    @Synchronized
-    fun retainedMessages(): List<DemoMessage> =
+    fun retainedMessages(): List<DemoMessage> = synchronized(lock) {
         configs + extras + docs.map { (topic, json) -> DemoMessage(topic, json.toString()) } +
             climateDocs.map { (topic, payload) -> DemoMessage(topic, payload) }
+    }
 
     /**
      * What the hub does with a Climat hold command on [topic]: the zone's new `override` and
      * `decision`. Null when [topic] is not the demo zone's hold command; empty when the payload
      * is refused (no duration, bad JSON), as the hub only logs it.
      */
-    @Synchronized
-    fun onClimateCommand(topic: String, payload: String): List<DemoMessage>? {
+    fun onClimateCommand(topic: String, payload: String): List<DemoMessage>? = synchronized(lock) {
         if (topic != "$CLIMAT_ZONE/hold/set") return null
         if (payload.isEmpty()) return climatSchedule()
         val request = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull() ?: return emptyList()
         val setpoint = (request["setpoint"] as? JsonPrimitive)?.doubleOrNull ?: return emptyList()
         val minutes = (request["minutes"] as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 } ?: return emptyList()
         val until = clock() + minutes * 60L
-        val ends = java.time.Instant.ofEpochSecond(until).atZone(java.time.ZoneId.systemDefault())
-            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        val ends = localHourMinute(until)
         climateDocs["$CLIMAT_ZONE/override"] =
             """[{"entity":null,"setpoint":$setpoint,"mode":null,"until":$until,"origin":"user"}]"""
         climateDocs["$CLIMAT_ZONE/decision"] = climatDecision("boost", setpoint, "Boost to $setpoint °C until $ends")
@@ -125,8 +127,7 @@ class DemoHouse(
     }
 
     /** The state message a real device would publish after receiving [payload] on [topic], or null. */
-    @Synchronized
-    fun onCommand(topic: String, payload: String): DemoMessage? {
+    fun onCommand(topic: String, payload: String): DemoMessage? = synchronized(lock) {
         val echo = echoes[topic] ?: return null
         val patch = echo.patch(payload) ?: return null
         val merged = JsonObject(docs.getValue(echo.stateTopic) + patch)
@@ -135,13 +136,12 @@ class DemoHouse(
     }
 
     /** The house's current state document for [topic], or null when it has none. Delayed echoes publish this, never a snapshot. */
-    @Synchronized
-    fun current(topic: String): DemoMessage? =
+    fun current(topic: String): DemoMessage? = synchronized(lock) {
         docs[topic]?.let { DemoMessage(topic, it.toString()) } ?: climateDocs[topic]?.let { DemoMessage(topic, it) }
+    }
 
     /** One step of live sensor noise: solar and house drift, grid follows, outdoor temperature wobbles. */
-    @Synchronized
-    fun tick(): List<DemoMessage> {
+    fun tick(): List<DemoMessage> = synchronized(lock) {
         val energy = docs.getValue(ENERGY)
         val solar = (energy.number("solar") + random.nextInt(-150, 151)).coerceIn(0.0, 4200.0)
         val house = (energy.number("house") + random.nextInt(-120, 121)).coerceIn(300.0, 3500.0)
