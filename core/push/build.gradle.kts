@@ -17,5 +17,5 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     testImplementation(libs.androidx.work.testing)
-    testImplementation(testFixtures(project(":core:transport")))
+    testImplementation(project(":core:transport-testing"))
 }

@@ -17,7 +17,7 @@ kotlin {
             api(project(":core:transport"))
         }
         jvmTest.dependencies {
-            implementation(project.dependencies.testFixtures(project(":core:transport")))
+            implementation(project(":core:transport-testing"))
         }
     }
 }

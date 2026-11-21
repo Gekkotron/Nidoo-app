@@ -27,7 +27,7 @@ jobs:
             tasks: >-
               :core:model:jvmTest
               :core:crypto:jvmTest
-              :core:transport:test
+              :core:transport:jvmTest
               :core:state:jvmTest
               :core:source:jvmTest
               :core:data:test
@@ -146,6 +146,7 @@ jobs:
           ./gradlew
           :core:model:iosSimulatorArm64Test
           :core:crypto:iosSimulatorArm64Test
+          :core:transport:iosSimulatorArm64Test
           :core:state:iosSimulatorArm64Test
           :core:source:iosSimulatorArm64Test
           :core:history:iosSimulatorArm64Test
