@@ -64,7 +64,7 @@ class MqttDiscoverySourceDashboardsTest {
     }
 
     @Test
-    fun `dashboard, ambiance, _home and _types leave overrides untouched`() = runTest {
+    fun `dashboard - ambiance - _home and _types leave overrides untouched`() = runTest {
         val sink = RecordingDashboards()
         val h = start(sink)
         h.transport.deliver(

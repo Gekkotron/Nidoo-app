@@ -59,7 +59,9 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
 import kotlin.time.Clock
 import kotlin.time.Instant
-import java.util.Locale
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+import kotlin.concurrent.Volatile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -80,7 +82,7 @@ class MqttDiscoverySource(
     private val store = StateStore(now, diagnostics)
     private val tracker = CommandTracker(store, scope, commandTimeout)
 
-    private val lock = Any()
+    private val lock = SynchronizedObject()
     private val discovered = linkedMapOf<String, List<DiscoveredEntity>>() // config topic -> entities
     private val overrides = mutableMapOf<String, UiOverride>()
     private val hubGroupSpecs = mutableMapOf<String, HubGroup>() // group id -> spec
@@ -465,9 +467,9 @@ class MqttDiscoverySource(
             // are one room, under the first spelling in sort order.
             val declaredIds = declared.mapTo(mutableSetOf()) { it.id }
             val canonical = raws.map { it.third }.filter { it !in declaredIds && it != UNASSIGNED_AREA }
-                .groupBy { it.lowercase(Locale.ROOT) }.mapValues { (_, spellings) -> spellings.min() }
+                .groupBy { it.lowercase() }.mapValues { (_, spellings) -> spellings.min() }
             val entities = raws.associate { (d, ui, raw) ->
-                val area = canonical[raw.lowercase(Locale.ROOT)]?.takeIf { raw !in declaredIds } ?: raw
+                val area = canonical[raw.lowercase()]?.takeIf { raw !in declaredIds } ?: raw
                 val named = d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
                 d.entity.uniqueId to named.copy(kind = effectiveKind(d.entity.protocolKind, ui))
             }
@@ -495,7 +497,7 @@ class MqttDiscoverySource(
 
     /** "julien" → "Julien", "salle_de_bain" → "Salle de bain"; the id stays raw. */
     private fun implicitName(raw: String): String =
-        raw.replace('_', ' ').replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+        raw.replace('_', ' ').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
     private fun computeAreas(declared: List<Area>, entities: Collection<Entity>): List<Area> {
         val used = entities.mapTo(mutableSetOf()) { it.area }

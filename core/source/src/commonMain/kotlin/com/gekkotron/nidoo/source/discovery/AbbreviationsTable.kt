@@ -1,3 +1,10 @@
+package com.gekkotron.nidoo.source.discovery
+
+/**
+ * Home Assistant's MQTT discovery abbreviation tables (spec §4.3), verbatim. A Kotlin string rather than
+ * a JVM resource so iOS reads the same table.
+ */
+internal const val ABBREVIATIONS_JSON: String = """
 {
   "payload": {
     "act_t": "action_topic", "act_tpl": "action_template",
@@ -74,3 +81,4 @@
     "name": "name", "sw": "sw_version", "url": "support_url"
   }
 }
+"""

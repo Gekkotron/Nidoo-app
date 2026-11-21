@@ -79,7 +79,7 @@ class EntityCacheSourceTest {
     }
 
     @Test
-    fun `the journal holds the topics that build the output, and drops removed ones`() = runTest {
+    fun `the journal holds the topics that build the output - and drops removed ones`() = runTest {
         val (transport, source) = start(FakeMqttTransport())
         transport.deliver(lightTopic, lightConfig, retain = true)
         runCurrent()
@@ -114,7 +114,7 @@ class EntityCacheSourceTest {
     }
 
     @Test
-    fun `a link that drops before the replay does not prune, and the next connection settles`() = runTest {
+    fun `a link that drops before the replay does not prune - and the next connection settles`() = runTest {
         val (transport, source) = start()
         source.restore(cached)
         transport.setLink(connected)
@@ -160,7 +160,7 @@ class EntityCacheSourceTest {
     }
 
     @Test
-    fun `after connecting, restored configs the broker no longer holds are pruned with their override`() = runTest {
+    fun `after connecting - restored configs the broker no longer holds are pruned with their override`() = runTest {
         val (transport, source) = start()
         source.restore(cached)
         runCurrent()

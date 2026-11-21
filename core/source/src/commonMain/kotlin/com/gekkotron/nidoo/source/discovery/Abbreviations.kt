@@ -6,13 +6,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** Expands HA MQTT discovery abbreviations (table embedded as a resource, spec §4.3). */
+/** Expands HA MQTT discovery abbreviations (table in [ABBREVIATIONS_JSON], spec §4.3). */
 internal object Abbreviations {
     private val tables: Map<String, Map<String, String>> by lazy {
-        val text = checkNotNull(Abbreviations::class.java.getResourceAsStream("/com/gekkotron/nidoo/source/abbreviations.json")) {
-            "abbreviations.json missing from resources"
-        }.use { it.readBytes().decodeToString() }
-        Json.parseToJsonElement(text).jsonObject.mapValues { (_, table) ->
+        Json.parseToJsonElement(ABBREVIATIONS_JSON).jsonObject.mapValues { (_, table) ->
             table.jsonObject.mapValues { it.value.jsonPrimitive.content }
         }
     }
