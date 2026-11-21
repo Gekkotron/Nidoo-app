@@ -14,11 +14,14 @@ kotlin {
         binaries.framework {
             baseName = "Nidoo"
             isStatic = true
+            // Swift implements MqttClientPort (CocoaMQTT, spec §9), so the framework exposes :core:transport.
+            export(project(":core:transport"))
         }
     }
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:model"))
+            api(project(":core:transport"))
             implementation(project(":core:demo"))
             implementation(project(":core:source"))
         }

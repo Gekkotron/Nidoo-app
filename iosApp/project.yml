@@ -13,12 +13,22 @@ configFiles:
 settings:
   base:
     ORGANIZATION_NAME: Gekkotron
+packages:
+  # The direct MQTT link (spec §9, MQTT gate of 2026-11-21): no KMP client met the bar.
+  CocoaMQTT:
+    url: https://github.com/emqx/CocoaMQTT
+    exactVersion: 2.4.2
 targets:
   Nidoo:
     type: application
     platform: iOS
     sources:
       - path: Nidoo
+    dependencies:
+      - package: CocoaMQTT
+        product: CocoaMQTT
+      - package: CocoaMQTT
+        product: CocoaMQTTWebSocket
     info:
       path: Nidoo/Info.plist
       properties:
@@ -28,6 +38,9 @@ targets:
         CADisableMinimumFrameDurationOnPhone: true
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
+        NSLocalNetworkUsageDescription: Nidoo talks to your home hub on the local network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     settings:
       base:
         PRODUCT_NAME: Nidoo
