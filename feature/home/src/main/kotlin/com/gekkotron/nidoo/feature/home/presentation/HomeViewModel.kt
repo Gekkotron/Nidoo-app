@@ -83,7 +83,9 @@ class HomeViewModel @Inject constructor(
         // Favorites is the exception: it is the launch default, and on a cold start the retained
         // favourite flags land after the entities, so its chip is briefly missing. Keeping the key
         // lets the screen settle on Favorites once they arrive instead of sticking on All.
-        if (ui.selected.key != key && key != RoomFilter.Favorites.key) savedState[KEY_FILTER] = ui.selected.key
+        // Not while the source is still empty: after process death the restored key (a room, Rooms)
+        // has no chip yet either, and rewriting it would land the user on All devices for good.
+        if (!ui.loading && ui.selected.key != key && key != RoomFilter.Favorites.key) savedState[KEY_FILTER] = ui.selected.key
         ui
     }
 

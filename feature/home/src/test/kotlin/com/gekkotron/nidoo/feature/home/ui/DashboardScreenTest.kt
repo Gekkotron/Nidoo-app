@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
 import com.gekkotron.nidoo.feature.home.presentation.DashboardScreenState
 import com.gekkotron.nidoo.feature.home.presentation.DashboardView
 import com.gekkotron.nidoo.feature.home.presentation.EnergyMetric
@@ -41,10 +42,10 @@ class DashboardScreenTest {
     private val runs = mutableListOf<String>()
     private val energyOpens = mutableListOf<Unit>()
 
-    private fun show(dashboard: DashboardScreenState) = compose.setContent {
+    private fun show(dashboard: DashboardScreenState, house: HomeUiState = DashboardFixtures.house) = compose.setContent {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             HomeScreen(
-                state = DashboardFixtures.house, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                state = house, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
                 dashboard = dashboard,
                 onSelectDashboard = { picks += it },
                 onRunFlow = { runs += it },
@@ -93,6 +94,14 @@ class DashboardScreenTest {
         show(shown(listOf(tile("a", TileContent.Entity(card("lamp")))), showHeader = true))
         compose.onNodeWithText("Good afternoon").assertExists()
         compose.onNodeWithText("Rooms").assertExists()
+    }
+
+    @Test
+    fun `a dashboard header shows the top-level pills even when House was left on a room`() {
+        val inRoom = DashboardFixtures.house.copy(selected = DashboardFixtures.house.roomChips.first().filter)
+        show(shown(listOf(tile("a", TileContent.Entity(card("lamp")))), showHeader = true), house = inRoom)
+        compose.onNodeWithText("Rooms").assertExists()
+        compose.onNodeWithText("‹ Rooms").assertDoesNotExist()
     }
 
     @Test

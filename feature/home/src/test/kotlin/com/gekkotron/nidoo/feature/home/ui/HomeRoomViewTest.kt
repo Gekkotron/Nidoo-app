@@ -250,4 +250,33 @@ class HomeRoomViewTest {
         compose.onNodeWithText("Search a device or room").assertExists()
         compose.onNodeWithText("la").assertDoesNotExist()
     }
+
+    @Test
+    @Config(qualifiers = "w700dp-h1200dp")
+    fun `on a three-column window a room card takes the full row instead of leaving a column empty`() {
+        show(RoomFilter.Rooms)
+        val card = compose.onNodeWithTag("room-living").fetchSemanticsNode().boundsInRoot.width
+        val grid = compose.onNodeWithTag("home-grid").fetchSemanticsNode().boundsInRoot.width
+        assert(card > grid * 0.9f) { "card $card of grid $grid" }
+    }
+
+    @Test
+    fun `while searching from a room the header is not that room's`() {
+        show(RoomFilter.Area("living"))
+        field.performTextInput("coffee")
+        compose.onNodeWithTag("card-coffee").assertExists()
+        compose.onNodeWithTag("room-title").assertDoesNotExist()
+        compose.onNodeWithTag("room-status").assertDoesNotExist()
+    }
+
+    @Test
+    fun `back still leaves Home after the focused field went away with its view`() {
+        show(RoomFilter.Rooms)
+        field.performClick()
+        field.assertIsFocused()
+        compose.runOnUiThread { selected = RoomFilter.Favorites }
+        field.assertDoesNotExist()
+        back()
+        assert(compose.activity.isFinishing) { "back was swallowed" }
+    }
 }

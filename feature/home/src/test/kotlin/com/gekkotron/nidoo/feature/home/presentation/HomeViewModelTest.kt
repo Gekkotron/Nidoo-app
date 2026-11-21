@@ -104,6 +104,21 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `a restored room or Rooms selection survives the empty moment before discovery`() = runTest(dispatcher) {
+        for (saved in listOf<RoomFilter>(RoomFilter.Area("kitchen"), RoomFilter.Rooms)) {
+            // Process death: the saved key is back, but the source has nothing yet.
+            val cold = FakeEntitySource()
+            val handle = SavedStateHandle(mapOf("home.filter" to saved.key))
+            val vm = HomeViewModel(cold, handle, dispatcher, preferences = testPreferences())
+            backgroundScope.launch { vm.state.collect {} }
+            assertEquals(saved.key, handle.get<String>("home.filter"))
+            cold.areas.value = listOf(Area("kitchen", "Kitchen"))
+            cold.entities.value = mapOf("lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen"))
+            assertEquals(saved, vm.state.value.selected)
+        }
+    }
+
+    @Test
     fun `launch lands on Favorites even when the favourite flags arrive after the entities`() = runTest(dispatcher) {
         // Cold start: discovery configs come in first, the retained nidoo/ui overrides a moment later.
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())

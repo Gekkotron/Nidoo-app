@@ -317,7 +317,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView.takeIf { !searching }, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
                 if (searching || fieldAlways) {
                     val opened = searchOpen && !fieldAlways
                     item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
@@ -335,7 +335,7 @@ fun HomeScreen(
                 if (!searching && showDashboardHeader) {
                     item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
                         // On a dashboard a pill goes back to House, on that view.
-                        HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
+                        HomeChips(state, inRoom = roomInView != null, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
                     }
                 }
                 val climat = state.climat
@@ -365,7 +365,8 @@ fun HomeScreen(
                     }
                 }
                 if (!onDashboard && !searching && state.selected == RoomFilter.Rooms) {
-                    items(state.roomCards, key = { "room-" + it.areaId }, span = { GridItemSpan(minOf(2, maxLineSpan)) }) { room ->
+                    // Two columns per card where they pair up; on an odd grid (3 columns) a 2-span card would leave a column empty on every row.
+                    items(state.roomCards, key = { "room-" + it.areaId }, span = { GridItemSpan(if (maxLineSpan % 2 == 0) 2 else maxLineSpan) }) { room ->
                         RoomCard(
                             room,
                             onOpen = { onSelect(RoomFilter.Area(room.areaId)) },
@@ -596,14 +597,14 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
 }
 
 @Composable
-private fun HomeChips(state: HomeUiState, onSelect: (RoomFilter) -> Unit) {
+private fun HomeChips(state: HomeUiState, inRoom: Boolean, onSelect: (RoomFilter) -> Unit) {
     val all = stringResource(R.string.chip_all)
     val favorites = stringResource(R.string.chip_favorites)
     val rooms = stringResource(R.string.chip_rooms)
     val unassigned = stringResource(R.string.area_unassigned)
     val hidden = stringResource(R.string.chip_hidden, state.hiddenCount)
-    // Inside a room the row is "‹ Rooms" then every room (rooms design §6.4); elsewhere the top-level views.
-    val inRoom = state.selected is RoomFilter.Area
+    // Inside a room the row is "‹ Rooms" then every room (rooms design §6.4); elsewhere, and on a
+    // dashboard whatever House was left on, the top-level views.
     val back = stringResource(R.string.chip_back_rooms)
     val items = (if (inRoom) state.roomChips else state.chips).map { chip ->
         val label = chip.label ?: when (chip.filter) {
