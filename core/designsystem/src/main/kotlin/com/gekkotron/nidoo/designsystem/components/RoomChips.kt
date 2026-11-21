@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -31,7 +33,13 @@ fun RoomChips(items: List<ChipItem>, selectedKey: String, onSelect: (String) -> 
     val listState = rememberLazyListState()
     LaunchedEffect(selectedKey, items.size) {
         val index = items.indexOfFirst { it.key == selectedKey }
-        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.animateScrollToItem(index)
+        if (index < 0) return@LaunchedEffect
+        // Wait for the first layout: before it nothing is "visible" and the row would always jump,
+        // pushing the leading pill ("‹ Rooms") off the edge.
+        val info = snapshotFlow { listState.layoutInfo }.first { it.visibleItemsInfo.isNotEmpty() }
+        val item = info.visibleItemsInfo.firstOrNull { it.index == index }
+        val fits = item != null && item.offset >= info.viewportStartOffset && item.offset + item.size <= info.viewportEndOffset
+        if (!fits) listState.animateScrollToItem(index)
     }
     LazyRow(modifier, state = listState, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(items, key = { it.key }) { item ->
