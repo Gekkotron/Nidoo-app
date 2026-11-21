@@ -8,28 +8,18 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapNotNull
-import okhttp3.OkHttpClient
-import java.io.IOException
-import java.util.concurrent.TimeUnit
+import kotlinx.io.IOException
 
 /**
  * [GatewayApi] over the gateway's own Kotlin SDK (`athena-gateway-client`, gateway spec §3.3). The SDK owns
  * the wire format; this maps its events and errors to ours. Streams are opened without the SDK's
- * `reconnect`: [GatewayTransport] reconnects, with make-before-break.
+ * `reconnect`: [GatewayTransport] reconnects, with make-before-break. Built by the platform factories
+ * `AthenaGatewayApi(spec, …)` (OkHttp on the JVM, the SDK's Darwin client on iOS).
  */
 class AthenaGatewayApi internal constructor(
     private val client: AthenaGatewayClient,
     private val broker: Broker?,
 ) : GatewayApi {
-    /** [http] is shared; publishes get a 10 s call timeout (the SDK clears it for streams). */
-    constructor(spec: TransportSpec.Gateway, http: OkHttpClient = OkHttpClient()) : this(
-        AthenaGatewayClient(
-            requireHttps(spec.url),
-            spec.key.toHex(),
-            http.noDowngrade().newBuilder().callTimeout(PUBLISH_TIMEOUT_SECONDS, TimeUnit.SECONDS).build(),
-        ),
-        spec.broker(),
-    )
 
     override fun stream(topics: Set<String>): Flow<GatewayEvent> =
         client.subscribe(*topics.sorted().toTypedArray(), qos = 1, broker = broker)
@@ -54,12 +44,9 @@ class AthenaGatewayApi internal constructor(
         }
     }
 
-    private companion object {
-        const val PUBLISH_TIMEOUT_SECONDS = 10L
-
-        fun requireHttps(url: String): String = url.also { require(it.startsWith("https://")) { "the gateway URL must use https" } }
-    }
 }
+
+internal fun requireHttps(url: String): String = url.also { require(it.startsWith("https://")) { "the gateway URL must use https" } }
 
 /** A refusal only the user can fix, or an IOException that [GatewayTransport] retries with backoff. */
 internal fun Throwable.toStreamFailure(): Throwable = when (this) {
@@ -70,7 +57,7 @@ internal fun Throwable.toStreamFailure(): Throwable = when (this) {
     is GatewayException.BrokerRefused -> GatewayRefused(Refusal.BrokerRejected)
     is GatewayException.StreamError -> IOException(reason, this)
     // Transport, GatewayError (including an undecryptable frame), anything else: worth another try.
-    else -> IOException(message ?: javaClass.simpleName, this)
+    else -> IOException(message ?: this::class.simpleName, this)
 }
 
 /** Short, secret-free text for "Not confirmed — Retry"; the known cases reuse the offline reasons. */
@@ -80,15 +67,12 @@ internal fun GatewayException.publishText(): String = when (this) {
     is GatewayException.BrokerRefused -> LinkState.Offline.REJECTED
     is GatewayException.GatewayError -> reason
     is GatewayException.Upstream -> errorText(body) ?: "broker error $status"
-    else -> message ?: javaClass.simpleName
+    else -> message ?: this::class.simpleName.orEmpty()
 }
 
 internal fun TransportSpec.Gateway.broker(): Broker? =
     if (brokerHost == null && username == null) null else Broker(host = brokerHost, username = username, password = password)
 
-internal fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+internal fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 
 private const val EXPIRED = "Request expired"
-
-/** Refuses https to http redirects: cleartext is allowed app-wide (push alerts spec §6.3), the gateway must stay on TLS. */
-internal fun OkHttpClient.noDowngrade(): OkHttpClient = newBuilder().followSslRedirects(false).build()

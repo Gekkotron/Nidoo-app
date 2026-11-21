@@ -20,7 +20,7 @@ class NoDowngradeTest {
     @Test
     fun `both gateway classes build their client with noDowngrade`() {
         val src = { n: String -> java.io.File("src/jvmMain/kotlin/com/gekkotron/nidoo/transport/$n").readText() }
-        assertTrue("noDowngrade()" in src("AthenaGatewayApi.kt"))
-        assertTrue("noDowngrade()" in src("AthenaGatewayDownloader.kt"))
+        assertTrue("noDowngrade()" in src("AthenaGatewayApi.jvm.kt"))
+        assertTrue("noDowngrade()" in src("AthenaGatewayDownloader.jvm.kt"))
     }
 }

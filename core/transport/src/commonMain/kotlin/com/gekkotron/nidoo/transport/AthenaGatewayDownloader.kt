@@ -8,16 +8,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
-import okhttp3.OkHttpClient
 
 /** [GatewayDownloader] over the SDK's `download` and `http`, with non-2xx answers returned instead of thrown. */
 class AthenaGatewayDownloader internal constructor(
     private val fetch: suspend (url: String, timeoutSeconds: Int, headers: Map<String, String>) -> GatewayDownload,
     private val send: suspend (url: String, body: JsonElement, timeoutSeconds: Int) -> GatewayResponse,
 ) : GatewayDownloader {
-    constructor(spec: TransportSpec.Gateway, http: OkHttpClient = OkHttpClient()) : this(clientFor(spec, http))
-
-    private constructor(client: AthenaGatewayClient) : this(
+    /** The platform factories `AthenaGatewayDownloader(spec, …)` build the client. */
+    internal constructor(client: AthenaGatewayClient) : this(
         fetch = { url, timeout, headers -> client.download(url, headers = headers, timeoutSeconds = timeout, throwOnUpstreamError = false) },
         send = { url, body, timeout ->
             client.http(url, method = "POST", headers = JSON_HEADERS, body = body, timeoutSeconds = timeout, throwOnUpstreamError = false)
@@ -40,11 +38,6 @@ class AthenaGatewayDownloader internal constructor(
 
     private companion object {
         val JSON_HEADERS = mapOf("Content-Type" to "application/json")
-
-        fun clientFor(spec: TransportSpec.Gateway, http: OkHttpClient): AthenaGatewayClient {
-            require(spec.url.startsWith("https://")) { "the gateway URL must use https" }
-            return AthenaGatewayClient(spec.url, spec.key.toHex(), http.noDowngrade())
-        }
     }
 }
 
