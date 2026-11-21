@@ -18,11 +18,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import java.time.Instant
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /** Maps each incoming (topic, payload) onto every entity bound to that topic (spec §4.4). Thread-safe. */
 class StateStore(
-    private val now: () -> Instant = Instant::now,
+    private val now: () -> Instant = { Clock.System.now() },
     private val diagnostics: DiagnosticSink = DiagnosticSink.None,
 ) {
     private class Tracked(
@@ -35,7 +38,7 @@ class StateStore(
         val allTopics: Set<String> = stateTopics + availability?.spec?.topics.orEmpty() + setOfNotNull(attributesTopic)
     }
 
-    private val lock = Any()
+    private val lock = SynchronizedObject()
     private var tracked: Map<String, Tracked> = emptyMap()
     private var topicIndex: Map<String, List<String>> = emptyMap()
     private val confirmed = mutableMapOf<String, StateValue>()

@@ -57,7 +57,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
-import java.time.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -71,7 +72,7 @@ class MqttDiscoverySource(
     private val prefix: String = DEFAULT_PREFIX,
     private val diagnostics: DiagnosticSink = DiagnosticSink.None,
     commandTimeout: Duration = 5.seconds,
-    now: () -> Instant = Instant::now,
+    now: () -> Instant = { Clock.System.now() },
     private val flowsSink: FlowsSink? = null,
     private val dashboardsSink: DashboardsSink? = null,
     private val climateSink: ClimateSink? = null,

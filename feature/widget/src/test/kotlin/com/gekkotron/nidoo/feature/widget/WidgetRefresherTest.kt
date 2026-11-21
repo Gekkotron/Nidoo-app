@@ -24,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.toKotlinInstant
 
 class WidgetRefresherTest {
     private object B : Bindings
@@ -31,7 +32,7 @@ class WidgetRefresherTest {
     private val sw = Entity("s", null, "Kettle", Kind.SWITCH, null, null, null, Capabilities(), B)
     private val kettleTile = TileSnapshot("s", "Kettle", Kind.SWITCH, TileIcon.SWITCH, TileValue.OnOff(true))
 
-    private fun on(v: Boolean, t: Long = 100) = EntityState("s", StateValue.OnOff(v), lastUpdate = Instant.ofEpochMilli(t))
+    private fun on(v: Boolean, t: Long = 100) = EntityState("s", StateValue.OnOff(v), lastUpdate = Instant.ofEpochMilli(t).toKotlinInstant())
 
     private class FakeEntities(
         var refresh: RefreshResult = RefreshResult.Failed(Failure.OFFLINE),

@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.toKotlinInstant
 
 class SecurityUiBuilderTest {
     private val areas = listOf(Area("garage", "Garage"), Area("living", "Living room"))
@@ -262,7 +263,7 @@ class SecurityUiBuilderTest {
     private val month = Duration.ofDays(30)
 
     private fun since(server: LastChange?, local: Instant?): Since? {
-        val state = EntityState("door", StateValue.OnOff(false), changedAt = local)
+        val state = EntityState("door", StateValue.OnOff(false), changedAt = local?.toKotlinInstant())
         val changes = server?.let { mapOf("door" to it) } ?: emptyMap()
         return SecurityUiBuilder.build(mapOf("door" to sensor("door", "door")), mapOf("door" to state), areas, LinkState.Connecting, changes)
             .sensors.single().since

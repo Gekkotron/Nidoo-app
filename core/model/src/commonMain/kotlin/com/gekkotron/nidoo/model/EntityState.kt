@@ -1,6 +1,6 @@
 package com.gekkotron.nidoo.model
 
-import java.time.Instant
+import kotlin.time.Instant
 
 data class EntityState(
     val uniqueId: String,

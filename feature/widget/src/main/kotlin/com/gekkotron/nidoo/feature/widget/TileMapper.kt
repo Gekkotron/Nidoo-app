@@ -55,7 +55,7 @@ object TileMapper {
             historyAvailable = historyEnabled && HistoryRefs.of(entity) != null,
             status = TileStatus.OK,
             pendingSince = null,
-            updatedAt = liveAt?.toEpochMilli() ?: previous?.updatedAt,
+            updatedAt = liveAt?.toEpochMilliseconds() ?: previous?.updatedAt,
         )
     }
 

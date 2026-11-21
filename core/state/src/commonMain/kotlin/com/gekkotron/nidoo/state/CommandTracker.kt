@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -24,27 +25,36 @@ class CommandTracker(
     private val _failures = MutableSharedFlow<CommandFailure>(extraBufferCapacity = 64)
     val failures: SharedFlow<CommandFailure> = _failures.asSharedFlow()
 
-    private val timers = ConcurrentHashMap<String, Job>()
+    private val lock = SynchronizedObject()
+    private val timers = mutableMapOf<String, Job>()
+
+    private fun removeTimer(uniqueId: String): Job? = synchronized(lock) { timers.remove(uniqueId) }
+
+    /** Removes the timer only if it is still [job] (a newer command may have replaced it). */
+    private fun removeTimer(uniqueId: String, job: Job): Unit = synchronized(lock) {
+        if (timers[uniqueId] === job) timers.remove(uniqueId)
+    }
 
     /**
      * Call before publishing. Without feedback, the caller confirms with [StateStore.confirmPending].
      * [confirmBy] restricts which state topics confirm (null = any state topic of the entity).
      */
     fun track(uniqueId: String, command: Command, predicted: StateValue?, hasFeedback: Boolean, confirmBy: Set<String>? = null) {
-        timers.remove(uniqueId)?.cancel()
+        removeTimer(uniqueId)?.cancel()
         if (predicted == null) return
         store.markPending(uniqueId, predicted, confirmBy)
         if (!hasFeedback) return
-        timers[uniqueId] = scope.launch {
+        val timer = scope.launch {
             delay(timeout)
-            timers.remove(uniqueId, coroutineContext.job)
+            removeTimer(uniqueId, coroutineContext.job)
             if (store.revert(uniqueId)) _failures.emit(CommandFailure(uniqueId, command, "Not confirmed"))
         }
+        synchronized(lock) { timers[uniqueId] = timer }
     }
 
     /** The publish failed: drop the prediction without reporting a timeout. */
     fun abort(uniqueId: String) {
-        timers.remove(uniqueId)?.cancel()
+        removeTimer(uniqueId)?.cancel()
         store.revert(uniqueId)
     }
 }

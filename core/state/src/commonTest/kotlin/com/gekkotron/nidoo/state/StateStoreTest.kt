@@ -3,7 +3,8 @@ package com.gekkotron.nidoo.state
 import com.gekkotron.nidoo.model.Diagnostic
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
-import java.time.Instant
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -38,7 +39,7 @@ class StateStoreTest {
     }
 
     @Test
-    fun `subscription topics include state, availability and attributes`() {
+    fun `subscription topics include state - availability and attributes`() {
         store.setEntities(listOf(temperature, lamp))
         assertEquals(setOf("z/capteur", "s", "s/avail", "s/attr"), store.subscriptionTopics())
     }
@@ -246,11 +247,11 @@ class StateStoreTest {
         timed.setEntities(listOf(door))
         timed.onMessage("d", "OFF")
         assertEquals(null, changedAt()) // the first message: the flip was not seen
-        time = time.plusSeconds(60)
+        time = time + 60.seconds
         timed.onMessage("d", "ON")
         assertEquals(time, changedAt())
         val flippedAt = time
-        time = time.plusSeconds(600)
+        time = time + 600.seconds
         timed.onMessage("d", "ON") // a battery report republishes the same state
         assertEquals(flippedAt, changedAt())
         assertEquals(time, timed.states.value.getValue("door").lastUpdate)
@@ -260,10 +261,10 @@ class StateStoreTest {
     fun `cache restores never count as a flip`() {
         timed.setEntities(listOf(door))
         timed.onMessage("d", "OFF", restored = true)
-        time = time.plusSeconds(60)
+        time = time + 60.seconds
         timed.onMessage("d", "ON") // differs from the cached value, but the change happened while the app was away
         assertEquals(null, changedAt())
-        time = time.plusSeconds(60)
+        time = time + 60.seconds
         timed.onMessage("d", "OFF")
         assertEquals(time, changedAt())
     }

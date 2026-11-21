@@ -12,6 +12,7 @@ import com.gekkotron.nidoo.model.SwitchType
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState
 import java.time.Instant
+import kotlin.time.toJavaInstant
 
 /** Entities → the Security tab (security spec §4.3). Pure. */
 object SecurityUiBuilder {
@@ -45,7 +46,7 @@ object SecurityUiBuilder {
                     active = (s?.value as? StateValue.OnOff)?.on,
                     available = s?.available ?: true,
                     stale = s?.stale == true,
-                    since = since(changes[e.uniqueId], s?.changedAt),
+                    since = since(changes[e.uniqueId], s?.changedAt?.toJavaInstant()),
                 )
             }
             // Stable order: a tile does not move when its state flips (security spec §4.3). Area then name, Unassigned last.
