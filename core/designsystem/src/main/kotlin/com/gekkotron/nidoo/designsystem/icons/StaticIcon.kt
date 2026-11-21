@@ -56,6 +56,17 @@ enum class NidooGlyph(private val parts: List<Part>) {
     BROKER(listOf(line("M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"))),
     INFO(listOf(area("M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"), line("M12 11v5.5M12 7.5h.01"))),
 
+    // Room cards on Home (rooms design §6.2); HOUSE is the generic room and WASHER the laundry.
+    SOFA(listOf(area("M5 11V9a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2a2 2 0 0 1 2 2v4H3v-4a2 2 0 0 1 2-2z"), line("M5 17v2M19 17v2M7 13h10"))),
+    POT(listOf(area("M5 10h14v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"), line("M3 10h18M10 6.5h4M12 6.5V10"))),
+    BED(listOf(area("M3 12h18v5H3z"), line("M3 7v12M21 17v2M6 12V9.5h5V12"))),
+    BATH(listOf(area("M3 12h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"), line("M6 12V6a2 2 0 0 1 4 0M7 19l-1 2M17 19l1 2"))),
+    DESK(listOf(area("M3 8h18v3H3z"), line("M5 11v9M19 11v9M13 11v5h6"))),
+    CAR(listOf(area("M5 11l1.5-4.5h11L19 11v6H5z"), line("M5 11h14M7.5 14h.5M16 14h.5M7 17v2M17 17v2"))),
+    LEAF(listOf(area("M5 19C5 10 10 5 20 4c0 10-5 15-14 15z"), line("M5 19c3-5 6-8 10-10"))),
+    ENTRY_DOOR(listOf(area("M7 3h10v18H7z"), line("M5 21h14M14 12h.5"))),
+    TOILET(listOf(area("M8 3h8v7H8zM6 10h12a6 6 0 0 1-6 6 6 6 0 0 1-6-6z"), line("M10 16v5h4v-5"))),
+
     // Media players: the note on the card, the transport buttons in the sheet (PLAY is above).
     MUSIC(listOf(line("M9 18V5.5l11-2V16"), area("M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"))),
     PAUSE(listOf(area("M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"))),

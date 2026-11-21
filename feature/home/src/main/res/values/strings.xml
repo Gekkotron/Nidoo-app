@@ -3,7 +3,7 @@
     <string name="greeting_afternoon">Good afternoon</string>
     <string name="greeting_evening">Good evening</string>
     <string name="home_discovering">Discovering devices…</string>
-    <string name="chip_all">All</string>
+    <string name="chip_all">All devices</string>
     <string name="chip_rooms">Rooms</string>
     <string name="chip_back_rooms">‹ Rooms</string>
     <string name="chip_favorites">Favourites</string>
@@ -294,4 +294,34 @@
     <string name="media_state_playing">Playing</string>
     <string name="media_state_paused">Paused</string>
     <string name="media_state_idle">Idle</string>
+
+    <!-- Rooms view and whole-room buttons (rooms design) -->
+    <plurals name="room_lights_on">
+        <item quantity="one">%1$d light on</item>
+        <item quantity="other">%1$d lights on</item>
+    </plurals>
+    <string name="room_lights_off">Lights off</string>
+    <string name="room_shutters_open">Shutters open</string>
+    <string name="room_shutters_closed">Shutters closed</string>
+    <string name="room_shutters_some">%1$d of %2$d open</string>
+    <string name="room_shutters_opening">Opening…</string>
+    <string name="room_shutters_closing">Closing…</string>
+    <plurals name="room_devices">
+        <item quantity="one">%1$d device</item>
+        <item quantity="other">%1$d devices</item>
+    </plurals>
+    <string name="room_action_lights_on">Turn on %1$s lights</string>
+    <string name="room_action_lights_off">Turn off %1$s lights</string>
+    <string name="room_action_shutters_open">Open %1$s shutters</string>
+    <string name="room_action_shutters_close">Close %1$s shutters</string>
+    <string name="room_action_shutters_stop">Stop %1$s shutters</string>
+    <string name="room_card_description">%1$s, %2$s</string>
+    <plurals name="home_room_not_confirmed_lights">
+        <item quantity="one">%2$s: %1$d light didn\'t respond</item>
+        <item quantity="other">%2$s: %1$d lights didn\'t respond</item>
+    </plurals>
+    <plurals name="home_room_not_confirmed_covers">
+        <item quantity="one">%2$s: %1$d shutter didn\'t respond</item>
+        <item quantity="other">%2$s: %1$d shutters didn\'t respond</item>
+    </plurals>
 </resources>

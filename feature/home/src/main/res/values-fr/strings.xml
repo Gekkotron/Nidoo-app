@@ -3,7 +3,7 @@
     <string name="greeting_afternoon">Bon après-midi</string>
     <string name="greeting_evening">Bonsoir</string>
     <string name="home_discovering">Recherche des appareils…</string>
-    <string name="chip_all">Tout</string>
+    <string name="chip_all">Tous les appareils</string>
     <string name="chip_rooms">Pièces</string>
     <string name="chip_back_rooms">‹ Pièces</string>
     <string name="chip_favorites">Favoris</string>
@@ -294,4 +294,34 @@
     <string name="media_state_playing">En lecture</string>
     <string name="media_state_paused">En pause</string>
     <string name="media_state_idle">À l\'arrêt</string>
+
+    <!-- Rooms view and whole-room buttons (rooms design) -->
+    <plurals name="room_lights_on">
+        <item quantity="one">%1$d lumière allumée</item>
+        <item quantity="other">%1$d lumières allumées</item>
+    </plurals>
+    <string name="room_lights_off">Lumières éteintes</string>
+    <string name="room_shutters_open">Volets ouverts</string>
+    <string name="room_shutters_closed">Volets fermés</string>
+    <string name="room_shutters_some">%1$d sur %2$d ouverts</string>
+    <string name="room_shutters_opening">Ouverture…</string>
+    <string name="room_shutters_closing">Fermeture…</string>
+    <plurals name="room_devices">
+        <item quantity="one">%1$d appareil</item>
+        <item quantity="other">%1$d appareils</item>
+    </plurals>
+    <string name="room_action_lights_on">Allumer les lumières : %1$s</string>
+    <string name="room_action_lights_off">Éteindre les lumières : %1$s</string>
+    <string name="room_action_shutters_open">Ouvrir les volets : %1$s</string>
+    <string name="room_action_shutters_close">Fermer les volets : %1$s</string>
+    <string name="room_action_shutters_stop">Arrêter les volets : %1$s</string>
+    <string name="room_card_description">%1$s, %2$s</string>
+    <plurals name="home_room_not_confirmed_lights">
+        <item quantity="one">%2$s : %1$d lumière n\'a pas répondu</item>
+        <item quantity="other">%2$s : %1$d lumières n\'ont pas répondu</item>
+    </plurals>
+    <plurals name="home_room_not_confirmed_covers">
+        <item quantity="one">%2$s : %1$d volet n\'a pas répondu</item>
+        <item quantity="other">%2$s : %1$d volets n\'ont pas répondu</item>
+    </plurals>
 </resources>

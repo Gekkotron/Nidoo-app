@@ -86,6 +86,7 @@ import com.gekkotron.nidoo.feature.home.presentation.HomeEvent
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
+import com.gekkotron.nidoo.feature.home.presentation.RoomKind
 import com.gekkotron.nidoo.feature.home.presentation.TapAction
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Command
@@ -114,11 +115,14 @@ fun HomeRoute(
     val voiceEnabled by viewModel.voiceEnabled.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var ask by rememberSaveable { mutableStateOf<HomeEvent.AskBeforeAction?>(null) }
+    val unassigned = stringResource(R.string.area_unassigned)
     HomeEventsEffect(
         viewModel.events, snackbar,
         onRetry = { id, c -> viewModel.send(id, c, cardOf(id)) },
         onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids, cardOf(g)) },
         onAsk = { ask = it },
+        onRetryRoom = viewModel::retryRoom,
+        roomName = { area -> state.roomCards.firstOrNull { it.areaId == area }?.name ?: unassigned },
     )
     val flowRefused = stringResource(R.string.widget_flow_refused)
     val flowFailed = stringResource(R.string.widget_flow_failed)
@@ -162,6 +166,7 @@ fun HomeRoute(
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
         onSendGroup = { id, c -> viewModel.sendGroup(id, c, group = cardOf(id)) },
+        onSendRoom = viewModel::sendRoom,
         onCustomizeGroup = { id, name, favorite -> viewModel.customizeGroup(id, name, favorite, cardOf(id)) },
         voiceEnabled = voiceEnabled,
         dashboard = dashboard,
@@ -192,6 +197,7 @@ fun HomeScreen(
     onSearch: (String) -> Unit = {},
     onOpenHistory: (String) -> Unit = {},
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
+    onSendRoom: (areaId: String, kind: RoomKind) -> Unit = { _, _ -> },
     onCustomizeGroup: (String, String, Boolean) -> Unit = { _, _, _ -> },
     voiceEnabled: Boolean = false,
     dashboard: DashboardScreenState = DashboardScreenState(),
@@ -308,6 +314,16 @@ fun HomeScreen(
                             )
                         }
                         DashboardView.House -> Unit
+                    }
+                }
+                if (!onDashboard && !searching && state.selected == RoomFilter.Rooms) {
+                    items(state.roomCards, key = { "room-" + it.areaId }, span = { GridItemSpan(minOf(2, maxLineSpan)) }) { room ->
+                        RoomCard(
+                            room,
+                            onOpen = { onSelect(RoomFilter.Area(room.areaId)) },
+                            onLights = { onSendRoom(room.areaId, RoomKind.LIGHT) },
+                            onShutters = { onSendRoom(room.areaId, RoomKind.COVER) },
+                        )
                     }
                 }
                 if (searching && state.query.isNotBlank() && state.cards.isEmpty()) {

@@ -90,6 +90,7 @@ class HomeScreenTest {
     private val selects = mutableListOf<RoomFilter>()
     private val customized = mutableListOf<Pair<String, UiOverride>>()
     private val histories = mutableListOf<String>()
+    private val roomSends = mutableListOf<Pair<String, com.gekkotron.nidoo.feature.home.presentation.RoomKind>>()
 
     private fun state(selected: RoomFilter = RoomFilter.All): HomeUiState =
         HomeUiBuilder.build(entities, states, areas, selected, LinkState.Connected(TransportMode.DEMO), Locale.US)
@@ -105,6 +106,7 @@ class HomeScreenTest {
                     onSend = { id, c -> sends += id to c },
                     onCustomize = { id, _, o -> customized += id to o },
                     onOpenHistory = { histories += it },
+                    onSendRoom = { area, kind -> roomSends += area to kind },
                     now = LocalTime.NOON,
                     windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
@@ -307,10 +309,37 @@ class HomeScreenTest {
     @Test
     fun `inside a room the pills are back to Rooms then every room, and select sideways`() {
         show(ui = state(RoomFilter.Area("living")))
-        compose.onNodeWithText("All").assertDoesNotExist()
+        compose.onNodeWithText("All devices").assertDoesNotExist()
         compose.onNodeWithText("Kitchen").performClick()
         compose.onNodeWithText("‹ Rooms").performClick()
         assertEquals(listOf(RoomFilter.Area("kitchen"), RoomFilter.Rooms), selects)
+    }
+
+    @Test
+    fun `the Rooms view lists a card per room and no device tile`() {
+        show(ui = state(RoomFilter.Rooms))
+        for (area in listOf("living", "kitchen", "garage")) compose.onNodeWithTag("room-$area").assertExists()
+        compose.onNodeWithTag("card-lamp").assertDoesNotExist()
+        compose.onNodeWithText("Floor lamp").assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping a room card selects that room`() {
+        show(ui = state(RoomFilter.Rooms))
+        compose.onNodeWithTag("room-living").performClick()
+        assertEquals(listOf<RoomFilter>(RoomFilter.Area("living")), selects)
+    }
+
+    @Test
+    fun `the room buttons send the whole room`() {
+        show(ui = state(RoomFilter.Rooms))
+        compose.onNodeWithTag("room-living-lights").performClick()
+        compose.onNodeWithTag("room-living-shutters").performClick()
+        assertEquals(
+            listOf("living" to com.gekkotron.nidoo.feature.home.presentation.RoomKind.LIGHT, "living" to com.gekkotron.nidoo.feature.home.presentation.RoomKind.COVER),
+            roomSends,
+        )
+        assertTrue(selects.isEmpty())
     }
 
     @Test
