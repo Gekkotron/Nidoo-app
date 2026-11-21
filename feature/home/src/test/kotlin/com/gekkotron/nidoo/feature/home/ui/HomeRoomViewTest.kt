@@ -5,6 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -81,6 +87,8 @@ class HomeRoomViewTest {
     }
 
     private fun back() {
+        // Let the last input recompose first: the back handlers follow the composed state.
+        compose.waitForIdle()
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
     }
@@ -161,5 +169,85 @@ class HomeRoomViewTest {
             val pills = compose.onAllNodesWithTag("strip-${e.uniqueId}").fetchSemanticsNodes().size
             assertEquals(1, tiles + pills, e.uniqueId)
         }
+    }
+
+    private val field get() = compose.onNode(hasSetTextAction())
+
+    @Test
+    fun `the search field is visible on Rooms, in a room and on All devices, without focus and without the magnifier`() {
+        show(RoomFilter.Rooms)
+        for (view in listOf(RoomFilter.Rooms, RoomFilter.Area("living"), RoomFilter.All)) {
+            compose.runOnUiThread { selected = view }
+            field.assertExists()
+            field.assertIsNotFocused()
+            compose.onNodeWithContentDescription("Search devices").assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun `Favourites keeps the magnifier, which opens a focused field`() {
+        show(RoomFilter.Favorites)
+        field.assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        field.assertIsFocused()
+        field.performTextInput("coffee")
+        compose.onNodeWithTag("card-coffee").assertExists()
+        back()
+        field.assertDoesNotExist()
+        compose.onNodeWithTag("card-lamp").assertExists()
+    }
+
+    @Test
+    fun `typing in a room replaces the pills, strip and sections with flat results from the whole house`() {
+        show(RoomFilter.Area("living"))
+        field.performTextInput("coffee")
+        compose.onNodeWithTag("card-coffee").assertExists()
+        compose.onNodeWithTag("card-lamp").assertDoesNotExist()
+        compose.onNodeWithTag("strip-temp").assertDoesNotExist()
+        compose.onNodeWithTag("section-LIGHTS").assertDoesNotExist()
+        compose.onNodeWithText("‹ Rooms").assertDoesNotExist()
+    }
+
+    @Test
+    fun `back clears the query and shows the room again, a second back goes to Rooms`() {
+        show(RoomFilter.Area("living"))
+        field.performTextInput("coffee")
+        back()
+        assertEquals("", query)
+        assertEquals<RoomFilter>(RoomFilter.Area("living"), selected)
+        compose.onNodeWithTag("card-lamp").assertExists()
+        compose.onNodeWithText("Search a device or room").assertExists()
+        back()
+        assertEquals<RoomFilter>(RoomFilter.Rooms, selected)
+    }
+
+    @Test
+    fun `back from a focused empty field only drops the focus`() {
+        show(RoomFilter.Area("living"))
+        field.performClick()
+        field.assertIsFocused()
+        back()
+        field.assertIsNotFocused()
+        assertEquals<RoomFilter>(RoomFilter.Area("living"), selected)
+    }
+
+    @Test
+    fun `the clear button empties the field and restores the view`() {
+        show(RoomFilter.Rooms)
+        compose.onNodeWithContentDescription("Close search").assertDoesNotExist()
+        field.performTextInput("coffee")
+        compose.onNodeWithTag("room-living").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Close search").performClick()
+        assertEquals("", query)
+        compose.onNodeWithTag("room-living").assertExists()
+    }
+
+    @Test
+    fun `switching view empties the field`() {
+        show(RoomFilter.All)
+        field.performTextInput("la")
+        compose.runOnUiThread { selected = RoomFilter.Rooms; query = "" }
+        compose.onNodeWithText("Search a device or room").assertExists()
+        compose.onNodeWithText("la").assertDoesNotExist()
     }
 }

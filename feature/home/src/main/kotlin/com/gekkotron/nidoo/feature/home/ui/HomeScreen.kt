@@ -65,6 +65,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.designsystem.NidooDimens
@@ -215,13 +216,39 @@ fun HomeScreen(
     climatResults: Flow<ClimatResult> = emptyFlow(),
 ) {
     val layoutDirection = LocalLayoutDirection.current
-    var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
-    val closeSearch = { searching = false; onSearch("") }
+    // Rooms design §6.5: the search field is always there on Rooms, in a room and on All devices.
+    // Elsewhere (Favourites, Hidden, a dashboard) the header keeps its magnifier, which opens it.
+    val dashboardSelected = dashboard.switcherVisible && dashboard.view !is DashboardView.House
+    val fieldAlways = !dashboardSelected &&
+        (state.selected == RoomFilter.Rooms || state.selected == RoomFilter.All || state.selected is RoomFilter.Area)
+    var searchOpen by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
+    // The screen owns the text: state.query comes back off Main, a frame or more late, and feeding it
+    // back as the value would reset the field (and the IME) to the stale text on every keystroke.
+    var searchText by rememberSaveable { mutableStateOf(state.query) }
+    var fieldFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val searching = searchText.isNotBlank() || state.query.isNotBlank() || (searchOpen && !fieldAlways)
+    val closeSearch = {
+        focusManager.clearFocus()
+        searchOpen = false
+        searchText = ""
+        onSearch("")
+    }
+    // Switching view ends a search (the view model clears the query with it): empty the field too.
+    var lastSelected by rememberSaveable { mutableStateOf(state.selected.key) }
+    LaunchedEffect(state.selected.key) {
+        if (lastSelected != state.selected.key) {
+            lastSelected = state.selected.key
+            searchOpen = false
+            searchText = ""
+        }
+    }
     // Back from a room goes to Rooms. Declared before the search handler: the last enabled one wins, so search closes first.
     val roomInView = (state.selected as? RoomFilter.Area)
-        ?.takeIf { !(dashboard.switcherVisible && dashboard.view !is DashboardView.House) }
+        ?.takeIf { !dashboardSelected }
         ?.let { area -> state.roomCards.firstOrNull { it.areaId == area.id } }
     BackHandler(enabled = roomInView != null) { onSelect(RoomFilter.Rooms) }
+    BackHandler(enabled = fieldFocused && !searching) { focusManager.clearFocus() }
     BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -246,7 +273,7 @@ fun HomeScreen(
         }
     }
     // Searching always looks through House, even from a dashboard.
-    val onDashboard = dashboard.switcherVisible && dashboard.view !is DashboardView.House && !searching
+    val onDashboard = dashboardSelected && !searching
     val shownDashboard = (dashboard.view as? DashboardView.Shown)?.ui
     val showDashboardHeader = !onDashboard || shownDashboard?.showHeader == true
     val cardClick: (CardUi) -> Unit = { card ->
@@ -290,15 +317,25 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
-                if (searching || showDashboardHeader) {
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
+                if (searching || fieldAlways) {
+                    val opened = searchOpen && !fieldAlways
+                    item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
+                        HomeSearchField(
+                            text = searchText,
+                            onTextChange = { searchText = it; onSearch(it) },
+                            onClear = closeSearch,
+                            showClear = searchText.isNotEmpty() || opened,
+                            autoFocus = opened,
+                            onFocusChange = { fieldFocused = it },
+                        )
+                    }
+                }
+                // Results replace the pills while searching.
+                if (!searching && showDashboardHeader) {
                     item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
-                        if (searching) {
-                            SearchField(state.query, onSearch, onClose = closeSearch)
-                        } else {
-                            // On a dashboard a room chip goes back to House, filtered.
-                            HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
-                        }
+                        // On a dashboard a pill goes back to House, on that view.
+                        HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
                     }
                 }
                 val climat = state.climat
@@ -491,7 +528,7 @@ private fun SectionLabel(section: HomeSection) {
 private const val VOICE_ACTIVITY = "com.gekkotron.nidoo.feature.voice.VoiceActivity"
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, room: RoomCardUi? = null, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, room: RoomCardUi? = null, showSearch: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
@@ -547,7 +584,7 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
                     StaticIcon(NidooGlyph.MIC, modifier = Modifier.size(24.dp).semantics { contentDescription = voiceLabel })
                 }
             }
-            IconButton(onClick = onSearchClick) {
+            if (showSearch) IconButton(onClick = onSearchClick) {
                 StaticIcon(NidooGlyph.SEARCH, modifier = Modifier.size(24.dp).semantics { contentDescription = searchLabel })
             }
             val settingsLabel = stringResource(R.string.settings_open)
@@ -556,31 +593,6 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
             }
         }
     }
-}
-
-/** Replaces the room chips while searching (Home search). */
-@Composable
-private fun SearchField(query: String, onSearch: (String) -> Unit, onClose: () -> Unit) {
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-    // The field owns its text: state.query comes back off Main, a frame or more late, and feeding it
-    // back as the value would reset the field (and the IME) to the stale text on every keystroke.
-    var text by rememberSaveable { mutableStateOf(query) }
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it; onSearch(it) },
-        placeholder = { Text(stringResource(R.string.search_hint)) },
-        leadingIcon = { StaticIcon(NidooGlyph.SEARCH, modifier = Modifier.size(20.dp)) },
-        trailingIcon = {
-            val closeLabel = stringResource(R.string.search_close)
-            IconButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = closeLabel }) {
-                StaticIcon(NidooGlyph.CLOSE, modifier = Modifier.size(20.dp))
-            }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-    )
 }
 
 @Composable

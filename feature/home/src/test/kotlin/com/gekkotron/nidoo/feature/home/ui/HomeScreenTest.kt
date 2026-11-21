@@ -446,9 +446,8 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `search filters the cards and closing restores the chips`() {
+    fun `typing in the always-visible field filters the cards and clearing restores the chips`() {
         showSearchable()
-        compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("coffee")
         compose.onNodeWithText("Coffee machine").assertExists()
         compose.onNodeWithText("Floor lamp").assertDoesNotExist()
@@ -469,7 +468,6 @@ class HomeScreenTest {
                 )
             }
         }
-        compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("co")
         compose.onNode(hasSetTextAction()).performTextInput("f")
         compose.onNodeWithText("cof").assertExists()
@@ -478,7 +476,6 @@ class HomeScreenTest {
     @Test
     fun `no match says so`() {
         showSearchable()
-        compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("zzz")
         compose.onNodeWithText("No device matches “zzz”").assertExists()
     }
