@@ -24,6 +24,8 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertTrue
+import kotlin.time.toKotlinDuration
+import kotlin.time.toKotlinInstant
 
 /** Last-change spec §5: the Openings section with durations, written to build/screenshots for a look. */
 @RunWith(AndroidJUnit4::class)
@@ -46,10 +48,10 @@ class SinceScreenshotTest {
             listOf(Area("entrance", "Entrance"), Area("garage", "Garage"), Area("bathroom", "Bathroom"), Area("cellar", "Cellar")),
             LinkState.Connecting,
             mapOf(
-                "front" to LastChange.At(now.minusSeconds(2 * 3_600)),
-                "garage" to LastChange.At(now.minusSeconds(40 * 60)),
-                "bath" to LastChange.At(now.minusSeconds(5 * 86_400)),
-                "cellar" to LastChange.OlderThan(Duration.ofDays(30)),
+                "front" to LastChange.At(now.minusSeconds(2 * 3_600).toKotlinInstant()),
+                "garage" to LastChange.At(now.minusSeconds(40 * 60).toKotlinInstant()),
+                "bath" to LastChange.At(now.minusSeconds(5 * 86_400).toKotlinInstant()),
+                "cellar" to LastChange.OlderThan(Duration.ofDays(30).toKotlinDuration()),
             ),
         )
         compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { NidooBackground { SecurityScreen(state, now = now) } } }

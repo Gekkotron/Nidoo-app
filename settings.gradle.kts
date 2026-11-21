@@ -12,9 +12,10 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         google()
-        // The gateway's own Kotlin SDK (athena-gateway-client), built by JitPack from its tags.
-        maven("https://jitpack.io") {
-            content { includeGroup("com.github.Gekkotron.Athena-HttpMqttGateway") }
+        // The gateway's own Kotlin Multiplatform SDK (athena-gateway-client, JVM + iOS), published by its
+        // release workflow to a static Maven repository on GitHub Pages.
+        maven("https://gekkotron.github.io/Nidoo-gateway/maven") {
+            content { includeGroup("io.github.gekkotron") }
         }
     }
 }
@@ -25,6 +26,7 @@ include(":shared")
 include(":core:model")
 include(":core:crypto")
 include(":core:transport")
+include(":core:transport-testing")
 include(":core:state")
 include(":core:source")
 include(":core:data")

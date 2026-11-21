@@ -17,6 +17,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.toKotlinInstant
 
 class TileMapperTest {
     private object NoBindings : Bindings
@@ -28,7 +29,7 @@ class TileMapperTest {
 
     @Test
     fun light_with_brightness_maps_percent() {
-        val tile = TileMapper.map(entity("l", Kind.LIGHT), EntityState("l", StateValue.Light(true, 128), lastUpdate = t0), null, historyEnabled = false, complete = true)!!
+        val tile = TileMapper.map(entity("l", Kind.LIGHT), EntityState("l", StateValue.Light(true, 128), lastUpdate = t0.toKotlinInstant()), null, historyEnabled = false, complete = true)!!
         assertEquals(TileValue.Light(true, 50), tile.value)
         assertEquals(TileIcon.LIGHT, tile.icon)
         assertEquals(1_000_000L, tile.updatedAt)
@@ -38,7 +39,7 @@ class TileMapperTest {
     fun temperature_sensor_gets_temperature_icon() {
         val tile = TileMapper.map(
             entity("t", Kind.SENSOR, unit = "°C", deviceClass = "temperature"),
-            EntityState("t", StateValue.Numeric(21.4), lastUpdate = t0), null, false, true,
+            EntityState("t", StateValue.Numeric(21.4), lastUpdate = t0.toKotlinInstant()), null, false, true,
         )!!
         assertEquals(TileValue.Measure(21.4, "°C"), tile.value)
         assertEquals(TileIcon.TEMPERATURE, tile.icon)
@@ -46,10 +47,10 @@ class TileMapperTest {
 
     @Test
     fun stale_cached_state_keeps_previous_updatedAt() {
-        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, false, true)
         val tile = TileMapper.map(
             entity("s", Kind.SWITCH),
-            EntityState("s", StateValue.OnOff(false), lastUpdate = t0.plusSeconds(60), stale = true), prev, false, true,
+            EntityState("s", StateValue.OnOff(false), lastUpdate = t0.plusSeconds(60).toKotlinInstant(), stale = true), prev, false, true,
         )!!
         assertEquals(1_000_000L, tile.updatedAt)
     }
@@ -57,8 +58,8 @@ class TileMapperTest {
     @Test
     fun climate_remembers_last_non_off_mode() {
         val caps = Capabilities(hvacModes = listOf("off", "heat", "cool"))
-        val on = TileMapper.map(entity("c", Kind.CLIMATE, caps = caps), EntityState("c", StateValue.Climate("cool", 22.0, 21.0), lastUpdate = t0), null, false, true)!!
-        val off = TileMapper.map(entity("c", Kind.CLIMATE, caps = caps), EntityState("c", StateValue.Climate("off", 22.0, 21.0), lastUpdate = t0), on, false, true)!!
+        val on = TileMapper.map(entity("c", Kind.CLIMATE, caps = caps), EntityState("c", StateValue.Climate("cool", 22.0, 21.0), lastUpdate = t0.toKotlinInstant()), null, false, true)!!
+        val off = TileMapper.map(entity("c", Kind.CLIMATE, caps = caps), EntityState("c", StateValue.Climate("off", 22.0, 21.0), lastUpdate = t0.toKotlinInstant()), on, false, true)!!
         assertEquals("cool", off.lastOnMode)
         assertEquals(listOf("off", "heat", "cool"), off.hvacModes)
     }
@@ -68,7 +69,7 @@ class TileMapperTest {
         val caps = Capabilities(alarmModes = setOf(AlarmMode.AWAY), codeDisarmRequired = true, codeFormat = CodeFormat.TEXT)
         val tile = TileMapper.map(
             entity("a", Kind.ALARM_PANEL, caps = caps),
-            EntityState("a", StateValue.Alarm(AlarmState.ARMED_AWAY), lastUpdate = t0), null, false, true,
+            EntityState("a", StateValue.Alarm(AlarmState.ARMED_AWAY), lastUpdate = t0.toKotlinInstant()), null, false, true,
         )!!
         assertTrue(tile.codeDisarmRequired)
         assertEquals(CodeFormat.TEXT, tile.codeFormat)
@@ -77,7 +78,7 @@ class TileMapperTest {
 
     @Test
     fun missing_entity_is_removed_only_after_repeated_complete_discoveries() {
-        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)!!
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, false, true)!!
         val once = TileMapper.map(null, null, prev, false, complete = true)!!
         assertEquals(prev.copy(missingCount = 1), once)
         val twice = TileMapper.map(null, null, once, false, complete = true)!!
@@ -89,23 +90,23 @@ class TileMapperTest {
 
     @Test
     fun seeing_the_entity_again_resets_the_miss_count() {
-        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)!!
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, false, true)!!
         val missed = TileMapper.map(null, null, TileMapper.map(null, null, prev, false, complete = true), false, complete = true)!!
-        val back = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), missed, false, true)!!
+        val back = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), missed, false, true)!!
         assertEquals(0, back.missingCount)
         assertEquals(TileStatus.OK, TileMapper.map(null, null, back, false, complete = true)!!.status)
     }
 
     @Test
     fun incomplete_discovery_does_not_count_a_miss() {
-        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)!!
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, false, true)!!
         val once = TileMapper.map(null, null, prev, false, complete = true)!!
         assertEquals(once, TileMapper.map(null, null, once, false, complete = false))
     }
 
     @Test
     fun missing_entity_after_incomplete_discovery_keeps_previous() {
-        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0), null, false, true)
+        val prev = TileMapper.map(entity("s", Kind.SWITCH), EntityState("s", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, false, true)
         assertEquals(prev, TileMapper.map(null, null, prev, false, complete = false))
     }
 
@@ -126,7 +127,7 @@ class TileMapperTest {
     fun binary_sensor_is_contact() {
         val tile = TileMapper.map(
             entity("d", Kind.BINARY_SENSOR, deviceClass = "door"),
-            EntityState("d", StateValue.OnOff(true), lastUpdate = t0), null, false, true,
+            EntityState("d", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, false, true,
         )!!
         assertEquals(TileValue.Contact("door", true), tile.value)
     }
@@ -134,7 +135,7 @@ class TileMapperTest {
     @Test
     fun history_needs_both_enabled_and_a_ref() {
         // A SWITCH is a non-charted kind, so HistoryRefs finds no ref even when history is enabled.
-        val tile = TileMapper.map(entity("sw", Kind.SWITCH), EntityState("sw", StateValue.OnOff(true), lastUpdate = t0), null, historyEnabled = true, complete = true)!!
+        val tile = TileMapper.map(entity("sw", Kind.SWITCH), EntityState("sw", StateValue.OnOff(true), lastUpdate = t0.toKotlinInstant()), null, historyEnabled = true, complete = true)!!
         assertEquals(false, tile.historyAvailable)
     }
 
@@ -142,7 +143,7 @@ class TileMapperTest {
     fun a_partial_discovery_never_drops_a_code_requirement() {
         // The cached alarm config has its code redacted, so before the live config replays the entity says "no code".
         val live = Capabilities(alarmModes = setOf(AlarmMode.AWAY), codeArmRequired = true, codeDisarmRequired = true, codeFormat = CodeFormat.TEXT)
-        val state = EntityState("a", StateValue.Alarm(AlarmState.ARMED_AWAY), lastUpdate = t0)
+        val state = EntityState("a", StateValue.Alarm(AlarmState.ARMED_AWAY), lastUpdate = t0.toKotlinInstant())
         val prev = TileMapper.map(entity("a", Kind.ALARM_PANEL, caps = live), state, null, false, complete = true)
         val cachedOnly = entity("a", Kind.ALARM_PANEL, caps = Capabilities(alarmModes = setOf(AlarmMode.AWAY)))
         val partial = TileMapper.map(cachedOnly, state, prev, false, complete = false)!!
@@ -161,16 +162,16 @@ class TileMapperTest {
 
     @Test
     fun media_player_tile_shows_the_title_and_whether_it_plays() {
-        val playing = TileMapper.map(player, EntityState("m", media("playing", "Song"), lastUpdate = t0), null, false, true)!!
+        val playing = TileMapper.map(player, EntityState("m", media("playing", "Song"), lastUpdate = t0.toKotlinInstant()), null, false, true)!!
         assertEquals(TileValue.Media("Song", playing = true), playing.value)
-        val paused = TileMapper.map(player, EntityState("m", media("paused", "Song"), lastUpdate = t0), null, false, true)!!
+        val paused = TileMapper.map(player, EntityState("m", media("paused", "Song"), lastUpdate = t0.toKotlinInstant()), null, false, true)!!
         assertEquals(TileValue.Media("Song", playing = false), paused.value)
     }
 
     @Test
     fun idle_media_tile_shows_nothing() {
         val idle = StateValue.MediaPlayer("idle", null, null, null, null, null, null, null, null)
-        assertEquals(TileValue.None, TileMapper.map(player, EntityState("m", idle, lastUpdate = t0), null, false, true)!!.value)
+        assertEquals(TileValue.None, TileMapper.map(player, EntityState("m", idle, lastUpdate = t0.toKotlinInstant()), null, false, true)!!.value)
     }
 
     @Test

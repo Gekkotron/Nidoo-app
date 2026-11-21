@@ -12,6 +12,8 @@ import com.gekkotron.nidoo.model.SwitchType
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState
 import java.time.Instant
+import kotlin.time.toJavaInstant
+import kotlin.time.toJavaDuration
 
 /** Entities → the Security tab (security spec §4.3). Pure. */
 object SecurityUiBuilder {
@@ -45,7 +47,7 @@ object SecurityUiBuilder {
                     active = (s?.value as? StateValue.OnOff)?.on,
                     available = s?.available ?: true,
                     stale = s?.stale == true,
-                    since = since(changes[e.uniqueId], s?.changedAt),
+                    since = since(changes[e.uniqueId], s?.changedAt?.toJavaInstant()),
                 )
             }
             // Stable order: a tile does not move when its state flips (security spec §4.3). Area then name, Unassigned last.
@@ -74,9 +76,9 @@ object SecurityUiBuilder {
 
     /** Last-change spec §4.4: the server's time, unless the app saw a later flip itself. */
     private fun since(server: LastChange?, local: Instant?): Since? = when {
-        server is LastChange.At -> Since.At(if (local != null && local > server.at) local else server.at)
+        server is LastChange.At -> server.at.toJavaInstant().let { at -> Since.At(if (local != null && local > at) local else at) }
         local != null -> Since.At(local)
-        server is LastChange.OlderThan -> Since.Over(server.window)
+        server is LastChange.OlderThan -> Since.Over(server.window.toJavaDuration())
         else -> null
     }
 }

@@ -43,6 +43,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.toKotlinInstant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HeadlessEntitiesTest {
@@ -319,7 +320,7 @@ class HeadlessEntitiesTest {
         override val devices: StateFlow<Map<String, Device>> = MutableStateFlow(emptyMap())
         override val areas: StateFlow<List<Area>> = MutableStateFlow(areaList)
         override val commandFailures: SharedFlow<CommandFailure> = MutableSharedFlow()
-        private val states = mapOf(entity.uniqueId to EntityState(entity.uniqueId, StateValue.OnOff(true), lastUpdate = Instant.EPOCH))
+        private val states = mapOf(entity.uniqueId to EntityState(entity.uniqueId, StateValue.OnOff(true), lastUpdate = Instant.EPOCH.toKotlinInstant()))
         override fun states(): Flow<Map<String, EntityState>> = flowOf(states)
         override suspend fun send(uniqueId: String, command: Command): CommandResult = CommandResult.Accepted
         override suspend fun setOverride(uniqueId: String, override: UiOverride) {}

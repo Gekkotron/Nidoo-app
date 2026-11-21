@@ -35,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.toKotlinInstant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetMirrorTest {
@@ -80,7 +81,7 @@ class WidgetMirrorTest {
         override suspend fun setAreas(areas: List<Area>) {}
 
         fun emit(id: String, value: StateValue) {
-            states.value = states.value + (id to EntityState(id, value, lastUpdate = Instant.ofEpochMilli(1_000)))
+            states.value = states.value + (id to EntityState(id, value, lastUpdate = Instant.ofEpochMilli(1_000).toKotlinInstant()))
         }
     }
 

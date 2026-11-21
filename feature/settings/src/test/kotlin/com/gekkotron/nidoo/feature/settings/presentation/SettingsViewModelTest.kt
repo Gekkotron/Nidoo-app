@@ -7,6 +7,7 @@ import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.data.PresenceConfig
+import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState

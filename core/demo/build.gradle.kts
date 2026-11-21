@@ -1,11 +1,19 @@
 plugins {
-    id("nidoo.jvm.library")
-    id("nidoo.serialization")
+    id("nidoo.kmp.jvm.library")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-dependencies {
-    api(project(":core:transport"))
-    testImplementation(project(":core:source"))
-    testImplementation(project(":core:dashboards"))
-    testImplementation(project(":core:climate"))
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(project(":core:transport"))
+            api(libs.kotlinx.serialization.json)
+            implementation(libs.atomicfu)
+        }
+        commonTest.dependencies {
+            implementation(project(":core:source"))
+            implementation(project(":core:dashboards"))
+            implementation(project(":core:climate"))
+        }
+    }
 }

@@ -20,17 +20,18 @@ jobs:
       matrix:
         group:
           - name: core
-            # KMP (nidoo.kmp.jvm.library) modules use :jvmTest; Android library modules use :test.
+            # KMP (nidoo.kmp.jvm.library) modules use :jvmTest; KMP Android modules (nidoo.kmp.library)
+            # use :testAndroidHostTest; Android library modules use :test.
             # Per-module koverXmlReport (not the root one) keeps the job scoped to :core:*;
             # the root koverXmlReport aggregates ALL subprojects and dragged :app and :feature:*
             # test tasks into this job, causing cross-module flakes.
             tasks: >-
               :core:model:jvmTest
-              :core:crypto:test
-              :core:transport:test
+              :core:crypto:jvmTest
+              :core:transport:jvmTest
               :core:state:jvmTest
               :core:source:jvmTest
-              :core:data:test
+              :core:data:testAndroidHostTest
               :core:alerts:test
               :core:history:jvmTest
               :core:flows:jvmTest
@@ -38,7 +39,7 @@ jobs:
               :core:dashboards:jvmTest
               :core:climate:jvmTest
               :core:push:test
-              :core:demo:test
+              :core:demo:jvmTest
               :core:designsystem:test
               :core:model:koverXmlReport
               :core:crypto:koverXmlReport
@@ -145,8 +146,12 @@ jobs:
         run: >-
           ./gradlew
           :core:model:iosSimulatorArm64Test
+          :core:crypto:iosSimulatorArm64Test
+          :core:transport:iosSimulatorArm64Test
           :core:state:iosSimulatorArm64Test
           :core:source:iosSimulatorArm64Test
+          :core:data:iosSimulatorArm64Test
+          :core:demo:iosSimulatorArm64Test
           :core:history:iosSimulatorArm64Test
           :core:dashboards:iosSimulatorArm64Test
           :core:flows:iosSimulatorArm64Test

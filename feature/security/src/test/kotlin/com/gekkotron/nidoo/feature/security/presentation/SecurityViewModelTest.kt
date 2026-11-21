@@ -34,6 +34,7 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toKotlinInstant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SecurityViewModelTest {
@@ -143,7 +144,7 @@ class SecurityViewModelTest {
     @Test
     fun `last changes are fetched once per ref set and land on the rows`() = runTest(dispatcher) {
         val src = mqttSource()
-        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
+        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0.toKotlinInstant())))
         val vm = SecurityViewModel(src, dispatcher, history)
         backgroundScope.launch { vm.state.collect {} }
         assertEquals(listOf(setOf(doorRef, HistoryRef("hall"))), history.asked.map { it.toSet() })
@@ -168,7 +169,7 @@ class SecurityViewModelTest {
     @Test
     fun `a failed answer keeps the previous times and raises no event`() = runTest(dispatcher) {
         val src = mqttSource()
-        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
+        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0.toKotlinInstant())))
         val vm = SecurityViewModel(src, dispatcher, history, refresh = 10.minutes)
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<SecurityEvent>()

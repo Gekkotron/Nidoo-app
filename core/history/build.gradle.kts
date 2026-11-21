@@ -7,10 +7,11 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:state"))
+            api(project(":core:transport"))
             api(libs.kotlinx.serialization.json)
         }
-        jvmMain.dependencies {
-            api(project(":core:transport"))
+        commonTest.dependencies {
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }

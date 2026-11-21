@@ -5,6 +5,7 @@ import com.gekkotron.nidoo.data.GatewayConfig
 import com.gekkotron.nidoo.data.LocalBroker
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
+import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.transport.Route
 import com.gekkotron.nidoo.transport.TransportSpec
 import kotlinx.coroutines.CoroutineScope

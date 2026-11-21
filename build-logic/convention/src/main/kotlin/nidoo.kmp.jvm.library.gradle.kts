@@ -28,6 +28,7 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.findLibrary("kotlinx-coroutines-test").get())
         }
         jvmTest.dependencies {
             implementation(project.dependencies.platform(libs.findLibrary("junit-bom").get()))

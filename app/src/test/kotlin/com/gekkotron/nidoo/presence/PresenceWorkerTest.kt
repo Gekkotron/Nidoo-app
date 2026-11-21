@@ -8,6 +8,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.workDataOf
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.PresenceConfig
+import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.push.TopicPublisher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

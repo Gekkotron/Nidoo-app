@@ -141,6 +141,7 @@ These were settled by the author, not the user; each is a default the user can o
 - **Module conversions are one PR per module**, moving `src/main` → `commonMain`/`androidMain` (or `jvmMain`) and `src/test` → `commonTest`/`androidUnitTest` as needed, consumers rewired in the same PR. Each PR keeps Android green and shippable.
 - **Koin goes in module by module, alongside Hilt.** Hilt and Koin coexist while modules move (Hilt-side bindings bridge to Koin, or the reverse); each feature module switches to `koinViewModel()` in the same PR that moves it to `commonMain`. Hilt is removed when the last Hilt user is gone. This replaces a big Phase 3 DI switch with no visible iOS progress.
 - **Existing Android installs upgrade in place.** The DataStore files, the Keystore secrets, the entity cache and the Room alerts database keep their names, keys and serialized formats, so the user's current Android setup survives the update. Any format change needs a migration and a test.
+- **2026-11-21, MQTT gate (Phase 2, Task 6): Swift fallback.** KMQTT (`io.github.davidepianca98:kmqtt-client`), the leading KMP MQTT client, publishes iosArm64/iosSimulatorArm64 but fails "a release in the last 12 months": its latest is 1.0.0 of 2024-12-11. The iOS direct link is CocoaMQTT (SwiftPM) behind the Kotlin `MqttClientPort`, passed to `MainViewController(mqttPort:)`; its broker checks are manual on the phone.
 
 ## 10. Gateway client (user's call)
 

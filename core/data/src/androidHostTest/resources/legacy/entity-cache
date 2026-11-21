@@ -1,0 +1,1 @@
+{"profileKey":"profile-key-1","messages":{"homeassistant/light/salon/config":"{\"name\":\"Salon\",\"stat_t\":\"~/state\",\"~\":\"nidoo/salon\"}","nidoo/salon/state":"ON","homeassistant/sensor/temp/state":"21.5 °C"}}

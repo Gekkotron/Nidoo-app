@@ -24,6 +24,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.toKotlinInstant
+import kotlin.time.toKotlinDuration
 
 class SecurityUiBuilderTest {
     private val areas = listOf(Area("garage", "Garage"), Area("living", "Living room"))
@@ -262,7 +264,7 @@ class SecurityUiBuilderTest {
     private val month = Duration.ofDays(30)
 
     private fun since(server: LastChange?, local: Instant?): Since? {
-        val state = EntityState("door", StateValue.OnOff(false), changedAt = local)
+        val state = EntityState("door", StateValue.OnOff(false), changedAt = local?.toKotlinInstant())
         val changes = server?.let { mapOf("door" to it) } ?: emptyMap()
         return SecurityUiBuilder.build(mapOf("door" to sensor("door", "door")), mapOf("door" to state), areas, LinkState.Connecting, changes)
             .sensors.single().since
@@ -270,11 +272,11 @@ class SecurityUiBuilderTest {
 
     @Test
     fun `since merges the server answer with a live flip`() {
-        assertEquals(Since.At(t0), since(LastChange.At(t0), null))
-        assertEquals(Since.At(t0.plusSeconds(60)), since(LastChange.At(t0), t0.plusSeconds(60)))
-        assertEquals(Since.At(t0), since(LastChange.At(t0), t0.minusSeconds(60)))
-        assertEquals(Since.Over(month), since(LastChange.OlderThan(month), null))
-        assertEquals(Since.At(t0), since(LastChange.OlderThan(month), t0))
+        assertEquals(Since.At(t0), since(LastChange.At(t0.toKotlinInstant()), null))
+        assertEquals(Since.At(t0.plusSeconds(60)), since(LastChange.At(t0.toKotlinInstant()), t0.plusSeconds(60)))
+        assertEquals(Since.At(t0), since(LastChange.At(t0.toKotlinInstant()), t0.minusSeconds(60)))
+        assertEquals(Since.Over(month), since(LastChange.OlderThan(month.toKotlinDuration()), null))
+        assertEquals(Since.At(t0), since(LastChange.OlderThan(month.toKotlinDuration()), t0))
         assertEquals(Since.At(t0), since(LastChange.NotRecorded, t0))
         assertEquals(Since.At(t0), since(null, t0))
         assertNull(since(LastChange.NotRecorded, null))

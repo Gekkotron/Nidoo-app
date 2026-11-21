@@ -7,6 +7,7 @@ import com.gekkotron.nidoo.data.FileEntityCache
 import com.gekkotron.nidoo.data.KeystoreSecretStore
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
+import com.gekkotron.nidoo.data.create
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

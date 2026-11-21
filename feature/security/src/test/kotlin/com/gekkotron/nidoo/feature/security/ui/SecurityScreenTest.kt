@@ -40,6 +40,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.time.toKotlinDuration
+import kotlin.time.toKotlinInstant
 
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h914dp")
@@ -304,26 +306,26 @@ class SecurityScreenTest {
 
     @Test
     fun `the tile shows how long, and TalkBack reads it in words`() {
-        show(withSince(LastChange.At(now.minusSeconds(2 * 3_600 + 300))))
+        show(withSince(LastChange.At(now.minusSeconds(2 * 3_600 + 300).toKotlinInstant())))
         compose.onNodeWithText("Closed · 2 h", useUnmergedTree = true).assertContentDescriptionEquals("Closed for 2 hours")
     }
 
     @Test
     fun `over the window reads 30+ d`() {
-        show(withSince(LastChange.OlderThan(Duration.ofDays(30))))
+        show(withSince(LastChange.OlderThan(Duration.ofDays(30).toKotlinDuration())))
         compose.onNodeWithText("Closed · 30+ d", useUnmergedTree = true).assertExists()
     }
 
     @Test
     fun `no duration on a stale or unavailable tile, nor without history`() {
-        show(withSince(LastChange.At(now.minusSeconds(600)), stale = true))
+        show(withSince(LastChange.At(now.minusSeconds(600).toKotlinInstant()), stale = true))
         compose.onNodeWithText("Closed", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("Closed · 10 min", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun `an unavailable tile shows no duration`() {
-        show(withSince(LastChange.At(now.minusSeconds(600)), available = false))
+        show(withSince(LastChange.At(now.minusSeconds(600).toKotlinInstant()), available = false))
         compose.onNodeWithText("Closed · 10 min", useUnmergedTree = true).assertDoesNotExist()
     }
 
@@ -335,14 +337,14 @@ class SecurityScreenTest {
 
     @Test
     fun `the sheet gives the exact time`() {
-        show(withSince(LastChange.At(java.time.Instant.parse("2026-10-14T06:42:00Z"))))
+        show(withSince(LastChange.At(java.time.Instant.parse("2026-10-14T06:42:00Z").toKotlinInstant())))
         compose.onNodeWithTag("sensor-door").performClick()
         compose.onNode(hasText("Since ", substring = true)).assertExists()
     }
 
     @Test
     fun `the sheet says no change in 30 days`() {
-        show(withSince(LastChange.OlderThan(Duration.ofDays(30))))
+        show(withSince(LastChange.OlderThan(Duration.ofDays(30).toKotlinDuration())))
         compose.onNodeWithTag("sensor-door").performClick()
         compose.onNodeWithText("No change in 30 days").assertExists()
     }

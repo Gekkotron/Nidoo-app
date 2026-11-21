@@ -116,7 +116,7 @@ dependencies {
     releaseImplementation(libs.firebase.appdistribution)
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.androidx.work.testing)
-    testImplementation(testFixtures(project(":core:transport")))
+    testImplementation(project(":core:transport-testing"))
     kspTest(libs.hilt.compiler)
 }
 

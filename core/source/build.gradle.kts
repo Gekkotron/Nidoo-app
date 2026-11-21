@@ -12,12 +12,11 @@ kotlin {
             api(project(":core:climate"))
             api(project(":core:state"))
             api(libs.kotlinx.serialization.json)
-        }
-        jvmMain.dependencies {
             api(project(":core:transport"))
+            implementation(libs.atomicfu)
         }
-        jvmTest.dependencies {
-            implementation(project.dependencies.testFixtures(project(":core:transport")))
+        commonTest.dependencies {
+            implementation(project(":core:transport-testing"))
         }
     }
 }
