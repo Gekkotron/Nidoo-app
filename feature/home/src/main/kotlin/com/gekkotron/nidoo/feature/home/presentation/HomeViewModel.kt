@@ -12,7 +12,6 @@ import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.CommandResult
-import com.gekkotron.nidoo.model.LightOnPreset
 import com.gekkotron.nidoo.model.SwitchType
 import com.gekkotron.nidoo.model.UiOverride
 import com.gekkotron.nidoo.source.EntitySource
@@ -232,15 +231,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** A light with a saved on-state preset turns on at that colour/brightness; otherwise plain on.
-     *  A customised [UiOverride.lightOnBrightness] replaces the preset's baked brightness. */
-    private fun turnOnFor(card: CardUi): Command.TurnOn {
-        if (card.kind != Kind.LIGHT) return Command.TurnOn()
-        val preset = LightOnPreset.of(card.ui.lightOnPreset) ?: return Command.TurnOn()
-        val color = preset.color.takeIf { card.capabilities.colorModes.isNotEmpty() }
-        val brightness = (card.ui.lightOnBrightness ?: preset.brightness).takeIf { card.capabilities.brightness }
-        return Command.TurnOn(brightness = brightness, color = color)
-    }
+    private fun turnOnFor(card: CardUi): Command.TurnOn =
+        if (card.kind == Kind.LIGHT) lightOnCommand(card.ui, card.capabilities) else Command.TurnOn()
 
     fun send(id: String, command: Command, card: CardUi? = null) {
         viewModelScope.launch {
