@@ -15,7 +15,7 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 <p align="center">
   <img src="docs/images/screen-rooms.png" width="24%" alt="Home in Night Glass: one card per room with its temperature, lights and shutters, and one-tap buttons for the whole room">
   <img src="docs/images/screen-room.png" width="24%" alt="The living room in Ivoire: a sensor strip, then lights, shutters, climate, plugs and media">
-  <img src="docs/images/screen-history.png" width="24%" alt="History of a boiler's power over 24 hours, with min, average and max">
+  <img src="docs/images/screen-history.png" width="24%" alt="History of the house's power over 24 hours, with min, average and max">
   <img src="docs/images/screen-alerts.png" width="24%" alt="Alerts grouped by day: door, camera, alarm, energy and gateway events">
 </p>
 

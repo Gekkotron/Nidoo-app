@@ -24,7 +24,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.time.ZoneOffset
 import java.util.Locale
-import kotlin.math.sin
+import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -36,13 +37,25 @@ class HistoryScreenshotTest {
 
     private val start = 1_790_000_000L
 
-    private fun line() = ChartContent.Line(
-        Series(600, (0 until 150).map {
-            val mean = 400.0 + 250.0 * sin(it / 12.0)
-            HistoryPoint(start + it * 600L, mean, mean - 60, mean + 80)
-        }),
-        min = 90.0, avg = 400.0, max = 730.0,
-    )
+    /** A house's power over a day: a fridge cycling on a low base, then breakfast, lunch and evening peaks. */
+    private fun housePower(i: Int): Double {
+        val hour = ((start + i * 600L) % 86_400L) / 3600.0
+        fun peak(at: Double, watts: Double, width: Double) = watts * exp(-((hour - at) / width).pow(2))
+        val fridge = if (i % 6 < 2) 90.0 else 0.0
+        val jitter = ((i * 37) % 11 - 5) * 8.0
+        return 190.0 + fridge + jitter + peak(7.3, 1500.0, 0.6) + peak(12.6, 750.0, 0.5) + peak(19.6, 2100.0, 1.0)
+    }
+
+    private fun line(): ChartContent.Line {
+        val points = (0 until 150).map {
+            val mean = housePower(it)
+            HistoryPoint(start + it * 600L, mean, mean - 30, mean + 50)
+        }
+        return ChartContent.Line(
+            Series(600, points),
+            min = points.minOf { it.min }, avg = points.map { it.mean }.average(), max = points.maxOf { it.max },
+        )
+    }
 
     private fun bars() = ChartContent.Bars(
         DailyTotals((0 until 7).map { DayTotal(start + it * 86_400L, 6.0 + (it * 7 % 5)) }),
@@ -65,7 +78,7 @@ class HistoryScreenshotTest {
 
     @Test
     fun `a line in Night Glass`() {
-        val state = HistoryUi(title = "Boiler", room = "Garage", live = 420.0, unit = "W", energy = true, toggle = true, content = line())
+        val state = HistoryUi(title = "House power", room = "Whole home", live = 240.0, unit = "W", energy = true, toggle = true, content = line())
         val bitmap = render(ThemeChoice.NIGHT_GLASS, "history-line-night", state)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) < 0.35f)
@@ -73,7 +86,7 @@ class HistoryScreenshotTest {
 
     @Test
     fun `a line in Ivoire`() {
-        val state = HistoryUi(title = "Boiler", room = "Garage", live = 420.0, unit = "W", range = HistoryRange.D7, content = line())
+        val state = HistoryUi(title = "House power", room = "Whole home", live = 240.0, unit = "W", range = HistoryRange.D7, content = line())
         val bitmap = render(ThemeChoice.IVOIRE, "history-line-warm", state)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) > 0.6f)
