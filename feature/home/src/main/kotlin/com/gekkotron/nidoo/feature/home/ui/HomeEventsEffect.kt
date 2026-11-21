@@ -42,6 +42,7 @@ fun HomeEventsEffect(
                 is HomeEvent.Rejected -> snackbar.showSnackbar(resources.getString(R.string.home_rejected, event.reason))
                 HomeEvent.SaveFailed -> snackbar.showSnackbar(resources.getString(R.string.home_save_failed))
                 HomeEvent.WaitingForConnection -> snackbar.showSnackbar(resources.getString(R.string.home_waiting_connection))
+                is HomeEvent.RoomNotConfirmed -> Unit // TODO(home-rooms task 6): room snackbar with Retry
                 is HomeEvent.GroupNotConfirmed -> {
                     val message = if (event.failedIds.size == 1) {
                         resources.getString(R.string.home_group_not_confirmed_one, event.failedNames.single())

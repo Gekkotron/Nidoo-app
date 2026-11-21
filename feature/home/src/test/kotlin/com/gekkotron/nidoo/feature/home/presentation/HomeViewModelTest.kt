@@ -585,5 +585,5 @@ class HomeViewModelTest {
     }
 }
 
-private fun testPreferences(): AppPreferences =
+internal fun testPreferences(): AppPreferences =
     AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, CoroutineScope(Dispatchers.Unconfined))

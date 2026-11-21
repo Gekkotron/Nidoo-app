@@ -175,6 +175,18 @@ sealed interface HomeEvent {
     /** Device sheet spec §5.3: a Door opener or Siren wants the user to confirm the tap. */
     data class AskBeforeAction(val id: String, val labelResId: Int, val command: Command) : HomeEvent
 
+    /**
+     * Devices of one whole-room tap that were not confirmed, merged (rooms design §6.3). [failed] is
+     * device id → the command to repeat (a lights-on tap sends each light its own), [failedNames] in the same order.
+     */
+    data class RoomNotConfirmed(
+        val sendId: String,
+        val areaId: String,
+        val kind: RoomKind,
+        val failed: Map<String, Command>,
+        val failedNames: List<String>,
+    ) : HomeEvent
+
     /** Members of one group send that were not confirmed, merged (room groups spec §5). */
     data class GroupNotConfirmed(
         val groupId: String,

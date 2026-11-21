@@ -126,9 +126,36 @@ class HomeViewModel @Inject constructor(
 
     private data class GroupSend(val groupId: String, val kind: Kind, val command: Command, val names: Map<String, String>)
 
+    /** Device id → the whole-room send it last took part in; the device's own send removes it. */
+    private val roomSends = mutableMapOf<String, RoomSend>()
+    /** Keyed by the room send id, not the command: a lights-on tap sends each light its own command, and they still share a snackbar. */
+    private val failedInRoom = mutableMapOf<String, LinkedHashMap<String, RoomSend>>()
+
+    private data class RoomSend(val sendId: String, val areaId: String, val kind: RoomKind, val command: Command, val name: String)
+
     init {
         viewModelScope.launch {
             source.commandFailures.collect { failure ->
+                val roomSend = roomSends[failure.uniqueId]?.takeIf { it.command == failure.command }
+                if (roomSend != null) {
+                    roomSends.remove(failure.uniqueId)
+                    val bucket = failedInRoom.getOrPut(roomSend.sendId) { LinkedHashMap() }
+                    bucket[failure.uniqueId] = roomSend
+                    // The first failure opens a 1 s window; the rest of the same tap joins it.
+                    if (bucket.size == 1) {
+                        launch {
+                            delay(GROUP_FAILURE_WINDOW_MS)
+                            val failed = failedInRoom.remove(roomSend.sendId).orEmpty()
+                            _events.send(
+                                HomeEvent.RoomNotConfirmed(
+                                    roomSend.sendId, roomSend.areaId, roomSend.kind,
+                                    failed.mapValues { it.value.command }, failed.values.map { it.name },
+                                ),
+                            )
+                        }
+                    }
+                    return@collect
+                }
                 val send = groupSends[failure.uniqueId]?.takeIf { it.command == failure.command }
                 if (send == null) return@collect _events.send(HomeEvent.NotConfirmed(failure.uniqueId, failure.command))
                 groupSends.remove(failure.uniqueId)
@@ -202,7 +229,9 @@ class HomeViewModel @Inject constructor(
         savedState[KEY_QUERY] = query
     }
 
+    /** Switching view ends a search (rooms design §6.5). */
     fun select(filter: RoomFilter) {
+        savedState[KEY_QUERY] = ""
         savedState[KEY_FILTER] = filter.key
     }
 
@@ -237,6 +266,7 @@ class HomeViewModel @Inject constructor(
     fun send(id: String, command: Command, card: CardUi? = null) {
         viewModelScope.launch {
             groupSends.remove(id)
+            roomSends.remove(id)
             // A cached value may be outdated: never act on it (entity cache spec §3.6).
             if ((state.value.card(id) ?: card)?.stale == true) return@launch _events.send(HomeEvent.WaitingForConnection)
             val result = source.send(id, command)
@@ -254,10 +284,45 @@ class HomeViewModel @Inject constructor(
             // Hub cover groups spec §2.4: a hub group fails under its own id, so the snackbar reads the
             // group's name instead of a bare "group_xyz".
             val names = mapOf(target.id to target.name)
-            ids.forEach { groupSends[it] = GroupSend(groupId, target.kind, command, names) }
+            ids.forEach {
+                roomSends.remove(it)
+                groupSends[it] = GroupSend(groupId, target.kind, command, names)
+            }
             val results = ids.map { id -> async { source.send(id, command) } }.awaitAll()
             results.firstOrNull { it is CommandResult.Rejected }?.let {
                 _events.send(HomeEvent.Rejected(groupId, (it as CommandResult.Rejected).reason))
+            }
+        }
+    }
+
+    /**
+     * A room card's lights or shutters button (rooms design §6.3): one absolute command to every
+     * device [RoomCommands] names, in parallel. Nothing is sent while a receiver's value is stale.
+     */
+    fun sendRoom(areaId: String, kind: RoomKind) {
+        val room = state.value.roomCards.firstOrNull { it.areaId == areaId && it.buttons } ?: return
+        if (RoomCommands.blockedByStale(room, kind)) {
+            viewModelScope.launch { _events.send(HomeEvent.WaitingForConnection) }
+            return
+        }
+        val names = (room.lights + room.shutters).associate { it.id to it.name }
+        dispatchRoom(RoomCommands.sendId(areaId, kind), areaId, kind, RoomCommands.commands(room, kind), names)
+    }
+
+    /** Retry of a [HomeEvent.RoomNotConfirmed]: the failed devices only, each with the command it was sent. */
+    fun retryRoom(event: HomeEvent.RoomNotConfirmed) =
+        dispatchRoom(event.sendId, event.areaId, event.kind, event.failed, event.failed.keys.zip(event.failedNames).toMap())
+
+    private fun dispatchRoom(sendId: String, areaId: String, kind: RoomKind, commands: Map<String, Command>, names: Map<String, String>) {
+        if (commands.isEmpty()) return
+        viewModelScope.launch {
+            commands.forEach { (id, command) ->
+                groupSends.remove(id)
+                roomSends[id] = RoomSend(sendId, areaId, kind, command, names[id] ?: id)
+            }
+            val results = commands.map { (id, command) -> async { source.send(id, command) } }.awaitAll()
+            results.firstOrNull { it is CommandResult.Rejected }?.let {
+                _events.send(HomeEvent.Rejected(sendId, (it as CommandResult.Rejected).reason))
             }
         }
     }
