@@ -65,6 +65,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.designsystem.NidooDimens
@@ -85,7 +86,13 @@ import com.gekkotron.nidoo.feature.home.presentation.DashboardViewModel
 import com.gekkotron.nidoo.feature.home.presentation.HomeEvent
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
+import com.gekkotron.nidoo.feature.home.presentation.HomeSection
+import com.gekkotron.nidoo.feature.home.presentation.RoomCardUi
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.style.TextOverflow
+import com.gekkotron.nidoo.feature.home.presentation.RoomKind
 import com.gekkotron.nidoo.feature.home.presentation.TapAction
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Command
@@ -114,11 +121,14 @@ fun HomeRoute(
     val voiceEnabled by viewModel.voiceEnabled.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var ask by rememberSaveable { mutableStateOf<HomeEvent.AskBeforeAction?>(null) }
+    val unassigned = stringResource(R.string.area_unassigned)
     HomeEventsEffect(
         viewModel.events, snackbar,
         onRetry = { id, c -> viewModel.send(id, c, cardOf(id)) },
         onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids, cardOf(g)) },
         onAsk = { ask = it },
+        onRetryRoom = viewModel::retryRoom,
+        roomName = { area -> state.roomCards.firstOrNull { it.areaId == area }?.name ?: unassigned },
     )
     val flowRefused = stringResource(R.string.widget_flow_refused)
     val flowFailed = stringResource(R.string.widget_flow_failed)
@@ -162,6 +172,7 @@ fun HomeRoute(
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
         onSendGroup = { id, c -> viewModel.sendGroup(id, c, group = cardOf(id)) },
+        onSendRoom = viewModel::sendRoom,
         onCustomizeGroup = { id, name, favorite -> viewModel.customizeGroup(id, name, favorite, cardOf(id)) },
         voiceEnabled = voiceEnabled,
         dashboard = dashboard,
@@ -192,6 +203,7 @@ fun HomeScreen(
     onSearch: (String) -> Unit = {},
     onOpenHistory: (String) -> Unit = {},
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
+    onSendRoom: (areaId: String, kind: RoomKind) -> Unit = { _, _ -> },
     onCustomizeGroup: (String, String, Boolean) -> Unit = { _, _, _ -> },
     voiceEnabled: Boolean = false,
     dashboard: DashboardScreenState = DashboardScreenState(),
@@ -204,8 +216,39 @@ fun HomeScreen(
     climatResults: Flow<ClimatResult> = emptyFlow(),
 ) {
     val layoutDirection = LocalLayoutDirection.current
-    var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
-    val closeSearch = { searching = false; onSearch("") }
+    // Rooms design §6.5: the search field is always there on Rooms, in a room and on All devices.
+    // Elsewhere (Favourites, Hidden, a dashboard) the header keeps its magnifier, which opens it.
+    val dashboardSelected = dashboard.switcherVisible && dashboard.view !is DashboardView.House
+    val fieldAlways = !dashboardSelected &&
+        (state.selected == RoomFilter.Rooms || state.selected == RoomFilter.All || state.selected is RoomFilter.Area)
+    var searchOpen by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
+    // The screen owns the text: state.query comes back off Main, a frame or more late, and feeding it
+    // back as the value would reset the field (and the IME) to the stale text on every keystroke.
+    var searchText by rememberSaveable { mutableStateOf(state.query) }
+    var fieldFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val searching = searchText.isNotBlank() || state.query.isNotBlank() || (searchOpen && !fieldAlways)
+    val closeSearch = {
+        focusManager.clearFocus()
+        searchOpen = false
+        searchText = ""
+        onSearch("")
+    }
+    // Switching view ends a search (the view model clears the query with it): empty the field too.
+    var lastSelected by rememberSaveable { mutableStateOf(state.selected.key) }
+    LaunchedEffect(state.selected.key) {
+        if (lastSelected != state.selected.key) {
+            lastSelected = state.selected.key
+            searchOpen = false
+            searchText = ""
+        }
+    }
+    // Back from a room goes to Rooms. Declared before the search handler: the last enabled one wins, so search closes first.
+    val roomInView = (state.selected as? RoomFilter.Area)
+        ?.takeIf { !dashboardSelected }
+        ?.let { area -> state.roomCards.firstOrNull { it.areaId == area.id } }
+    BackHandler(enabled = roomInView != null) { onSelect(RoomFilter.Rooms) }
+    BackHandler(enabled = fieldFocused && !searching) { focusManager.clearFocus() }
     BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -230,7 +273,7 @@ fun HomeScreen(
         }
     }
     // Searching always looks through House, even from a dashboard.
-    val onDashboard = dashboard.switcherVisible && dashboard.view !is DashboardView.House && !searching
+    val onDashboard = dashboardSelected && !searching
     val shownDashboard = (dashboard.view as? DashboardView.Shown)?.ui
     val showDashboardHeader = !onDashboard || shownDashboard?.showHeader == true
     val cardClick: (CardUi) -> Unit = { card ->
@@ -264,6 +307,7 @@ fun HomeScreen(
             }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(columns),
+                modifier = Modifier.testTag("home-grid"),
                 contentPadding = PaddingValues(
                     start = padding.calculateStartPadding(layoutDirection) + 16.dp,
                     end = padding.calculateEndPadding(layoutDirection) + 16.dp,
@@ -273,15 +317,25 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
-                if (searching || showDashboardHeader) {
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView.takeIf { !searching }, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
+                if (searching || fieldAlways) {
+                    val opened = searchOpen && !fieldAlways
+                    item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
+                        HomeSearchField(
+                            text = searchText,
+                            onTextChange = { searchText = it; onSearch(it) },
+                            onClear = closeSearch,
+                            showClear = searchText.isNotEmpty() || opened,
+                            autoFocus = opened,
+                            onFocusChange = { fieldFocused = it },
+                        )
+                    }
+                }
+                // Results replace the pills while searching.
+                if (!searching && showDashboardHeader) {
                     item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
-                        if (searching) {
-                            SearchField(state.query, onSearch, onClose = closeSearch)
-                        } else {
-                            // On a dashboard a room chip goes back to House, filtered.
-                            HomeChips(state, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
-                        }
+                        // On a dashboard a pill goes back to House, on that view.
+                        HomeChips(state, inRoom = roomInView != null, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
                     }
                 }
                 val climat = state.climat
@@ -310,6 +364,17 @@ fun HomeScreen(
                         DashboardView.House -> Unit
                     }
                 }
+                if (!onDashboard && !searching && state.selected == RoomFilter.Rooms) {
+                    // Two columns per card where they pair up; on an odd grid (3 columns) a 2-span card would leave a column empty on every row.
+                    items(state.roomCards, key = { "room-" + it.areaId }, span = { GridItemSpan(if (maxLineSpan % 2 == 0) 2 else maxLineSpan) }) { room ->
+                        RoomCard(
+                            room,
+                            onOpen = { onSelect(RoomFilter.Area(room.areaId)) },
+                            onLights = { onSendRoom(room.areaId, RoomKind.LIGHT) },
+                            onShutters = { onSendRoom(room.areaId, RoomKind.COVER) },
+                        )
+                    }
+                }
                 if (searching && state.query.isNotBlank() && state.cards.isEmpty()) {
                     item(key = "no-match", span = { GridItemSpan(maxLineSpan) }) {
                         Text(stringResource(R.string.search_no_match, state.query.trim()), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
@@ -320,24 +385,23 @@ fun HomeScreen(
                         Text(stringResource(R.string.home_discovering), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
                     }
                 }
-                if (!onDashboard) items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
-                    val onClick = { cardClick(card) }
-                    if (card.isGroup) {
-                        // Group: tap opens the sheet; long-press opens it too for lights, Customize for shutters; the inline buttons drive the group directly.
-                        GroupCard(
-                            card,
-                            onClick = onClick,
-                            onLongClick = { cardLongClick(card) },
-                            onSendGroup = onSendGroup,
-                        )
+                if (!onDashboard) {
+                    if (state.sections.isEmpty() && state.strip.isEmpty()) {
+                        // Favourites, Hidden and search results: one flat grid.
+                        homeCards(state.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
                     } else {
-                        EntityCard(
-                            card = card,
-                            onClick = onClick,
-                            onLongClick = { cardLongClick(card) },
-                            onForce = { cardForce(card) },
-                            onSend = { onSend(card.id, it) },
-                        )
+                        // A room or All devices (rooms design §6.4): sensors as pills, then one block per type.
+                        if (state.strip.isNotEmpty()) {
+                            item(key = "strip", span = { GridItemSpan(maxLineSpan) }) {
+                                SensorStrip(state.strip, onClick = cardClick, onLongClick = cardLongClick)
+                            }
+                        }
+                        state.sections.forEach { section ->
+                            if (section.showLabel) {
+                                item(key = "section-" + section.section.name, span = { GridItemSpan(maxLineSpan) }) { SectionLabel(section.section) }
+                            }
+                            homeCards(section.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
+                        }
                     }
                 }
             }
@@ -412,10 +476,60 @@ fun HomeScreen(
     }
 }
 
+/** One block of cards: a tile per device, a wide card per group. */
+private fun LazyGridScope.homeCards(
+    cards: List<CardUi>,
+    cardClick: (CardUi) -> Unit,
+    cardLongClick: (CardUi) -> Unit,
+    cardForce: (CardUi) -> Unit,
+    onSend: (String, Command) -> Unit,
+    onSendGroup: (String, Command) -> Unit,
+) = items(cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
+    val onClick = { cardClick(card) }
+    if (card.isGroup) {
+        // Group: tap opens the sheet; long-press opens it too for lights, Customize for shutters; the inline buttons drive the group directly.
+        GroupCard(
+            card,
+            onClick = onClick,
+            onLongClick = { cardLongClick(card) },
+            onSendGroup = onSendGroup,
+        )
+    } else {
+        EntityCard(
+            card = card,
+            onClick = onClick,
+            onLongClick = { cardLongClick(card) },
+            onForce = { cardForce(card) },
+            onSend = { onSend(card.id, it) },
+        )
+    }
+}
+
+@Composable
+internal fun sectionLabel(section: HomeSection): String = stringResource(
+    when (section) {
+        HomeSection.LIGHTS -> R.string.section_lights
+        HomeSection.SHUTTERS_CLIMATE -> R.string.section_shutters_climate
+        HomeSection.PLUGS_MEDIA -> R.string.section_plugs_media
+        HomeSection.OTHER -> R.string.section_other
+        HomeSection.SENSORS -> R.string.section_sensors
+    },
+)
+
+@Composable
+private fun SectionLabel(section: HomeSection) {
+    Text(
+        sectionLabel(section).uppercase(),
+        style = NidooTheme.type.label,
+        color = NidooTheme.colors.contentMuted,
+        modifier = Modifier.padding(top = 8.dp, start = 2.dp).testTag("section-" + section.name).semantics { heading() },
+    )
+}
+
 private const val VOICE_ACTIVITY = "com.gekkotron.nidoo.feature.voice.VoiceActivity"
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, room: RoomCardUi? = null, showSearch: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
@@ -431,7 +545,11 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
             }
             DashboardSwitcher(title, onSwitcherClick)
         }
-        if (showGreeting) Row(verticalAlignment = Alignment.Bottom) {
+        if (showGreeting && room != null) {
+            // Inside a room the title is the room and its status takes the weather's place (rooms design §6.4).
+            Text(roomName(room), style = NidooTheme.type.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("room-title").semantics { heading() })
+            Text(roomStatus(room), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, modifier = Modifier.testTag("room-status"))
+        } else if (showGreeting) Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = NidooTheme.type.display, modifier = Modifier.weight(1f))
             state.hero?.let { hero ->
                 Text(
@@ -467,7 +585,7 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
                     StaticIcon(NidooGlyph.MIC, modifier = Modifier.size(24.dp).semantics { contentDescription = voiceLabel })
                 }
             }
-            IconButton(onClick = onSearchClick) {
+            if (showSearch) IconButton(onClick = onSearchClick) {
                 StaticIcon(NidooGlyph.SEARCH, modifier = Modifier.size(24.dp).semantics { contentDescription = searchLabel })
             }
             val settingsLabel = stringResource(R.string.settings_open)
@@ -478,47 +596,28 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
     }
 }
 
-/** Replaces the room chips while searching (Home search). */
 @Composable
-private fun SearchField(query: String, onSearch: (String) -> Unit, onClose: () -> Unit) {
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-    // The field owns its text: state.query comes back off Main, a frame or more late, and feeding it
-    // back as the value would reset the field (and the IME) to the stale text on every keystroke.
-    var text by rememberSaveable { mutableStateOf(query) }
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it; onSearch(it) },
-        placeholder = { Text(stringResource(R.string.search_hint)) },
-        leadingIcon = { StaticIcon(NidooGlyph.SEARCH, modifier = Modifier.size(20.dp)) },
-        trailingIcon = {
-            val closeLabel = stringResource(R.string.search_close)
-            IconButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = closeLabel }) {
-                StaticIcon(NidooGlyph.CLOSE, modifier = Modifier.size(20.dp))
-            }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-    )
-}
-
-@Composable
-private fun HomeChips(state: HomeUiState, onSelect: (RoomFilter) -> Unit) {
+private fun HomeChips(state: HomeUiState, inRoom: Boolean, onSelect: (RoomFilter) -> Unit) {
     val all = stringResource(R.string.chip_all)
     val favorites = stringResource(R.string.chip_favorites)
+    val rooms = stringResource(R.string.chip_rooms)
     val unassigned = stringResource(R.string.area_unassigned)
     val hidden = stringResource(R.string.chip_hidden, state.hiddenCount)
-    val items = state.chips.map { chip ->
+    // Inside a room the row is "‹ Rooms" then every room (rooms design §6.4); elsewhere, and on a
+    // dashboard whatever House was left on, the top-level views.
+    val back = stringResource(R.string.chip_back_rooms)
+    val items = (if (inRoom) state.roomChips else state.chips).map { chip ->
         val label = chip.label ?: when (chip.filter) {
             RoomFilter.All -> all
             RoomFilter.Favorites -> favorites
+            RoomFilter.Rooms -> rooms
             RoomFilter.Hidden -> hidden
             is RoomFilter.Area -> unassigned
         }
         ChipItem(chip.filter.key, label)
     }
-    RoomChips(items, state.selected.key, onSelect = { onSelect(RoomFilter.fromKey(it)) })
+    val row = if (inRoom) listOf(ChipItem(RoomFilter.Rooms.key, back)) + items else items
+    RoomChips(row, state.selected.key, onSelect = { onSelect(RoomFilter.fromKey(it)) })
 }
 
 @Composable

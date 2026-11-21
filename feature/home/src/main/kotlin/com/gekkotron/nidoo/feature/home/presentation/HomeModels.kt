@@ -22,6 +22,11 @@ sealed interface RoomFilter {
         override val key = "favorites"
     }
 
+    /** The room cards (rooms design §6.2); a room itself is an [Area]. */
+    data object Rooms : RoomFilter {
+        override val key = "rooms"
+    }
+
     /** Hidden entities only, so they can be found and unhidden (Settings takes this over later). */
     data object Hidden : RoomFilter {
         override val key = "hidden"
@@ -37,13 +42,14 @@ sealed interface RoomFilter {
         fun fromKey(key: String): RoomFilter = when {
             key == Favorites.key -> Favorites
             key == Hidden.key -> Hidden
+            key == Rooms.key -> Rooms
             key.startsWith(AREA_PREFIX) -> Area(key.removePrefix(AREA_PREFIX))
             else -> All
         }
     }
 }
 
-/** A null [label] is localized by the UI: All, Favourites or Unassigned. */
+/** A null [label] is localized by the UI: All, Favourites, Rooms or Unassigned. */
 data class ChipUi(val filter: RoomFilter, val label: String?)
 
 enum class TapAction { TOGGLE, PRESS, OPEN_SHEET, OPEN_HISTORY, NONE }
@@ -127,9 +133,19 @@ data class HomeUiState(
     val loading: Boolean = true,
     val link: LinkState = LinkState.Connecting,
     val hero: CardUi? = null,
+    /** The top-level pills: Favourites, Rooms, All devices, Hidden. Rooms are in [roomChips]. */
     val chips: List<ChipUi> = listOf(ChipUi(RoomFilter.All, null)),
+    /** One [RoomFilter.Area] per room card, in the same order: the pill row inside a room. */
+    val roomChips: List<ChipUi> = emptyList(),
+    /** The Rooms view's cards, built whatever is selected (the room header and buttons read them too). */
+    val roomCards: List<RoomCardUi> = emptyList(),
     val selected: RoomFilter = RoomFilter.All,
+    /** Every card of the selected view, [strip] and [sections] included; empty on Rooms. */
     val cards: List<CardUi> = emptyList(),
+    /** A room's sensors, shown as pills; empty outside a room view. */
+    val strip: List<CardUi> = emptyList(),
+    /** The by-type sections of a room or of All devices; empty elsewhere and while searching (flat grid). */
+    val sections: List<SectionUi> = emptyList(),
     /** Rooms the override sheet can pick from: every area except Unassigned. */
     val rooms: List<Area> = emptyList(),
     val hiddenCount: Int = 0,
@@ -158,6 +174,18 @@ sealed interface HomeEvent {
 
     /** Device sheet spec §5.3: a Door opener or Siren wants the user to confirm the tap. */
     data class AskBeforeAction(val id: String, val labelResId: Int, val command: Command) : HomeEvent
+
+    /**
+     * Devices of one whole-room tap that were not confirmed, merged (rooms design §6.3). [failed] is
+     * device id → the command to repeat (a lights-on tap sends each light its own), [failedNames] in the same order.
+     */
+    data class RoomNotConfirmed(
+        val sendId: String,
+        val areaId: String,
+        val kind: RoomKind,
+        val failed: Map<String, Command>,
+        val failedNames: List<String>,
+    ) : HomeEvent
 
     /** Members of one group send that were not confirmed, merged (room groups spec §5). */
     data class GroupNotConfirmed(

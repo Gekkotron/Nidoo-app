@@ -53,18 +53,22 @@ object HomeUiBuilder {
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }
 
         val occupied = entities.values.mapTo(mutableSetOf()) { it.area }
-        val used = grid.mapTo(mutableSetOf()) { it.area }
         val hasFavorites = grid.any { it.ui.favorite }
+        // Built whatever is selected: the Rooms view, a room's header and its pill row all read them.
+        val roomCards = RoomCards.build(grid, states, areas, names, locale)
+        val roomChips = roomCards.map { ChipUi(RoomFilter.Area(it.areaId), it.name) }
         val chips = buildList {
             if (hasFavorites) add(ChipUi(RoomFilter.Favorites, null))
+            if (roomCards.isNotEmpty()) add(ChipUi(RoomFilter.Rooms, null))
             add(ChipUi(RoomFilter.All, null))
-            for (area in areas) {
-                if (area.id in used) add(ChipUi(RoomFilter.Area(area.id), area.name.takeUnless { area.id == UNASSIGNED_AREA }))
-            }
             if (hidden.isNotEmpty()) add(ChipUi(RoomFilter.Hidden, null))
         }
-        val fallback = if (hasFavorites) RoomFilter.Favorites else RoomFilter.All
-        val effective = selected.takeIf { s -> chips.any { it.filter == s } } ?: fallback
+        val fallback = when {
+            hasFavorites -> RoomFilter.Favorites
+            roomCards.isNotEmpty() -> RoomFilter.Rooms
+            else -> RoomFilter.All
+        }
+        val effective = selected.takeIf { s -> chips.any { it.filter == s } || roomChips.any { it.filter == s } } ?: fallback
 
         val shown = when {
             query.isNotBlank() -> standalone.filter { SearchMatch.matches(query, names.getValue(it.uniqueId), it.deviceName, areaNames[it.area]) }
@@ -112,14 +116,25 @@ object HomeUiBuilder {
         } else {
             sorted
         }
+        // Rooms design §6.1/§6.4: a room and All devices are cut by type; Favourites, Hidden and search stay flat.
+        val layout = when {
+            query.isNotBlank() -> null
+            effective is RoomFilter.Area -> HomeSections.room(cards)
+            effective == RoomFilter.All -> HomeSections.allDevices(cards)
+            else -> null
+        }
 
         return HomeUiState(
             loading = entities.isEmpty(),
             link = link,
             hero = hero?.let { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled) },
             chips = chips,
+            roomChips = roomChips,
+            roomCards = roomCards,
             selected = effective,
             cards = cards,
+            strip = layout?.strip.orEmpty(),
+            sections = layout?.sections.orEmpty(),
             rooms = areas.filter { it.id != UNASSIGNED_AREA && it.id in occupied },
             hiddenCount = hidden.size,
             query = query,
@@ -174,7 +189,7 @@ object HomeUiBuilder {
         RoomFilter.All -> true
         RoomFilter.Favorites -> entity.ui.favorite
         is RoomFilter.Area -> entity.area == filter.id
-        RoomFilter.Hidden -> false
+        RoomFilter.Hidden, RoomFilter.Rooms -> false
     }
 
     /** A name the user typed wins; otherwise a known label is translated after the device name. */

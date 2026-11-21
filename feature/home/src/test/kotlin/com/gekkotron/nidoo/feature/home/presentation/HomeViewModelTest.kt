@@ -52,6 +52,9 @@ class HomeViewModelTest {
         stateMap.value = mapOf("lamp" to EntityState("lamp", StateValue.Light(true, 255)))
     }
 
+    /** Most tests read device cards, so they start on All devices; a fresh launch lands on Favourites or Rooms. */
+    private fun allDevices() = SavedStateHandle(mapOf("home.filter" to RoomFilter.All.key))
+
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
 
@@ -60,7 +63,7 @@ class HomeViewModelTest {
 
     @Test
     fun `state reflects the source`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         assertFalse(vm.state.value.loading)
         assertEquals(setOf("lamp", "shutter"), vm.state.value.cards.map { it.id }.toSet())
@@ -68,7 +71,7 @@ class HomeViewModelTest {
 
     @Test
     fun `selected room survives recreation`() = runTest(dispatcher) {
-        val handle = SavedStateHandle()
+        val handle = allDevices()
         HomeViewModel(source, handle, dispatcher, preferences = testPreferences()).select(RoomFilter.Area("kitchen"))
         val recreated = HomeViewModel(source, handle, dispatcher, preferences = testPreferences())
         backgroundScope.launch { recreated.state.collect {} }
@@ -76,19 +79,43 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `a stale Hidden selection resets to All instead of reappearing once something else is hidden`() = runTest(dispatcher) {
+    fun `a stale Hidden selection resets to Rooms instead of reappearing once something else is hidden`() = runTest(dispatcher) {
         source.entities.value += "secret" to testEntity("secret", Kind.SWITCH, area = "kitchen", ui = UiOverride(hidden = true))
-        val handle = SavedStateHandle()
+        val handle = allDevices()
         val vm = HomeViewModel(source, handle, dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.Hidden)
         assertEquals(RoomFilter.Hidden, vm.state.value.selected)
-        // Unhiding the last hidden card drops the Hidden chip; the view falls back to All.
+        // Unhiding the last hidden card drops the Hidden chip; the view falls back to Rooms.
         source.entities.value += "secret" to testEntity("secret", Kind.SWITCH, area = "kitchen")
-        assertEquals(RoomFilter.All, vm.state.value.selected)
+        assertEquals(RoomFilter.Rooms, vm.state.value.selected)
         // Hiding another card brings the Hidden chip back; a stale saved key would jump back to it.
         source.entities.value += "lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen", ui = UiOverride(hidden = true))
-        assertEquals(RoomFilter.All, vm.state.value.selected)
+        assertEquals(RoomFilter.Rooms, vm.state.value.selected)
+    }
+
+    @Test
+    fun `a saved room that lost its devices lands on Rooms and the saved key follows`() = runTest(dispatcher) {
+        val handle = SavedStateHandle(mapOf("home.filter" to RoomFilter.Area("garage").key))
+        val vm = HomeViewModel(source, handle, dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        assertEquals(RoomFilter.Rooms, vm.state.value.selected)
+        assertEquals(RoomFilter.Rooms.key, handle.get<String>("home.filter"))
+    }
+
+    @Test
+    fun `a restored room or Rooms selection survives the empty moment before discovery`() = runTest(dispatcher) {
+        for (saved in listOf<RoomFilter>(RoomFilter.Area("kitchen"), RoomFilter.Rooms)) {
+            // Process death: the saved key is back, but the source has nothing yet.
+            val cold = FakeEntitySource()
+            val handle = SavedStateHandle(mapOf("home.filter" to saved.key))
+            val vm = HomeViewModel(cold, handle, dispatcher, preferences = testPreferences())
+            backgroundScope.launch { vm.state.collect {} }
+            assertEquals(saved.key, handle.get<String>("home.filter"))
+            cold.areas.value = listOf(Area("kitchen", "Kitchen"))
+            cold.entities.value = mapOf("lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen"))
+            assertEquals(saved, vm.state.value.selected)
+        }
     }
 
     @Test
@@ -96,7 +123,7 @@ class HomeViewModelTest {
         // Cold start: discovery configs come in first, the retained nidoo/ui overrides a moment later.
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
-        assertEquals(RoomFilter.All, vm.state.value.selected)
+        assertEquals(RoomFilter.Rooms, vm.state.value.selected)
         source.entities.value += "lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen", ui = UiOverride(favorite = true))
         assertEquals(RoomFilter.Favorites, vm.state.value.selected)
         assertEquals(RoomFilter.Favorites, vm.state.value.chips.first().filter)
@@ -104,7 +131,7 @@ class HomeViewModelTest {
 
     @Test
     fun `picking All by hand sticks when favourites show up later`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.All)
         source.entities.value += "lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen", ui = UiOverride(favorite = true))
@@ -114,7 +141,7 @@ class HomeViewModelTest {
     @Test
     fun `tapping sends an absolute on-off so Retry repeats the intent, and ignores sheet cards`() = runTest(dispatcher) {
         source.entities.value += "off" to testEntity("off", Kind.SWITCH, area = "kitchen")
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val cards = vm.state.value.cards.associateBy { it.id }
         vm.tap(cards.getValue("lamp"))
@@ -133,7 +160,7 @@ class HomeViewModelTest {
             ),
         )
         source.stateMap.value = mapOf("led" to EntityState("led", StateValue.Light(false, 10)))
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val led = vm.state.value.card("led")!!
         vm.tap(led)
@@ -150,7 +177,7 @@ class HomeViewModelTest {
             ),
         )
         source.stateMap.value = mapOf("led" to EntityState("led", StateValue.Light(false, 10)))
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.tap(vm.state.value.card("led")!!)
         assertEquals("led" to Command.TurnOn(brightness = 80, color = com.gekkotron.nidoo.model.Hs(0.0, 0.0)), source.sent.last())
@@ -158,7 +185,7 @@ class HomeViewModelTest {
 
     @Test
     fun `unconfirmed command becomes a NotConfirmed event`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         source.commandFailures.emit(CommandFailure("lamp", Command.Toggle, "timeout"))
         assertEquals(HomeEvent.NotConfirmed("lamp", Command.Toggle), vm.events.first())
     }
@@ -166,14 +193,14 @@ class HomeViewModelTest {
     @Test
     fun `rejected command becomes a Rejected event`() = runTest(dispatcher) {
         source.result = CommandResult.Rejected("unavailable")
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         vm.send("lamp", Command.TurnOff)
         assertEquals(HomeEvent.Rejected("lamp", "unavailable"), vm.events.first())
     }
 
     @Test
     fun `a burst of state updates collapses, with the final state reflecting the last update`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         repeat(50) { i ->
             source.stateMap.value = mapOf("lamp" to EntityState("lamp", StateValue.Light(on = i % 2 == 0, brightness = i)))
@@ -184,7 +211,7 @@ class HomeViewModelTest {
 
     @Test
     fun `customize writes the override`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         vm.customize("lamp", emptyList(), UiOverride(name = "Ceiling"))
         assertEquals(UiOverride(name = "Ceiling"), source.overrides["lamp"])
         assertEquals(listOf("override"), source.calls)
@@ -193,14 +220,14 @@ class HomeViewModelTest {
     @Test
     fun `customize failure emits SaveFailed`() = runTest(dispatcher) {
         source.failWrites = true
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         vm.customize("lamp", emptyList(), UiOverride(hidden = true))
         assertEquals(HomeEvent.SaveFailed, vm.events.first())
     }
 
     @Test
     fun `customize with a new room publishes the areas, then the override, in order`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         vm.customize("lamp", listOf(Area("office", "Office")), UiOverride(area = "office"))
         assertEquals(listOf("areas", "override"), source.calls)
         assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("office", "Office"))), source.areaWrites)
@@ -210,7 +237,7 @@ class HomeViewModelTest {
     @Test
     fun `when publishing the new room fails, the override is never sent`() = runTest(dispatcher) {
         source.failWrites = true
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         vm.customize("lamp", listOf(Area("office", "Office")), UiOverride(area = "office"))
         assertEquals(listOf("areas"), source.calls)
         assertEquals(emptyMap(), source.overrides)
@@ -219,7 +246,7 @@ class HomeViewModelTest {
 
     @Test
     fun `a room typed and then left for another is not published`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         vm.customize("lamp", listOf(Area("office", "Office"), Area("attic", "Attic")), UiOverride(area = "attic"))
         assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("attic", "Attic"))), source.areaWrites)
     }
@@ -230,7 +257,7 @@ class HomeViewModelTest {
             "lamp" to EntityState("lamp", StateValue.Light(true, 255), stale = true),
             "shutter" to EntityState("shutter", StateValue.Unknown, stale = true),
         )
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
@@ -245,7 +272,7 @@ class HomeViewModelTest {
 
     @Test
     fun `a live state is not stale and sends`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val lamp = vm.state.value.cards.first { it.id == "lamp" }
         assertFalse(lamp.stale)
@@ -255,7 +282,7 @@ class HomeViewModelTest {
 
     @Test
     fun `search query filters and survives recreation`() = runTest(dispatcher) {
-        val handle = SavedStateHandle()
+        val handle = allDevices()
         HomeViewModel(source, handle, dispatcher, preferences = testPreferences()).search("shut")
         val recreated = HomeViewModel(source, handle, dispatcher, preferences = testPreferences())
         backgroundScope.launch { recreated.state.collect {} }
@@ -277,7 +304,7 @@ class HomeViewModelTest {
     @Test
     fun `a group send goes to the hub group entity, the hub fans out`() = runTest(dispatcher) {
         val src = groupSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.sendGroup("group_cover_living", Command.Close)
         assertEquals(listOf<Pair<String, Command>>("group_cover_living" to Command.Close), src.sent)
@@ -286,7 +313,7 @@ class HomeViewModelTest {
     @Test
     fun `a stale member blocks the whole group send`() = runTest(dispatcher) {
         val src = groupSource().apply { stateMap.value = mapOf("a" to EntityState("a", StateValue.Cover(CoverState.OPEN, 100), stale = true)) }
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val event = async { vm.events.first() }
         vm.sendGroup("group_cover_living", Command.Open)
@@ -297,7 +324,7 @@ class HomeViewModelTest {
     @Test
     fun `a failed group send reports the group under its own name`() = runTest(dispatcher) {
         val src = groupSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
@@ -313,7 +340,7 @@ class HomeViewModelTest {
     @Test
     fun `a failure for a member sent on its own stays a single NotConfirmed`() = runTest(dispatcher) {
         val src = groupSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
@@ -336,7 +363,7 @@ class HomeViewModelTest {
             hubGroups.value = mapOf("light_living" to HubGroup("light_living", Kind.LIGHT, "Lights", listOf("x", "y")))
             stateMap.value = mapOf("x" to EntityState("x", StateValue.Light(true, 255)))
         }
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val group = vm.state.value.cards.single()
         vm.sendGroup(group.id, GroupCommands.toggle(group))
@@ -346,7 +373,7 @@ class HomeViewModelTest {
     @Test
     fun `a rejected group send reports once`() = runTest(dispatcher) {
         val src = groupSource().apply { result = CommandResult.Rejected("read-only") }
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
@@ -357,7 +384,7 @@ class HomeViewModelTest {
     @Test
     fun `customizing a hub group saves its name and favorite on the group entity`() = runTest(dispatcher) {
         val src = groupSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.customizeGroup("group_cover_living", " Baie ", favorite = true)
         assertEquals(UiOverride(name = "Baie", favorite = true), src.overrides["group_cover_living"])
@@ -367,7 +394,7 @@ class HomeViewModelTest {
     @Test
     fun `failures of two different group sends never merge, so Retry repeats the right command`() = runTest(dispatcher) {
         val src = groupSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         val events = mutableListOf<HomeEvent>()
         backgroundScope.launch { vm.events.collect { events += it } }
@@ -404,7 +431,7 @@ class HomeViewModelTest {
     @Test
     fun `group send reaches members when House shows another filter`() = runTest(dispatcher) {
         val src = dashboardSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.Area("den"))
         val card = livingGroupCard(src)
@@ -416,7 +443,7 @@ class HomeViewModelTest {
     @Test
     fun `tapping a stale dashboard card that House does not show waits for connection`() = runTest(dispatcher) {
         val src = dashboardSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.Area("living"))
         val events = mutableListOf<HomeEvent>()
@@ -434,7 +461,7 @@ class HomeViewModelTest {
     @Test
     fun `retry without a card reuses the last group card given`() = runTest(dispatcher) {
         val src = dashboardSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.Area("den"))
         val card = livingGroupCard(src)
@@ -447,7 +474,7 @@ class HomeViewModelTest {
     @Test
     fun `a stale dashboard card waits for connection`() = runTest(dispatcher) {
         val src = dashboardSource()
-        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        val vm = HomeViewModel(src, allDevices(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.Area("den"))
         val events = mutableListOf<HomeEvent>()
@@ -471,7 +498,7 @@ class HomeViewModelTest {
 
     @Test
     fun `climat banner shows only in a room view`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = climate())
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences(), climate = climate())
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.All)
         assertEquals(null, vm.state.value.climat)
@@ -485,7 +512,7 @@ class HomeViewModelTest {
     @Test
     fun `climat banner follows the zone documents`() = runTest(dispatcher) {
         val repo = climate()
-        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = repo)
+        val vm = HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences(), climate = repo)
         backgroundScope.launch { vm.state.collect {} }
         vm.select(RoomFilter.Area("kitchen"))
         assertEquals(ClimatWhy.SCHEDULE, vm.state.value.climat?.why)
@@ -496,7 +523,7 @@ class HomeViewModelTest {
     private val boostOverride = """[{"entity":null,"setpoint":22.0,"mode":null,"until":9999999999,"origin":"user"}]"""
 
     private fun climatVm(repo: ClimateRepository, transport: FakeMqttTransport) =
-        HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences(), climate = repo, transport = transport)
+        HomeViewModel(source, allDevices(), dispatcher, preferences = testPreferences(), climate = repo, transport = transport)
 
     @Test
     fun `startBoost publishes the hold command`() = runTest(dispatcher) {
@@ -573,5 +600,5 @@ class HomeViewModelTest {
     }
 }
 
-private fun testPreferences(): AppPreferences =
+internal fun testPreferences(): AppPreferences =
     AppPreferences.create(File.createTempFile("prefs", ".json").also { it.delete() }, CoroutineScope(Dispatchers.Unconfined))

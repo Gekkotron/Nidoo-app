@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -25,7 +29,19 @@ data class ChipItem(val key: String, val label: String)
 @Composable
 fun RoomChips(items: List<ChipItem>, selectedKey: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     val c = NidooTheme.colors
-    LazyRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // The selected pill is brought into view: with many rooms it may start off-screen (rooms design §6.4).
+    val listState = rememberLazyListState()
+    LaunchedEffect(selectedKey, items.size) {
+        val index = items.indexOfFirst { it.key == selectedKey }
+        if (index < 0) return@LaunchedEffect
+        // Wait for the first layout: before it nothing is "visible" and the row would always jump,
+        // pushing the leading pill ("‹ Rooms") off the edge.
+        val info = snapshotFlow { listState.layoutInfo }.first { it.visibleItemsInfo.isNotEmpty() }
+        val item = info.visibleItemsInfo.firstOrNull { it.index == index }
+        val fits = item != null && item.offset >= info.viewportStartOffset && item.offset + item.size <= info.viewportEndOffset
+        if (!fits) listState.animateScrollToItem(index)
+    }
+    LazyRow(modifier, state = listState, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(items, key = { it.key }) { item ->
             val selected = item.key == selectedKey
             Box(

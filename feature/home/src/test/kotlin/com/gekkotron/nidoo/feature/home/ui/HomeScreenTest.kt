@@ -90,21 +90,23 @@ class HomeScreenTest {
     private val selects = mutableListOf<RoomFilter>()
     private val customized = mutableListOf<Pair<String, UiOverride>>()
     private val histories = mutableListOf<String>()
+    private val roomSends = mutableListOf<Pair<String, com.gekkotron.nidoo.feature.home.presentation.RoomKind>>()
 
-    private fun state(): HomeUiState =
-        HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
+    private fun state(selected: RoomFilter = RoomFilter.All): HomeUiState =
+        HomeUiBuilder.build(entities, states, areas, selected, LinkState.Connected(TransportMode.DEMO), Locale.US)
 
-    private fun show(insets: WindowInsets? = null, fontScale: () -> Float = { 1f }) = compose.setContent {
+    private fun show(insets: WindowInsets? = null, ui: HomeUiState = state(), fontScale: () -> Float = { 1f }) = compose.setContent {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale())) {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
-                    state = state(),
+                    state = ui,
                     onSelect = { selects += it },
                     onTap = { taps += it.id },
                     onSend = { id, c -> sends += id to c },
                     onCustomize = { id, _, o -> customized += id to o },
                     onOpenHistory = { histories += it },
+                    onSendRoom = { area, kind -> roomSends += area to kind },
                     now = LocalTime.NOON,
                     windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
@@ -305,10 +307,47 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `room chip selects its area`() {
-        show()
+    fun `inside a room the pills are back to Rooms then every room, and select sideways`() {
+        show(ui = state(RoomFilter.Area("living")))
+        compose.onNodeWithText("All devices").assertDoesNotExist()
         compose.onNodeWithText("Kitchen").performClick()
-        assertEquals(listOf<RoomFilter>(RoomFilter.Area("kitchen")), selects)
+        compose.onNodeWithText("‹ Rooms").performClick()
+        assertEquals(listOf(RoomFilter.Area("kitchen"), RoomFilter.Rooms), selects)
+    }
+
+    @Test
+    fun `the Rooms view lists a card per room and no device tile`() {
+        show(ui = state(RoomFilter.Rooms))
+        for (area in listOf("living", "kitchen", "garage")) compose.onNodeWithTag("room-$area").assertExists()
+        compose.onNodeWithTag("card-lamp").assertDoesNotExist()
+        compose.onNodeWithText("Floor lamp").assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping a room card selects that room`() {
+        show(ui = state(RoomFilter.Rooms))
+        compose.onNodeWithTag("room-living").performClick()
+        assertEquals(listOf<RoomFilter>(RoomFilter.Area("living")), selects)
+    }
+
+    @Test
+    fun `the room buttons send the whole room`() {
+        show(ui = state(RoomFilter.Rooms))
+        compose.onNodeWithTag("room-living-lights").performClick()
+        compose.onNodeWithTag("room-living-shutters").performClick()
+        assertEquals(
+            listOf("living" to com.gekkotron.nidoo.feature.home.presentation.RoomKind.LIGHT, "living" to com.gekkotron.nidoo.feature.home.presentation.RoomKind.COVER),
+            roomSends,
+        )
+        assertTrue(selects.isEmpty())
+    }
+
+    @Test
+    fun `outside a room the pills are the top-level views, without the rooms`() {
+        show()
+        compose.onNodeWithText("Kitchen").assertDoesNotExist()
+        compose.onNodeWithText("Rooms").performClick()
+        assertEquals(listOf<RoomFilter>(RoomFilter.Rooms), selects)
     }
 
     @Test
@@ -407,16 +446,15 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `search filters the cards and closing restores the chips`() {
+    fun `typing in the always-visible field filters the cards and clearing restores the chips`() {
         showSearchable()
-        compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("coffee")
         compose.onNodeWithText("Coffee machine").assertExists()
         compose.onNodeWithText("Floor lamp").assertDoesNotExist()
-        compose.onNodeWithText("Kitchen").assertDoesNotExist() // the chips row is replaced by the field
+        compose.onNodeWithText("Rooms").assertDoesNotExist() // the chips row is replaced by the field
         compose.onNodeWithContentDescription("Close search").performClick()
         compose.onNodeWithText("Floor lamp").assertExists()
-        compose.onNodeWithText("Kitchen").assertExists()
+        compose.onNodeWithText("Rooms").assertExists()
     }
 
     @Test
@@ -430,7 +468,6 @@ class HomeScreenTest {
                 )
             }
         }
-        compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("co")
         compose.onNode(hasSetTextAction()).performTextInput("f")
         compose.onNodeWithText("cof").assertExists()
@@ -439,7 +476,6 @@ class HomeScreenTest {
     @Test
     fun `no match says so`() {
         showSearchable()
-        compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("zzz")
         compose.onNodeWithText("No device matches “zzz”").assertExists()
     }
@@ -450,7 +486,7 @@ class HomeScreenTest {
         compose.setContent {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
-                    state = state().copy(cards = listOf(card)),
+                    state = state().copy(cards = listOf(card), sections = emptyList(), strip = emptyList()),
                     onSelect = {},
                     onTap = { taps += it.id },
                     onSend = { _, _ -> },

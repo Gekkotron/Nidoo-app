@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import com.gekkotron.nidoo.feature.home.R
 import com.gekkotron.nidoo.feature.home.presentation.HomeEvent
+import com.gekkotron.nidoo.feature.home.presentation.RoomKind
 import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.Kind
 import kotlinx.coroutines.flow.Flow
@@ -22,11 +23,16 @@ fun HomeEventsEffect(
     onRetry: (String, Command) -> Unit,
     onRetryGroup: (String, Command, List<String>) -> Unit = { _, _, _ -> },
     onAsk: (HomeEvent.AskBeforeAction) -> Unit = {},
+    onRetryRoom: (HomeEvent.RoomNotConfirmed) -> Unit = {},
+    /** The room's display name for an area id, for the whole-room snackbar. */
+    roomName: (String) -> String = { it },
 ) {
     val resources = LocalContext.current.resources
     val retry by rememberUpdatedState(onRetry)
     val retryGroup by rememberUpdatedState(onRetryGroup)
     val ask by rememberUpdatedState(onAsk)
+    val retryRoom by rememberUpdatedState(onRetryRoom)
+    val nameOf by rememberUpdatedState(roomName)
     LaunchedEffect(events, snackbar) {
         events.collect { event ->
             when (event) {
@@ -42,6 +48,17 @@ fun HomeEventsEffect(
                 is HomeEvent.Rejected -> snackbar.showSnackbar(resources.getString(R.string.home_rejected, event.reason))
                 HomeEvent.SaveFailed -> snackbar.showSnackbar(resources.getString(R.string.home_save_failed))
                 HomeEvent.WaitingForConnection -> snackbar.showSnackbar(resources.getString(R.string.home_waiting_connection))
+                is HomeEvent.RoomNotConfirmed -> {
+                    val count = event.failed.size
+                    val message = if (count == 1) {
+                        resources.getString(R.string.home_group_not_confirmed_one, event.failedNames.single())
+                    } else {
+                        val plural = if (event.kind == RoomKind.COVER) R.plurals.home_room_not_confirmed_covers else R.plurals.home_room_not_confirmed_lights
+                        resources.getQuantityString(plural, count, count, nameOf(event.areaId))
+                    }
+                    val result = snackbar.showSnackbar(message = message, actionLabel = resources.getString(R.string.home_retry), duration = SnackbarDuration.Long)
+                    if (result == SnackbarResult.ActionPerformed) retryRoom(event)
+                }
                 is HomeEvent.GroupNotConfirmed -> {
                     val message = if (event.failedIds.size == 1) {
                         resources.getString(R.string.home_group_not_confirmed_one, event.failedNames.single())
