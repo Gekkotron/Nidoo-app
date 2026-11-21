@@ -86,10 +86,17 @@ class MainActivityTest {
         compose.onNodeWithText("Set up again").performClick()
     }
 
+    /** Home opens on Favourites, or on Rooms when nothing is a favourite; [pill] ("Rooms", "All devices") switches view. */
+    private fun openHomeView(pill: String) {
+        compose.waitUntilAtLeastOneExists(hasText(pill), timeoutMillis = 10_000)
+        compose.onNodeWithText(pill).performClick()
+    }
+
     @Test
     fun `fresh install opens onboarding and the demo shows the demo house`() {
         openDemo()
         compose.onNodeWithText("Demo").assertExists()
+        openHomeView("Rooms")
         compose.waitUntilAtLeastOneExists(hasText("Living room"), timeoutMillis = 10_000)
     }
 
@@ -164,6 +171,7 @@ class MainActivityTest {
         setUpAgain()
         connectToBroker(kettle)
         finishRooms("Skip")
+        openHomeView("All devices")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
         compose.onAllNodes(hasContentDescription("Air conditioner", substring = true)).assertCountEquals(0)
     }
@@ -177,17 +185,21 @@ class MainActivityTest {
         compose.onNodeWithText("Add").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Done"), timeoutMillis = 10_000)
         finishRooms("Done")
+        // Home lands on Rooms (nothing is a favourite yet): the new room has its card, and opening it shows the kettle.
+        val roomCard = hasContentDescription("Kitchen, ", substring = true)
+        compose.waitUntilAtLeastOneExists(roomCard, timeoutMillis = 10_000)
+        compose.onNode(roomCard).performClick()
         compose.waitUntilAtLeastOneExists(
             hasContentDescription("Kettle", substring = true) and hasContentDescription("Kitchen", substring = true),
             timeoutMillis = 10_000,
         )
-        compose.onNodeWithText("Kitchen").assertExists()
     }
 
     @Test
     fun `after rooms the notification step is offered once and Not now reaches Home`() {
         connectToBroker(kettle)
         finishRooms("Skip") // waits for "Stay informed" and taps "Not now"
+        openHomeView("All devices")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
         compose.onAllNodes(hasText("Stay informed")).assertCountEquals(0)
         compose.waitUntil(10_000) { enqueued == 1 }
@@ -200,6 +212,7 @@ class MainActivityTest {
             .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
         connectToBroker(kettle)
         answerRooms("Skip")
+        openHomeView("All devices")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
         compose.onAllNodes(hasText("Stay informed")).assertCountEquals(0)
         compose.waitUntil(10_000) { enqueued >= 1 }
