@@ -10,6 +10,17 @@ Nidoo talks **MQTT** directly. It connects to your local broker at home and goes
 
 > **Status:** works against a real [Nidoo](https://github.com/Gekkotron/Nidoo) hub, at home over MQTT and away through Nidoo-gateway, set up by scanning the hub's QR code. It covers Home and dashboards, Energy, Security, History, Flows, climate, alerts and push notifications, voice through the hub's assistant, home-screen widgets and status-bar device controls. The Android app is the one that ships today. The domain core (`:core:model`, `:core:state`, `:core:source`, the hub clients) is already Kotlin Multiplatform, and the iOS targets and app are being built on top of it. The debug build can still run against a built-in demo house (see [Try the demo](#try-the-demo)). Design specs live in [docs/superpowers/specs/](docs/superpowers/specs/), mockups in [docs/design/mockups/](docs/design/mockups/).
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/screen-rooms.png" width="24%" alt="Home in Night Glass: one card per room with its temperature, lights and shutters, and one-tap buttons for the whole room">
+  <img src="docs/images/screen-room.png" width="24%" alt="The living room in Ivoire: a sensor strip, then lights, shutters, climate, plugs and media">
+  <img src="docs/images/screen-history.png" width="24%" alt="History of a boiler's power over 24 hours, with min, average and max">
+  <img src="docs/images/screen-alerts.png" width="24%" alt="Alerts grouped by day: door, camera, alarm, energy and gateway events">
+</p>
+
+Rooms, a room, History and Alerts, in the Night Glass and Ivoire themes. These are rendered from the demo fixtures by the `*ScreenshotTest` unit tests, which write to each module's `build/screenshots/`.
+
 ## Living icons
 
 <p align="center">
