@@ -28,6 +28,8 @@ androidxTestExtJunit = "1.3.0"
 hivemq = "1.4.0"
 moquette = "0.17"
 datastore = "1.2.1"
+# Already resolved by :app through DataStore and OkHttp; pinned for :core:data's common code.
+okio = "3.17.0"
 cryptographyKotlin = "0.6.0"
 kotlinxIo = "0.9.1"
 atomicfu = "0.33.0"
@@ -124,6 +126,9 @@ androidx-glance-appwidget-testing = { module = "androidx.glance:glance-appwidget
 androidx-glance-preview = { module = "androidx.glance:glance-preview", version.ref = "glance" }
 androidx-glance-appwidget-preview = { module = "androidx.glance:glance-appwidget-preview", version.ref = "glance" }
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastore" }
+androidx-datastore-core-okio = { module = "androidx.datastore:datastore-core-okio", version.ref = "datastore" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }

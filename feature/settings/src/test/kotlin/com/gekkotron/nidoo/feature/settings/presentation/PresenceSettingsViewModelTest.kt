@@ -2,6 +2,7 @@ package com.gekkotron.nidoo.feature.settings.presentation
 
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.PresenceConfig
+import com.gekkotron.nidoo.data.create
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher

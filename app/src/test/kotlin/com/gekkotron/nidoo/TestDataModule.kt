@@ -5,6 +5,7 @@ import com.gekkotron.nidoo.data.EntityCache
 import com.gekkotron.nidoo.data.FileEntityCache
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
+import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.di.ApplicationScope
 import com.gekkotron.nidoo.di.DataModule
 import dagger.Module
