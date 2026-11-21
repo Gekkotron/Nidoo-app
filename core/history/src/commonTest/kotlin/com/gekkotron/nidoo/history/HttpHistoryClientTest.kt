@@ -1,9 +1,9 @@
 package com.gekkotron.nidoo.history
 
 import com.gekkotron.nidoo.transport.HttpGetResult
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Test
-import java.time.Instant
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
@@ -18,14 +18,14 @@ class HttpHistoryClientTest {
         HttpHistoryClient(baseUrl = { base }, get = { urls += it; answer }, clock = { now })
 
     @Test
-    fun `series is parsed`(): Unit = runBlocking {
+    fun `series is parsed`() = runTest {
         val s = assertIs<HistoryResult.Ok<Series>>(client().series(ref, HistoryRange.H24)).value
         assertEquals(600, s.windowSeconds)
         assertEquals(listOf(HistoryPoint(1696000000, 21.0, 20.5, 21.5), HistoryPoint(1696000600, 21.2, 21.0, 21.4)), s.points)
     }
 
     @Test
-    fun `entity id is url encoded and base url trailing slash is not doubled`(): Unit = runBlocking {
+    fun `entity id is url encoded and base url trailing slash is not doubled`() = runTest {
         client().series(ref, HistoryRange.D7)
         assertEquals(
             "http://192.168.1.91:8081/api/v1/history/series?entity=living%20room%2Fthermometer&range=7d",
@@ -34,7 +34,7 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `daily and today apply the scale`(): Unit = runBlocking {
+    fun `daily and today apply the scale`() = runTest {
         answer = ok("""{"days":[[1695938400,3200.0],[1696024800,1500.0]]}""")
         val d = assertIs<HistoryResult.Ok<DailyTotals>>(client().daily(ref, 7, EnergyScale(EnergyKind.COUNTER, 0.001))).value
         assertEquals(listOf(DayTotal(1695938400, 3.2), DayTotal(1696024800, 1.5)), d.days)
@@ -46,7 +46,7 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `statuses map to results`(): Unit = runBlocking {
+    fun `statuses map to results`() = runTest {
         answer = HttpGetResult.Response(404, """{"error":"not_recorded"}""".encodeToByteArray(), null)
         assertEquals(HistoryResult.NotRecorded, client().series(ref, HistoryRange.H24))
         answer = HttpGetResult.Response(404, ByteArray(0), null) // a LAN 404: body never read
@@ -62,14 +62,14 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `gateway refusal is NotAllowed and no url is Unavailable`(): Unit = runBlocking {
+    fun `gateway refusal is NotAllowed and no url is Unavailable`() = runTest {
         answer = HttpGetResult.NotAllowed
         assertEquals(HistoryResult.NotAllowed, client().series(ref, HistoryRange.H24))
         assertIs<HistoryResult.Unavailable>(client(base = null).series(ref, HistoryRange.H24))
     }
 
     @Test
-    fun `answers are cached per request for their ttl, failures are not`(): Unit = runBlocking {
+    fun `answers are cached per request for their ttl - failures are not`() = runTest {
         val c = client()
         c.series(ref, HistoryRange.H24)
         now += 59_000
@@ -93,7 +93,7 @@ class HttpHistoryClientTest {
     private val shed = HistoryRef("shed_door")
 
     @Test
-    fun `lastChanges sends sorted, de-duplicated ids and maps the two states`(): Unit = runBlocking {
+    fun `lastChanges sends sorted - de-duplicated ids and maps the two states`() = runTest {
         answer = ok("""{"items":[{"changed_at":1760350920,"recorded":true},{"changed_at":null,"recorded":false},{"changed_at":null,"recorded":false}]}""")
         val r = assertIs<HistoryResult.Ok<Map<HistoryRef, LastChange>>>(client().lastChanges(listOf(shed, door, hall, door))).value
         assertEquals(
@@ -102,7 +102,7 @@ class HttpHistoryClientTest {
         )
         assertEquals(
             mapOf(
-                door to LastChange.At(Instant.ofEpochSecond(1760350920)),
+                door to LastChange.At(Instant.fromEpochSeconds(1760350920)),
                 hall to LastChange.NotRecorded,
                 shed to LastChange.NotRecorded,
             ),
@@ -111,7 +111,7 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `lastChanges encodes awkward ids`(): Unit = runBlocking {
+    fun `lastChanges encodes awkward ids`() = runTest {
         answer = ok("""{"items":[{"changed_at":null,"recorded":false}]}""")
         client().lastChanges(listOf(HistoryRef("salle de bain & co+1")))
         assertEquals(
@@ -121,14 +121,14 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `lastChanges with no refs asks nothing`(): Unit = runBlocking {
+    fun `lastChanges with no refs asks nothing`() = runTest {
         assertEquals(HistoryResult.Ok(emptyMap()), client().lastChanges(emptyList()))
         assertEquals(emptyList(), urls)
     }
 
     @Test
-    fun `lastChanges chunks by 50 and any failed chunk fails the whole`(): Unit = runBlocking {
-        val refs = (0 until 60).map { HistoryRef("d%02d".format(it)) }
+    fun `lastChanges chunks by 50 and any failed chunk fails the whole`() = runTest {
+        val refs = (0 until 60).map { HistoryRef("d${it.toString().padStart(2, '0')}") }
         var calls = 0
         val c = HttpHistoryClient(baseUrl = { "http://h:8081" }, get = { url ->
             urls += url
@@ -148,7 +148,7 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `lastChanges failures map like the other calls`(): Unit = runBlocking {
+    fun `lastChanges failures map like the other calls`() = runTest {
         answer = HttpGetResult.Response(404, ByteArray(0), null) // a hub that lost its history link
         assertEquals(HistoryResult.NotRecorded, client().lastChanges(listOf(door)))
         answer = ok("""{"items":[]}""") // item count does not match
@@ -158,7 +158,7 @@ class HttpHistoryClientTest {
     }
 
     @Test
-    fun `lastChanges answers are cached for a minute`(): Unit = runBlocking {
+    fun `lastChanges answers are cached for a minute`() = runTest {
         answer = ok("""{"items":[{"changed_at":1760350920,"recorded":true}]}""")
         val c = client()
         c.lastChanges(listOf(door))

@@ -1,8 +1,9 @@
 package com.gekkotron.nidoo.history
 
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Test
-import java.time.Instant
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -11,7 +12,7 @@ class DemoHistoryClientTest {
     private val demo = DemoHistoryClient(clock = { 1_696_000_000_000 })
 
     @Test
-    fun `about 150 rising-in-time points per range, same answer twice`(): Unit = runBlocking {
+    fun `about 150 rising-in-time points per range - same answer twice`() = runTest {
         HistoryRange.entries.forEach { range ->
             val s = assertIs<HistoryResult.Ok<Series>>(demo.series(HistoryRef("demo_temperature_sensor"), range)).value
             assertTrue(s.points.size in 140..151, "$range ${s.points.size}")
@@ -22,7 +23,7 @@ class DemoHistoryClientTest {
     }
 
     @Test
-    fun `solar is never negative and daily has one value per day`(): Unit = runBlocking {
+    fun `solar is never negative and daily has one value per day`() = runTest {
         val s = (demo.series(HistoryRef("demo_solar_power"), HistoryRange.H24) as HistoryResult.Ok).value
         assertTrue(s.points.all { it.mean >= 0 })
         val d = (demo.daily(HistoryRef("demo_solar_kwh"), 7, EnergyScale(EnergyKind.COUNTER, 1.0)) as HistoryResult.Ok).value
@@ -31,7 +32,7 @@ class DemoHistoryClientTest {
     }
 
     @Test
-    fun `daily and today follow the scale factor`(): Unit = runBlocking {
+    fun `daily and today follow the scale factor`() = runTest {
         val ref = HistoryRef("demo_total_kwh")
         val one = (demo.daily(ref, 3, EnergyScale(EnergyKind.COUNTER, 1.0)) as HistoryResult.Ok).value
         val milli = (demo.daily(ref, 3, EnergyScale(EnergyKind.COUNTER, 0.001)) as HistoryResult.Ok).value
@@ -40,7 +41,7 @@ class DemoHistoryClientTest {
     }
 
     @Test
-    fun `lastChanges answers every ref with a past time, the same twice`(): Unit = runBlocking {
+    fun `lastChanges answers every ref with a past time - the same twice`() = runTest {
         val now = 1_760_000_000_000L
         val c = DemoHistoryClient(clock = { now })
         val refs = listOf(HistoryRef("demo_door_contact"), HistoryRef("demo_hall_occupancy"))
@@ -48,7 +49,7 @@ class DemoHistoryClientTest {
         assertEquals(refs.toSet(), a.keys)
         a.values.forEach {
             val at = assertIs<LastChange.At>(it).at
-            assertTrue(at < Instant.ofEpochMilli(now) && at > Instant.ofEpochMilli(now).minusSeconds(3 * 86_400))
+            assertTrue(at < Instant.fromEpochMilliseconds(now) && at > Instant.fromEpochMilliseconds(now) - (3 * 86_400).seconds)
         }
         assertEquals(a, assertIs<HistoryResult.Ok<Map<HistoryRef, LastChange>>>(c.lastChanges(refs)).value)
     }

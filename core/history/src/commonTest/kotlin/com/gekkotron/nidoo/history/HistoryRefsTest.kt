@@ -4,7 +4,7 @@ import com.gekkotron.nidoo.model.Bindings
 import com.gekkotron.nidoo.model.Capabilities
 import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.model.Kind
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -22,7 +22,7 @@ class HistoryRefsTest {
     }
 
     @Test
-    fun `a sensor without a unit, or a kind that is not charted, has none`() {
+    fun `a sensor without a unit - or a kind that is not charted - has none`() {
         assertNull(HistoryRefs.of(entity(Kind.SENSOR, null)))
         assertNull(HistoryRefs.of(entity(Kind.SENSOR, "   ")))
         assertNull(HistoryRefs.of(entity(Kind.SWITCH, "W")))

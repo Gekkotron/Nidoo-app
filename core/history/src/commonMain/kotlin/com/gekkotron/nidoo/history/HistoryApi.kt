@@ -8,8 +8,8 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import java.net.URLEncoder
-import java.time.Instant
+import kotlin.math.roundToLong
+import kotlin.time.Instant
 
 /** The hub's `/api/v1/history/...` HTTP contract (see `crates/nidoo-api/src/history.rs`). */
 internal object HistoryApi {
@@ -30,7 +30,7 @@ internal object HistoryApi {
             val at = i["changed_at"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.longOrNull
             // The hub emits `{changed_at: <ts>, recorded: true}` or `{changed_at: null, recorded: false}`;
             // the OlderThan branch the hub's history API used (recorded without a timestamp) is gone with the hub.
-            ref to if (at != null) LastChange.At(Instant.ofEpochSecond(at)) else LastChange.NotRecorded
+            ref to if (at != null) LastChange.At(Instant.fromEpochSeconds(at)) else LastChange.NotRecorded
         }
     }
 
@@ -38,7 +38,16 @@ internal object HistoryApi {
         (listOf("entity" to ref.id) + extra)
             .joinToString("&", prefix = "${base.trimEnd('/')}/api/v1/history/$path?") { (k, v) -> "$k=${encode(v)}" }
 
-    private fun encode(v: String) = URLEncoder.encode(v, Charsets.UTF_8).replace("+", "%20")
+    /** `java.net.URLEncoder` (UTF-8) with spaces as `%20`: letters, digits and `.-*_` stay, every other byte is `%XX`. */
+    private fun encode(v: String): String = buildString {
+        for (b in v.encodeToByteArray()) {
+            val c = (b.toInt() and 0xff).toChar()
+            if (c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c in ".-*_") append(c)
+            else append('%').append(HEX[(b.toInt() shr 4) and 0xf]).append(HEX[b.toInt() and 0xf])
+        }
+    }
+
+    private const val HEX = "0123456789ABCDEF"
 
     fun parseSeries(text: String): Series {
         val o = (Json.parseToJsonElement(text) as? JsonObject ?: error("not an object"))
@@ -59,7 +68,7 @@ internal object HistoryApi {
         return if (kwh is JsonNull) null else kwh.jsonPrimitive.doubleOrNull?.let { kwh(it, factor) }
     }
 
-    private fun kwh(raw: Double, factor: Double) = Math.round(raw * factor * 1000) / 1000.0
+    private fun kwh(raw: Double, factor: Double) = (raw * factor * 1000).roundToLong() / 1000.0
 
     private fun JsonArray.long(i: Int) = (getOrNull(i) ?: error("short array")).jsonPrimitive.longOrNull ?: error("bad timestamp")
     private fun JsonArray.double(i: Int) = (getOrNull(i) ?: error("short array")).jsonPrimitive.doubleOrNull ?: error("bad value")

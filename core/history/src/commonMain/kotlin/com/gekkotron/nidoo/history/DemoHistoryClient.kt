@@ -3,16 +3,16 @@ package com.gekkotron.nidoo.history
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.time.Instant
-import java.time.ZoneId
+import kotlin.time.Instant
 import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.round
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlin.time.Clock
 
 /** Deterministic fake history for the demo profile: same ref and range, same curve (history spec §4.5). */
-class DemoHistoryClient(private val clock: () -> Long = System::currentTimeMillis) : HistoryClient {
+class DemoHistoryClient(private val clock: () -> Long = { Clock.System.now().toEpochMilliseconds() }) : HistoryClient {
     override val available: StateFlow<Boolean> = MutableStateFlow(true).asStateFlow()
 
     override suspend fun series(ref: HistoryRef, range: HistoryRange): HistoryResult<Series> {
@@ -61,7 +61,7 @@ class DemoHistoryClient(private val clock: () -> Long = System::currentTimeMilli
     /** Each sensor flipped between 1 min and 3 days ago, the same for the same ref. */
     override suspend fun lastChanges(refs: List<HistoryRef>): HistoryResult<Map<HistoryRef, LastChange>> {
         val now = clock() / 1000
-        return HistoryResult.Ok(refs.associateWith { LastChange.At(Instant.ofEpochSecond(now - Random(it.hashCode()).nextLong(60, 3 * 86_400L))) })
+        return HistoryResult.Ok(refs.associateWith { LastChange.At(Instant.fromEpochSeconds(now - Random(it.hashCode()).nextLong(60, 3 * 86_400L))) })
     }
 
     private fun scaled(kwh: Double, scale: EnergyScale) = round(kwh * scale.factor * 1000) / 1000
@@ -70,12 +70,12 @@ class DemoHistoryClient(private val clock: () -> Long = System::currentTimeMilli
 
     private fun noise(rnd: Random, amplitude: Double) = (rnd.nextDouble() * 2 - 1) * amplitude
 
-    private fun hourOfDay(t: Long): Double {
-        val z = Instant.ofEpochSecond(t).atZone(ZoneId.of("Europe/Paris"))
-        return z.hour + z.minute / 60.0
-    }
+    private fun hourOfDay(t: Long): Double = parisHourOfDay(t)
 
     private companion object {
         const val POINTS = 150
     }
 }
+
+/** Hours since midnight (with minutes as a fraction) of [epochSeconds] in Europe/Paris, the demo house's zone. */
+internal expect fun parisHourOfDay(epochSeconds: Long): Double

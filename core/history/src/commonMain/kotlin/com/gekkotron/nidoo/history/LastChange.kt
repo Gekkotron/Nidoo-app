@@ -1,7 +1,7 @@
 package com.gekkotron.nidoo.history
 
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 /** When a binary series last flipped (last-change spec §4.2). */
 sealed interface LastChange {

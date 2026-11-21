@@ -13,6 +13,7 @@ import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState
 import java.time.Instant
 import kotlin.time.toJavaInstant
+import kotlin.time.toJavaDuration
 
 /** Entities → the Security tab (security spec §4.3). Pure. */
 object SecurityUiBuilder {
@@ -75,9 +76,9 @@ object SecurityUiBuilder {
 
     /** Last-change spec §4.4: the server's time, unless the app saw a later flip itself. */
     private fun since(server: LastChange?, local: Instant?): Since? = when {
-        server is LastChange.At -> Since.At(if (local != null && local > server.at) local else server.at)
+        server is LastChange.At -> server.at.toJavaInstant().let { at -> Since.At(if (local != null && local > at) local else at) }
         local != null -> Since.At(local)
-        server is LastChange.OlderThan -> Since.Over(server.window)
+        server is LastChange.OlderThan -> Since.Over(server.window.toJavaDuration())
         else -> null
     }
 }

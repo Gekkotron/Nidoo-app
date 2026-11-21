@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Clock
 
 interface HistoryClient {
     val available: StateFlow<Boolean>
@@ -34,7 +35,7 @@ interface HistoryClient {
 class HttpHistoryClient(
     private val baseUrl: suspend () -> String?,
     private val get: suspend (url: String) -> HttpGetResult,
-    private val clock: () -> Long = System::currentTimeMillis,
+    private val clock: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : HistoryClient {
     override val available: StateFlow<Boolean> = MutableStateFlow(true).asStateFlow()
     private val cache = HashMap<String, Pair<Long, HistoryResult<*>>>()
