@@ -489,7 +489,7 @@ class HomeScreenTest {
         compose.setContent {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
-                    state = state().copy(cards = listOf(card)),
+                    state = state().copy(cards = listOf(card), sections = emptyList(), strip = emptyList()),
                     onSelect = {},
                     onTap = { taps += it.id },
                     onSend = { _, _ -> },

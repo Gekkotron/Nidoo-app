@@ -324,4 +324,10 @@
         <item quantity="one">%2$s : %1$d volet n\'a pas répondu</item>
         <item quantity="other">%2$s : %1$d volets n\'ont pas répondu</item>
     </plurals>
+    <string name="section_lights">Lumières</string>
+    <string name="section_shutters_climate">Volets et climat</string>
+    <string name="section_plugs_media">Prises et médias</string>
+    <string name="section_other">Autres</string>
+    <string name="section_sensors">Capteurs</string>
+    <string name="strip_pill_description">%1$s, %2$s, %3$s</string>
 </resources>

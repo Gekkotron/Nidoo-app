@@ -85,7 +85,12 @@ import com.gekkotron.nidoo.feature.home.presentation.DashboardViewModel
 import com.gekkotron.nidoo.feature.home.presentation.HomeEvent
 import com.gekkotron.nidoo.feature.home.presentation.HomeUiState
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
+import com.gekkotron.nidoo.feature.home.presentation.HomeSection
+import com.gekkotron.nidoo.feature.home.presentation.RoomCardUi
 import com.gekkotron.nidoo.feature.home.presentation.RoomFilter
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.style.TextOverflow
 import com.gekkotron.nidoo.feature.home.presentation.RoomKind
 import com.gekkotron.nidoo.feature.home.presentation.TapAction
 import com.gekkotron.nidoo.model.Area
@@ -212,6 +217,11 @@ fun HomeScreen(
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
     val closeSearch = { searching = false; onSearch("") }
+    // Back from a room goes to Rooms. Declared before the search handler: the last enabled one wins, so search closes first.
+    val roomInView = (state.selected as? RoomFilter.Area)
+        ?.takeIf { !(dashboard.switcherVisible && dashboard.view !is DashboardView.House) }
+        ?.let { area -> state.roomCards.firstOrNull { it.areaId == area.id } }
+    BackHandler(enabled = roomInView != null) { onSelect(RoomFilter.Rooms) }
     BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -270,6 +280,7 @@ fun HomeScreen(
             }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(columns),
+                modifier = Modifier.testTag("home-grid"),
                 contentPadding = PaddingValues(
                     start = padding.calculateStartPadding(layoutDirection) + 16.dp,
                     end = padding.calculateEndPadding(layoutDirection) + 16.dp,
@@ -279,7 +290,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
                 if (searching || showDashboardHeader) {
                     item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
                         if (searching) {
@@ -336,24 +347,23 @@ fun HomeScreen(
                         Text(stringResource(R.string.home_discovering), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
                     }
                 }
-                if (!onDashboard) items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
-                    val onClick = { cardClick(card) }
-                    if (card.isGroup) {
-                        // Group: tap opens the sheet; long-press opens it too for lights, Customize for shutters; the inline buttons drive the group directly.
-                        GroupCard(
-                            card,
-                            onClick = onClick,
-                            onLongClick = { cardLongClick(card) },
-                            onSendGroup = onSendGroup,
-                        )
+                if (!onDashboard) {
+                    if (state.sections.isEmpty() && state.strip.isEmpty()) {
+                        // Favourites, Hidden and search results: one flat grid.
+                        homeCards(state.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
                     } else {
-                        EntityCard(
-                            card = card,
-                            onClick = onClick,
-                            onLongClick = { cardLongClick(card) },
-                            onForce = { cardForce(card) },
-                            onSend = { onSend(card.id, it) },
-                        )
+                        // A room or All devices (rooms design §6.4): sensors as pills, then one block per type.
+                        if (state.strip.isNotEmpty()) {
+                            item(key = "strip", span = { GridItemSpan(maxLineSpan) }) {
+                                SensorStrip(state.strip, onClick = cardClick, onLongClick = cardLongClick)
+                            }
+                        }
+                        state.sections.forEach { section ->
+                            if (section.showLabel) {
+                                item(key = "section-" + section.section.name, span = { GridItemSpan(maxLineSpan) }) { SectionLabel(section.section) }
+                            }
+                            homeCards(section.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
+                        }
                     }
                 }
             }
@@ -428,10 +438,60 @@ fun HomeScreen(
     }
 }
 
+/** One block of cards: a tile per device, a wide card per group. */
+private fun LazyGridScope.homeCards(
+    cards: List<CardUi>,
+    cardClick: (CardUi) -> Unit,
+    cardLongClick: (CardUi) -> Unit,
+    cardForce: (CardUi) -> Unit,
+    onSend: (String, Command) -> Unit,
+    onSendGroup: (String, Command) -> Unit,
+) = items(cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
+    val onClick = { cardClick(card) }
+    if (card.isGroup) {
+        // Group: tap opens the sheet; long-press opens it too for lights, Customize for shutters; the inline buttons drive the group directly.
+        GroupCard(
+            card,
+            onClick = onClick,
+            onLongClick = { cardLongClick(card) },
+            onSendGroup = onSendGroup,
+        )
+    } else {
+        EntityCard(
+            card = card,
+            onClick = onClick,
+            onLongClick = { cardLongClick(card) },
+            onForce = { cardForce(card) },
+            onSend = { onSend(card.id, it) },
+        )
+    }
+}
+
+@Composable
+internal fun sectionLabel(section: HomeSection): String = stringResource(
+    when (section) {
+        HomeSection.LIGHTS -> R.string.section_lights
+        HomeSection.SHUTTERS_CLIMATE -> R.string.section_shutters_climate
+        HomeSection.PLUGS_MEDIA -> R.string.section_plugs_media
+        HomeSection.OTHER -> R.string.section_other
+        HomeSection.SENSORS -> R.string.section_sensors
+    },
+)
+
+@Composable
+private fun SectionLabel(section: HomeSection) {
+    Text(
+        sectionLabel(section).uppercase(),
+        style = NidooTheme.type.label,
+        color = NidooTheme.colors.contentMuted,
+        modifier = Modifier.padding(top = 8.dp, start = 2.dp).testTag("section-" + section.name).semantics { heading() },
+    )
+}
+
 private const val VOICE_ACTIVITY = "com.gekkotron.nidoo.feature.voice.VoiceActivity"
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, room: RoomCardUi? = null, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
@@ -447,7 +507,11 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
             }
             DashboardSwitcher(title, onSwitcherClick)
         }
-        if (showGreeting) Row(verticalAlignment = Alignment.Bottom) {
+        if (showGreeting && room != null) {
+            // Inside a room the title is the room and its status takes the weather's place (rooms design §6.4).
+            Text(roomName(room), style = NidooTheme.type.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("room-title").semantics { heading() })
+            Text(roomStatus(room), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, modifier = Modifier.testTag("room-status"))
+        } else if (showGreeting) Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = NidooTheme.type.display, modifier = Modifier.weight(1f))
             state.hero?.let { hero ->
                 Text(

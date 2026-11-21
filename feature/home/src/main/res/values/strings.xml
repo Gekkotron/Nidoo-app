@@ -324,4 +324,10 @@
         <item quantity="one">%2$s: %1$d shutter didn\'t respond</item>
         <item quantity="other">%2$s: %1$d shutters didn\'t respond</item>
     </plurals>
+    <string name="section_lights">Lights</string>
+    <string name="section_shutters_climate">Shutters &amp; climate</string>
+    <string name="section_plugs_media">Plugs &amp; media</string>
+    <string name="section_other">Other</string>
+    <string name="section_sensors">Sensors</string>
+    <string name="strip_pill_description">%1$s, %2$s, %3$s</string>
 </resources>
