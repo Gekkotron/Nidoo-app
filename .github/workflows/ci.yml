@@ -26,7 +26,7 @@ jobs:
             # test tasks into this job, causing cross-module flakes.
             tasks: >-
               :core:model:jvmTest
-              :core:crypto:test
+              :core:crypto:jvmTest
               :core:transport:test
               :core:state:jvmTest
               :core:source:jvmTest
@@ -145,6 +145,7 @@ jobs:
         run: >-
           ./gradlew
           :core:model:iosSimulatorArm64Test
+          :core:crypto:iosSimulatorArm64Test
           :core:state:iosSimulatorArm64Test
           :core:source:iosSimulatorArm64Test
           :core:history:iosSimulatorArm64Test

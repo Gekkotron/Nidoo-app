@@ -4,10 +4,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import java.util.Base64
+import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class EnvelopeCryptoTest {
     private val key = ByteArray(32) { it.toByte() }
@@ -54,7 +55,7 @@ class EnvelopeCryptoTest {
         val c = EnvelopeCrypto(key)
         val a = c.sealBytes("x".encodeToByteArray())
         val b = c.sealBytes("x".encodeToByteArray())
-        assert(a != b)
+        assertTrue(a != b)
     }
 
     @Test
@@ -65,16 +66,16 @@ class EnvelopeCryptoTest {
 
     @Test
     fun `tampered ciphertext fails authentication`() {
-        val raw = Base64.getDecoder().decode(vectorEnvelope)
+        val raw = Base64.decode(vectorEnvelope)
         raw[20] = (raw[20].toInt() xor 1).toByte()
         assertFailsWith<EnvelopeException.AuthenticationFailed> {
-            crypto().open(Base64.getEncoder().encodeToString(raw))
+            crypto().open(Base64.encode(raw))
         }
     }
 
     @Test
     fun `truncated input is malformed`() {
-        val short = Base64.getEncoder().encodeToString(ByteArray(27))
+        val short = Base64.encode(ByteArray(27))
         assertFailsWith<EnvelopeException.Malformed> { crypto().open(short) }
     }
 
@@ -128,6 +129,6 @@ class EnvelopeCryptoTest {
     fun `exception messages never contain the key`() {
         val hex = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
         val e = assertFailsWith<EnvelopeException> { EnvelopeCrypto(ByteArray(32) { 7 }).open(vectorEnvelope) }
-        assert(hex !in (e.message ?: ""))
+        assertTrue(hex !in (e.message ?: ""))
     }
 }

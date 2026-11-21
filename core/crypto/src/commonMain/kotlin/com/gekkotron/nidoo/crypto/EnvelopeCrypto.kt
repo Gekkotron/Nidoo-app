@@ -5,13 +5,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
-import java.security.SecureRandom
-import java.util.Base64
-import javax.crypto.AEADBadTagException
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
+import kotlin.io.encoding.Base64
 import kotlin.math.abs
+import kotlin.time.Clock
 
 /**
  * AES-256-GCM envelope used by Athena-HttpMqttGateway:
@@ -20,14 +16,14 @@ import kotlin.math.abs
 class EnvelopeCrypto(
     key: ByteArray,
     private val maxAgeSeconds: Long = 60,
-    private val nowSeconds: () -> Long = { System.currentTimeMillis() / 1000 },
+    private val nowSeconds: () -> Long = { Clock.System.now().epochSeconds },
     private val nonceSource: () -> ByteArray = ::randomNonce,
 ) {
-    private val keySpec: SecretKeySpec
+    private val key: ByteArray
 
     init {
         require(key.size == KEY_BYTES) { "AES-256 key must be $KEY_BYTES bytes" }
-        keySpec = SecretKeySpec(key.copyOf(), "AES")
+        this.key = key.copyOf()
     }
 
     /** Encrypts [fields], adding `timestamp` when absent. */
@@ -39,26 +35,18 @@ class EnvelopeCrypto(
     fun sealBytes(plaintext: ByteArray): String {
         val nonce = nonceSource()
         require(nonce.size == NONCE_BYTES) { "nonce must be $NONCE_BYTES bytes" }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(TAG_BITS, nonce))
-        return Base64.getEncoder().encodeToString(nonce + cipher.doFinal(plaintext))
+        return Base64.encode(nonce + AesGcm256.seal(key, nonce, plaintext))
     }
 
     /** Decrypts without a freshness check (used for SSE events). */
     fun open(envelope: String): JsonObject {
         val raw = try {
-            Base64.getDecoder().decode(envelope.trim())
+            LENIENT_BASE64.decode(envelope.trim())
         } catch (e: IllegalArgumentException) {
             throw EnvelopeException.Malformed("not base64")
         }
         if (raw.size < NONCE_BYTES + TAG_BITS / 8) throw EnvelopeException.Malformed("too short")
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(TAG_BITS, raw, 0, NONCE_BYTES))
-        val plaintext = try {
-            cipher.doFinal(raw, NONCE_BYTES, raw.size - NONCE_BYTES)
-        } catch (e: AEADBadTagException) {
-            throw EnvelopeException.AuthenticationFailed()
-        }
+        val plaintext = AesGcm256.open(key, raw.copyOfRange(0, NONCE_BYTES), raw.copyOfRange(NONCE_BYTES, raw.size))
         val element = try {
             Json.parseToJsonElement(plaintext.decodeToString())
         } catch (e: SerializationException) {
@@ -78,10 +66,12 @@ class EnvelopeCrypto(
     }
 
     companion object {
-        const val KEY_BYTES = 32
-        const val NONCE_BYTES = 12
-        private const val TAG_BITS = 128
-        private const val TRANSFORMATION = "AES/GCM/NoPadding"
+        const val KEY_BYTES = AES_GCM_KEY_BYTES
+        const val NONCE_BYTES = AES_GCM_NONCE_BYTES
+        private const val TAG_BITS = AES_GCM_TAG_BYTES * 8
+
+        /** java.util.Base64's decoder took input with or without `=` padding; so does this one. */
+        private val LENIENT_BASE64 = Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
 
         /** Parses the 64-character hex key from the onboarding QR payload. */
         fun keyFromHex(hex: String): ByteArray {
@@ -94,4 +84,4 @@ class EnvelopeCrypto(
     }
 }
 
-private fun randomNonce(): ByteArray = ByteArray(EnvelopeCrypto.NONCE_BYTES).also { SecureRandom().nextBytes(it) }
+private fun randomNonce(): ByteArray = secureRandomBytes(EnvelopeCrypto.NONCE_BYTES)
