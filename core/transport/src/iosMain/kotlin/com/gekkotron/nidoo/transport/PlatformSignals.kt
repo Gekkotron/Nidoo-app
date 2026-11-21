@@ -19,8 +19,10 @@ import platform.Network.nw_path_monitor_start
 import platform.Network.nw_path_status_satisfied
 import platform.Network.nw_path_t
 import platform.Network.nw_path_uses_interface_type
+import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationState
 import platform.darwin.dispatch_get_main_queue
 
 /** Emits when the network path changes in a way worth a reconnect check (see [pathChanged]); the first path counts. */
@@ -38,9 +40,16 @@ fun iosNetworkChanges(): Flow<Unit> = callbackFlow {
     awaitClose { nw_path_monitor_cancel(monitor) }
 }
 
-/** true when the app becomes active, false when it goes to the background. */
+/**
+ * Whether the app is in the foreground: the current state first (so a collector that starts after launch is not
+ * left paused), then true when the app becomes active and false when it goes to the background.
+ */
 fun iosForeground(): Flow<Boolean> = callbackFlow {
     val center = NSNotificationCenter.defaultCenter
+    // UIApplication is main-thread only; the main queue also orders this before any notification below.
+    NSOperationQueue.mainQueue.addOperationWithBlock {
+        trySend(UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive)
+    }
     val active = center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, NSOperationQueue.mainQueue) { trySend(true) }
     val background = center.addObserverForName(UIApplicationDidEnterBackgroundNotification, null, NSOperationQueue.mainQueue) { trySend(false) }
     awaitClose {

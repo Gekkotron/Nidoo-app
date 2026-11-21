@@ -5,7 +5,9 @@ import Nidoo
 
 /// The iOS direct link's MQTT 3.1.1 client: CocoaMQTT behind the Kotlin `MqttClientPort` (spec §9, MQTT gate).
 /// One connection attempt per `connect`; `PortMqttTransport` owns reconnecting and resubscribing, so
-/// CocoaMQTT's own auto-reconnect stays off. Callbacks run on the main queue (CocoaMQTT's default).
+/// CocoaMQTT's own auto-reconnect stays off. One instance serves one transport (Kotlin gets a factory).
+/// Kotlin calls in from any thread: every entry point hops to the main queue, where CocoaMQTT also delivers
+/// its delegate callbacks, so all state below is only touched on main.
 final class CocoaMqttClientPort: NSObject, MqttClientPort, CocoaMQTTDelegate {
     private var client: CocoaMQTT?
     private var listener: MqttPortListener?
@@ -16,7 +18,11 @@ final class CocoaMqttClientPort: NSObject, MqttClientPort, CocoaMQTTDelegate {
     private var pendingUnsubscribes: [(String?) -> Void] = []
 
     func connect(spec: TransportSpecDirect, listener: MqttPortListener) {
-        disconnect()
+        onMain { self.connectOnMain(spec: spec, listener: listener) }
+    }
+
+    private func connectOnMain(spec: TransportSpecDirect, listener: MqttPortListener) {
+        disconnectOnMain()
         let mqtt: CocoaMQTT
         if spec.ws {
             let socket = CocoaMQTTWebSocket(uri: "/mqtt")
@@ -41,26 +47,38 @@ final class CocoaMqttClientPort: NSObject, MqttClientPort, CocoaMQTTDelegate {
     }
 
     func subscribe(filters: [String], qos: Int32, done: @escaping (String?) -> Void) {
-        guard let mqtt = client, mqtt.connState == .connected else { return done("not connected") }
-        pendingSubscribes.append(done)
-        mqtt.subscribe(filters.map { ($0, CocoaMQTTQoS(rawValue: UInt8(qos)) ?? .qos1) })
+        onMain {
+            guard let mqtt = self.client, mqtt.connState == .connected else { return done("not connected") }
+            self.pendingSubscribes.append(done)
+            mqtt.subscribe(filters.map { ($0, CocoaMQTTQoS(rawValue: UInt8(qos)) ?? .qos1) })
+        }
     }
 
     func unsubscribe(filters: [String], done: @escaping (String?) -> Void) {
-        guard let mqtt = client, mqtt.connState == .connected else { return done("not connected") }
-        pendingUnsubscribes.append(done)
-        mqtt.unsubscribe(filters)
+        onMain {
+            guard let mqtt = self.client, mqtt.connState == .connected else { return done("not connected") }
+            self.pendingUnsubscribes.append(done)
+            mqtt.unsubscribe(filters)
+        }
     }
 
     func publish(topic: String, payload: KotlinByteArray, qos: Int32, retain: Bool, done: @escaping (String?) -> Void) {
-        guard let mqtt = client, mqtt.connState == .connected else { return done("not connected") }
-        let level = CocoaMQTTQoS(rawValue: UInt8(qos)) ?? .qos1
-        let id = mqtt.publish(CocoaMQTTMessage(topic: topic, payload: payload.toBytes(), qos: level, retained: retain))
-        if id < 0 { return done("publish refused by the client") }
-        if level == .qos0 { done(nil) } else { pendingPublishes[UInt16(id)] = done }
+        let bytes = payload.toBytes()
+        onMain {
+            guard let mqtt = self.client, mqtt.connState == .connected else { return done("not connected") }
+            let level = CocoaMQTTQoS(rawValue: UInt8(qos)) ?? .qos1
+            let id = mqtt.publish(CocoaMQTTMessage(topic: topic, payload: bytes, qos: level, retained: retain))
+            if id < 0 { return done("publish refused by the client") }
+            // QoS 1 completes on PUBACK (didPublishAck), QoS 2 on PUBCOMP (didPublishComplete).
+            if level == .qos0 { done(nil) } else { self.pendingPublishes[UInt16(id)] = done }
+        }
     }
 
     func disconnect() {
+        onMain { self.disconnectOnMain() }
+    }
+
+    private func disconnectOnMain() {
         guard let mqtt = client else { return }
         mqtt.delegate = nil
         mqtt.disconnect()
@@ -82,6 +100,10 @@ final class CocoaMqttClientPort: NSObject, MqttClientPort, CocoaMQTTDelegate {
     func mqtt(_ mqtt: CocoaMQTT, didPublishMessage message: CocoaMQTTMessage, id: UInt16) {}
 
     func mqtt(_ mqtt: CocoaMQTT, didPublishAck id: UInt16) {
+        pendingPublishes.removeValue(forKey: id)?(nil)
+    }
+
+    func mqtt(_ mqtt: CocoaMQTT, didPublishComplete id: UInt16) {
         pendingPublishes.removeValue(forKey: id)?(nil)
     }
 
@@ -111,6 +133,11 @@ final class CocoaMqttClientPort: NSObject, MqttClientPort, CocoaMQTTDelegate {
     }
 
     // MARK: Helpers
+
+    /// Runs [work] on the main queue: at once when already there, otherwise in order after earlier calls.
+    private func onMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
+    }
 
     private func reportLoss(_ kind: PortFailure, _ message: String) {
         guard !lossReported else { return }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
@@ -39,6 +40,7 @@ class PortMqttTransport(
     private val port: MqttClientPort,
     reconnectInitial: Duration = 1.seconds,
     reconnectMax: Duration = 30.seconds,
+    /** Also bounds the wait for a subscribe or unsubscribe acknowledgement. */
     private val publishTimeout: Duration = 10.seconds,
 ) : ManagedTransport {
     private val _link = MutableStateFlow<LinkState>(LinkState.Offline(LinkState.Offline.NOT_STARTED))
@@ -159,13 +161,21 @@ class PortMqttTransport(
         }
     }
 
-    /** A failed (un)subscribe means the connection dropped; onConnected re-applies the set. */
+    /**
+     * A failed (un)subscribe means the connection dropped; onConnected re-applies the set. Malformed filters
+     * are left out: a client may refuse the whole request for one of them (CocoaMQTT does, silently). An
+     * answer that never comes is given up after [publishTimeout], so no caller waits forever.
+     */
     private suspend fun subscribe(filters: List<String>) {
-        await { done -> port.subscribe(filters, QOS_AT_LEAST_ONCE, done) }
+        val valid = filters.filter(::isValidSubscribeFilter)
+        if (valid.isEmpty()) return
+        withTimeoutOrNull(publishTimeout) { await { done -> port.subscribe(valid, QOS_AT_LEAST_ONCE, done) } }
     }
 
     private suspend fun unsubscribe(filters: List<String>) {
-        await { done -> port.unsubscribe(filters, done) }
+        val valid = filters.filter(::isValidSubscribeFilter)
+        if (valid.isEmpty()) return
+        withTimeoutOrNull(publishTimeout) { await { done -> port.unsubscribe(valid, done) } }
     }
 
     /** The port's error, or null; a callback that runs twice is ignored the second time. */

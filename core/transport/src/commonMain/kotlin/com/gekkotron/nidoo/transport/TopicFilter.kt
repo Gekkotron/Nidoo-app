@@ -17,3 +17,19 @@ fun topicMatches(filter: String, topic: String): Boolean {
 
 fun isValidPublishTopic(topic: String): Boolean =
     topic.isNotEmpty() && '+' !in topic && '#' !in topic && '\u0000' !in topic
+
+/**
+ * An MQTT 3.1.1 subscription filter (§4.7): not empty, no NUL, at most 65535 UTF-8 bytes, `#` only as the
+ * whole last level, `+` only as a whole level.
+ */
+fun isValidSubscribeFilter(filter: String): Boolean {
+    if (filter.isEmpty() || '\u0000' in filter || filter.encodeToByteArray().size > 65_535) return false
+    val levels = filter.split('/')
+    return levels.withIndex().all { (i, level) ->
+        when {
+            '#' in level -> level == "#" && i == levels.lastIndex
+            '+' in level -> level == "+"
+            else -> true
+        }
+    }
+}

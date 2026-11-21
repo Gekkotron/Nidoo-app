@@ -40,4 +40,10 @@ class TopicFilterTest {
         assertFalse(isValidPublishTopic("nidoo/ui/#"))
         assertFalse(isValidPublishTopic(""))
     }
+
+    @Test
+    fun subscribeFiltersFollowMqtt311() {
+        for (ok in listOf("#", "+", "a/#", "a/+/b", "+/+", "homeassistant/light/+/config", "\$SYS/#", "a//b")) assertTrue(isValidSubscribeFilter(ok), ok)
+        for (bad in listOf("", "a/#/b", "a#", "a/b#", "x+/y", "a/+b", "nul\u0000", "x".repeat(65_536))) assertFalse(isValidSubscribeFilter(bad), bad.take(20))
+    }
 }

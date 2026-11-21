@@ -27,6 +27,7 @@ class PortMqttTransportTest {
         val publishDone = mutableListOf<(String?) -> Unit>()
         var disconnects = 0
         var autoCompletePublish = true
+        var autoCompleteSubscribe = true
 
         override fun connect(spec: TransportSpec.Direct, listener: MqttPortListener) {
             connects += spec
@@ -36,7 +37,7 @@ class PortMqttTransportTest {
         override fun subscribe(filters: List<String>, qos: Int, done: (error: String?) -> Unit) {
             assertEquals(1, qos)
             subscribes += filters
-            done(null)
+            if (autoCompleteSubscribe) done(null)
         }
 
         override fun unsubscribe(filters: List<String>, done: (error: String?) -> Unit) {
@@ -181,6 +182,29 @@ class PortMqttTransportTest {
         port.connected()
         runCurrent()
         assertEquals(listOf(listOf("x/#")), port.subscribes)
+    }
+
+    /** CocoaMQTT drops a whole SUBSCRIBE, silently, when one filter is malformed: only valid filters reach the port. */
+    @Test
+    fun invalidFiltersAreDroppedAndTheRestSubscribed() = runTest {
+        val t = connected()
+        t.setSubscriptions(linkedSetOf("ok/#", "a/#/b", "", "x+/y", "nul\u0000/z", "fine/+/state"))
+        assertEquals(listOf(listOf("ok/#", "fine/+/state")), port.subscribes)
+        port.lost(PortFailure.UNREACHABLE)
+        advanceTimeBy(241.milliseconds)
+        port.connected()
+        runCurrent()
+        assertEquals(listOf("ok/#", "fine/+/state"), port.subscribes.last())
+    }
+
+    /** A subscribe the port never answers must not hold the caller (the discovery source's mutex) forever. */
+    @Test
+    fun aSubscribeWithNoAnswerTimesOut() = runTest {
+        val t = connected()
+        port.autoCompleteSubscribe = false
+        val call = async { t.setSubscriptions(setOf("a/#")) }
+        advanceTimeBy(2.seconds + 1.milliseconds)
+        assertTrue(call.isCompleted)
     }
 
     @Test
