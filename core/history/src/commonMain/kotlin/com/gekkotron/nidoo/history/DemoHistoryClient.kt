@@ -5,7 +5,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.time.Instant
 import kotlin.math.PI
+import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
 import kotlin.random.Random
@@ -39,7 +41,7 @@ class DemoHistoryClient(private val clock: () -> Long = { Clock.System.now().toE
                 counter -> { total += (8.0 + rnd.nextDouble() * 6.0) * step / 86_400.0; total }
                 solar -> if (h in 7.0..19.0) max(0.0, 4000 * sin(PI * (h - 7) / 12)) * (1 + noise(rnd, 0.05)) else 0.0
                 temperature -> 21 + 2 * sin(2 * PI * (h - 15) / 24) + noise(rnd, 0.2)
-                else -> (500 + 300 * sin(2 * PI * h / 24)) * (1 + noise(rnd, 0.05))
+                else -> housePower(h) * (1 + noise(rnd, 0.06))
             }
             val spread = if (temperature) 0.3 else mean * 0.03
             HistoryPoint(t, mean, mean - spread, mean + spread)
@@ -67,6 +69,12 @@ class DemoHistoryClient(private val clock: () -> Long = { Clock.System.now().toE
     private fun scaled(kwh: Double, scale: EnergyScale) = round(kwh * scale.factor * 1000) / 1000
 
     private fun isCounter(key: String) = key.contains("kwh") || key.contains("energy") || key.contains("total")
+
+    /** A house's draw in watts at hour [h]: a low base, then breakfast, lunch and evening peaks. */
+    private fun housePower(h: Double): Double {
+        fun peak(at: Double, watts: Double, width: Double) = watts * exp(-((h - at) / width).pow(2))
+        return 220.0 + peak(7.3, 1300.0, 0.7) + peak(12.6, 700.0, 0.6) + peak(19.6, 1900.0, 1.1)
+    }
 
     private fun noise(rnd: Random, amplitude: Double) = (rnd.nextDouble() * 2 - 1) * amplitude
 
