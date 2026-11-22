@@ -27,6 +27,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Nidoo scans your hub's setup code.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Nidoo talks to your home hub on the local network.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

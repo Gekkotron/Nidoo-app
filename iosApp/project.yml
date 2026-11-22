@@ -39,6 +39,7 @@ targets:
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
         NSLocalNetworkUsageDescription: Nidoo talks to your home hub on the local network.
+        NSCameraUsageDescription: Nidoo scans your hub's setup code.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     settings:
