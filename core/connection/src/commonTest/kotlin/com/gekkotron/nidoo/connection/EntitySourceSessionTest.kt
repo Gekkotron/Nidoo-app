@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.junit.After
-import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
@@ -36,7 +36,7 @@ class EntitySourceSessionTest {
     }
     private val direct = ConnectionProfile.Direct(LocalBroker("192.168.1.91"))
 
-    @After
+    @AfterTest
     fun tearDown() = parent.cancel()
 
     @Test
@@ -92,7 +92,7 @@ class EntitySourceSessionTest {
     }
 
     @Test
-    fun `reset cancels the source, clears its subscriptions, and the same profile then gets a fresh one`() = runBlocking {
+    fun `reset cancels the source and clears its subscriptions - the same profile then gets a fresh one`() = runBlocking {
         val first = session.current(ConnectionProfile.Demo)
         assertTrue(transport.subscriptions.isNotEmpty())
         session.reset()

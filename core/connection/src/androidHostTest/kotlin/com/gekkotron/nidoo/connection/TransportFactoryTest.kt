@@ -1,9 +1,11 @@
 package com.gekkotron.nidoo.connection
 
 import com.gekkotron.nidoo.demo.DemoBroker
+import com.gekkotron.nidoo.transport.AthenaGatewayApi
 import com.gekkotron.nidoo.transport.DirectMqttTransport
 import com.gekkotron.nidoo.transport.GatewayTransport
 import com.gekkotron.nidoo.transport.Route
+import com.gekkotron.nidoo.transport.TcpProbe
 import com.gekkotron.nidoo.transport.TransportSelector
 import com.gekkotron.nidoo.transport.TransportSpec
 import kotlinx.coroutines.flow.emptyFlow
@@ -13,7 +15,13 @@ import org.junit.Test
 import kotlin.test.assertIs
 
 class TransportFactoryTest {
-    private val factory = TransportFactory(TestScope(), emptyFlow(), OkHttpClient())
+    private val factory = TransportFactory(
+        TestScope(),
+        emptyFlow(),
+        direct = ::DirectMqttTransport,
+        gatewayApi = { AthenaGatewayApi(it, OkHttpClient()) },
+        probe = { host, port -> TcpProbe(host, port) },
+    )
     private val direct = TransportSpec.Direct("192.168.1.91", 1883, tls = false, ws = false, username = null, password = null, clientId = "c")
     private val gateway = TransportSpec.Gateway("https://gw.example", ByteArray(32), null, null, null)
 

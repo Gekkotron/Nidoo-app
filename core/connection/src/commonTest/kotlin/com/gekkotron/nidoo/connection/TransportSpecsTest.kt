@@ -7,7 +7,7 @@ import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.data.RoutePreference
 import com.gekkotron.nidoo.transport.Route
 import com.gekkotron.nidoo.transport.TransportSpec
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
@@ -16,7 +16,7 @@ class TransportSpecsTest {
     private val id = "3f2a9c1e-0b7d-4e5f-9a8b-1c2d3e4f5a6b"
 
     @Test
-    fun `client ids are short, stable and distinct for the setup test`() {
+    fun `client ids are short and stable - and distinct for the setup test`() {
         assertEquals("nidoo-3f2a9c1e", clientIdFor(id))
         assertEquals("nidoo-3f2a9c1e-setup", setupClientIdFor(id))
     }

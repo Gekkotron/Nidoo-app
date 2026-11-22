@@ -1,5 +1,7 @@
 package com.gekkotron.nidoo.feature.onboarding
 
+import com.gekkotron.nidoo.connection.ConnectionTester
+import com.gekkotron.nidoo.connection.TestState
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.SecretUnavailable

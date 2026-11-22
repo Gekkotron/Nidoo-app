@@ -1,5 +1,7 @@
 package com.gekkotron.nidoo.feature.onboarding
 
+import com.gekkotron.nidoo.connection.TestState
+import com.gekkotron.nidoo.connection.TestFailure
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.LocalBroker

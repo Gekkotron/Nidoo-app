@@ -10,6 +10,7 @@ android {
 
 dependencies {
     implementation(project(":core:data"))
+    api(project(":core:connection"))
     implementation(project(":core:designsystem"))
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

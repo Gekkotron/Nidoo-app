@@ -1,15 +1,11 @@
 package com.gekkotron.nidoo.connection
 
 import com.gekkotron.nidoo.data.ConnectionProfile
-import com.gekkotron.nidoo.feature.onboarding.ConnectionTester
-import com.gekkotron.nidoo.feature.onboarding.TestFailure
-import com.gekkotron.nidoo.feature.onboarding.TestState
 import com.gekkotron.nidoo.model.Device
 import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.source.MqttDiscoverySource
 import com.gekkotron.nidoo.transport.DirectFailure
-import com.gekkotron.nidoo.transport.AthenaGatewayApi
-import com.gekkotron.nidoo.transport.DirectMqttTransport
+import com.gekkotron.nidoo.transport.DirectLink
 import com.gekkotron.nidoo.transport.GatewayApi
 import com.gekkotron.nidoo.transport.GatewayTransport
 import com.gekkotron.nidoo.transport.LinkState
@@ -44,9 +40,11 @@ import kotlin.time.Duration.Companion.seconds
  */
 class DirectConnectionTester(
     private val clientId: suspend () -> String,
+    /** The platform's direct link (HiveMQ on Android, CocoaMQTT on iOS). */
+    private val direct: (TransportSpec.Direct, CoroutineScope) -> DirectLink,
+    private val gatewayApi: (TransportSpec.Gateway) -> GatewayApi,
     private val connectTimeout: Duration = 5.seconds,
     private val gatewayTimeout: Duration = 10.seconds,
-    private val gatewayApi: (TransportSpec.Gateway) -> GatewayApi = { AthenaGatewayApi(it) },
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ConnectionTester {
     override fun test(draft: ConnectionProfile.Direct): Flow<TestState> = channelFlow {
@@ -91,7 +89,7 @@ class DirectConnectionTester(
 
     /** Returns the failure, or runs discovery until the collector cancels (and so never returns). */
     private suspend fun ProducerScope<TestState>.testDirect(draft: ConnectionProfile.Direct): TestFailure? {
-        val transport = DirectMqttTransport(draft.local.toSpec(clientId()), this)
+        val transport = direct(draft.local.toSpec(clientId()), this)
         try {
             transport.start()
             // null = still trying; true = connected; a failure = definitive (no point waiting for the timeout).

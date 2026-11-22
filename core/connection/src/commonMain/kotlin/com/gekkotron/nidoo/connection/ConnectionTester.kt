@@ -1,4 +1,4 @@
-package com.gekkotron.nidoo.feature.onboarding
+package com.gekkotron.nidoo.connection
 
 import com.gekkotron.nidoo.data.ConnectionProfile
 import kotlinx.coroutines.flow.Flow

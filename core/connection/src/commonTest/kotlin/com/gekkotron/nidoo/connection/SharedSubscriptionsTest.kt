@@ -2,7 +2,7 @@ package com.gekkotron.nidoo.connection
 
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SharedSubscriptionsTest {

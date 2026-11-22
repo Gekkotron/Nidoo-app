@@ -1,5 +1,7 @@
 package com.gekkotron.nidoo.feature.onboarding
 
+import com.gekkotron.nidoo.connection.ConnectionTester
+import com.gekkotron.nidoo.connection.TestState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.nidoo.data.ConnectionProfile

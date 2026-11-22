@@ -15,7 +15,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.onboarding.R
-import com.gekkotron.nidoo.feature.onboarding.TestState
+import com.gekkotron.nidoo.connection.TestState
 
 private const val MAX_DEVICES_SHOWN = 5
 

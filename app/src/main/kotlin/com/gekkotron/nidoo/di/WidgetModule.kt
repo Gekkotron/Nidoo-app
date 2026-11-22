@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.work.WorkManager
 import com.gekkotron.nidoo.connection.EntitySourceSession
 import com.gekkotron.nidoo.connection.HeadlessEntities
-import com.gekkotron.nidoo.connection.TransportFactory
+import com.gekkotron.nidoo.connection.androidTransportFactory
 import com.gekkotron.nidoo.connection.VoiceWidgetSync
 import com.gekkotron.nidoo.connection.WidgetMirror
 import com.gekkotron.nidoo.data.AppPreferences
@@ -82,7 +82,7 @@ object WidgetModule {
         foreground = { active.link.value is LinkState.Connected },
         cache = cache,
         // A session is too short to care about network switches.
-        transports = { spec, scope -> TransportFactory(scope, emptyFlow(), http).create(spec) },
+        transports = { spec, scope -> androidTransportFactory(scope, emptyFlow(), http).create(spec) },
     )
 
     @Provides

@@ -10,7 +10,7 @@ import androidx.compose.ui.semantics.semantics
 import com.gekkotron.nidoo.data.PayloadError
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.onboarding.R
-import com.gekkotron.nidoo.feature.onboarding.TestFailure
+import com.gekkotron.nidoo.connection.TestFailure
 
 @Composable
 internal fun payloadErrorText(error: PayloadError): String = when (error) {

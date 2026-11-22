@@ -3,8 +3,8 @@ package com.gekkotron.nidoo.connection
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.GatewayConfig
 import com.gekkotron.nidoo.data.LocalBroker
-import com.gekkotron.nidoo.feature.onboarding.TestFailure
-import com.gekkotron.nidoo.feature.onboarding.TestState
+import com.gekkotron.nidoo.connection.TestFailure
+import com.gekkotron.nidoo.connection.TestState
 import com.gekkotron.nidoo.model.Bindings
 import com.gekkotron.nidoo.model.Capabilities
 import com.gekkotron.nidoo.model.Entity
@@ -12,6 +12,8 @@ import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.model.UiOverride
 import com.gekkotron.nidoo.transport.GatewayRefused
+import com.gekkotron.nidoo.transport.AthenaGatewayApi
+import com.gekkotron.nidoo.transport.DirectMqttTransport
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.Refusal
 import com.gekkotron.nidoo.transport.testing.EmbeddedBroker
@@ -30,7 +32,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class DirectConnectionTesterTest {
     private val brokers = mutableListOf<EmbeddedBroker>()
-    private val tester = DirectConnectionTester(clientId = { "nidoo-test-setup" }, connectTimeout = 2.seconds)
+    private val tester = DirectConnectionTester(clientId = { "nidoo-test-setup" }, direct = ::DirectMqttTransport, gatewayApi = { AthenaGatewayApi(it) }, connectTimeout = 2.seconds)
 
     @After
     fun tearDown() = brokers.forEach { it.close() }
@@ -144,7 +146,7 @@ class DirectConnectionTesterTest {
     )
 
     private fun gatewayTester(api: FakeGatewayApi) =
-        DirectConnectionTester(clientId = { "nidoo-test-setup" }, connectTimeout = 1.seconds, gatewayTimeout = 3.seconds, gatewayApi = { api })
+        DirectConnectionTester(clientId = { "nidoo-test-setup" }, direct = ::DirectMqttTransport, gatewayApi = { api }, connectTimeout = 1.seconds, gatewayTimeout = 3.seconds)
 
     @Test
     fun `an unreachable broker falls back to the gateway when the draft has one`() = runBlocking {
@@ -174,6 +176,7 @@ class DirectConnectionTesterTest {
     fun `a gateway address the SDK cannot use fails with InvalidGateway instead of throwing`() = runBlocking {
         val tester = DirectConnectionTester(
             clientId = { "nidoo-test-setup" },
+            direct = ::DirectMqttTransport,
             connectTimeout = 1.seconds,
             gatewayTimeout = 3.seconds,
             gatewayApi = { throw IllegalArgumentException("Invalid URL host: \"my host\"") },

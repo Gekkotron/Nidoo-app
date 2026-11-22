@@ -11,6 +11,8 @@ import com.gekkotron.nidoo.model.DiagnosticSink
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.source.MqttDiscoverySource
 import com.gekkotron.nidoo.transport.MqttTransport
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -18,7 +20,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.IOException
+import okio.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -46,42 +48,43 @@ class EntitySourceSession(
             defaultBuild(transport, scope, prefix, diagnostics, flowsSink, dashboardsSink, climateSink)
         },
 ) {
+    private val lock = SynchronizedObject()
     private var profile: ConnectionProfile? = null
     private var scope: CoroutineScope? = null
     private var source: EntitySource? = null
 
     /** The source for [profile]; `null` (no saved profile) gets a source for the default prefix. */
-    @Synchronized
     fun current(profile: ConnectionProfile?): EntitySource {
-        source?.let {
-            if (profile.sourceKey() == this.profile.sourceKey()) {
-                this.profile = profile // only the history URL may differ: it is not the source's business
-                return it
+        synchronized(lock) {
+            source?.let {
+                if (profile.sourceKey() == this.profile.sourceKey()) {
+                    this.profile = profile // only the history URL may differ: it is not the source's business
+                    return it
+                }
             }
-        }
-        drop()
-        val child = CoroutineScope(parent.coroutineContext + SupervisorJob(parent.coroutineContext[Job]))
-        val built = build(transport, child, profile?.prefix ?: DEFAULT_PREFIX, diagnostics)
-        if (cache != null) {
-            when (profile) {
-                is ConnectionProfile.Direct -> attach(built, cache, profile.cacheKey(), child)
-                // The demo never shows a real house: forget any cached one.
-                ConnectionProfile.Demo -> parent.launch { cache.clear() }
-                // No profile yet (cold start before DataStore resolves, or signed out): keep the cache
-                // so a real profile that follows can restore from it. setUpAgain() wipes it via reset().
-                null -> {}
+            dropLocked()
+            val child = CoroutineScope(parent.coroutineContext + SupervisorJob(parent.coroutineContext[Job]))
+            val built = build(transport, child, profile?.prefix ?: DEFAULT_PREFIX, diagnostics)
+            if (cache != null) {
+                when (profile) {
+                    is ConnectionProfile.Direct -> attach(built, cache, profile.cacheKey(), child)
+                    // The demo never shows a real house: forget any cached one.
+                    ConnectionProfile.Demo -> parent.launch { cache.clear() }
+                    // No profile yet (cold start before DataStore resolves, or signed out): keep the cache
+                    // so a real profile that follows can restore from it. setUpAgain() wipes it via reset().
+                    null -> {}
+                }
             }
-        }
-        return built.also {
-            scope = child
-            source = it
-            this.profile = profile
+            return built.also {
+                scope = child
+                source = it
+                this.profile = profile
+            }
         }
     }
 
     /** The current source without building one; null before the first [current] or after [reset]. */
-    @Synchronized
-    fun peek(): EntitySource? = source
+    fun peek(): EntitySource? = synchronized(lock) { source }
 
     /**
      * Restores, then saves once the source has settled (before that its journal is partial, or just the
@@ -121,8 +124,10 @@ class EntitySourceSession(
         transport.setSubscriptions(emptySet())
     }
 
-    @Synchronized
-    private fun drop() {
+    private fun drop() = synchronized(lock) { dropLocked() }
+
+    /** Callers hold [lock]. */
+    private fun dropLocked() {
         scope?.cancel()
         scope = null
         source = null

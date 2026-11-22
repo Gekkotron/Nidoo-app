@@ -22,8 +22,8 @@ import com.gekkotron.nidoo.data.PayloadError
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.feature.onboarding.FormField
 import com.gekkotron.nidoo.feature.onboarding.ManualForm
-import com.gekkotron.nidoo.feature.onboarding.TestFailure
-import com.gekkotron.nidoo.feature.onboarding.TestState
+import com.gekkotron.nidoo.connection.TestFailure
+import com.gekkotron.nidoo.connection.TestState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
