@@ -1,8 +1,10 @@
 package com.gekkotron.nidoo.di
 
 import android.app.Application
+import com.gekkotron.nidoo.connection.ConnectionTester
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
+import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
 import com.gekkotron.nidoo.source.EntitySource
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -23,6 +25,7 @@ interface KoinBridgeEntryPoint {
     fun profiles(): ProfileRepository
     fun preferences(): AppPreferences
     fun entitySource(): EntitySource
+    fun connectionTester(): ConnectionTester
 }
 
 /** Each type is a factory that asks Hilt, so Hilt keeps owning the lifetimes (EntitySource is unscoped there). */
@@ -30,6 +33,7 @@ fun hiltBridgeModule(bridge: KoinBridgeEntryPoint): Module = module {
     factory { bridge.profiles() }
     factory { bridge.preferences() }
     factory { bridge.entitySource() }
+    factory { bridge.connectionTester() }
 }
 
 /** Starts (or restarts, if a previous Application in this process started it) the app's Koin graph. */
@@ -37,6 +41,6 @@ fun startNidooKoin(app: Application, bridge: KoinBridgeEntryPoint) {
     stopKoin()
     startKoin {
         androidContext(app)
-        modules(hiltBridgeModule(bridge))
+        modules(hiltBridgeModule(bridge), onboardingModule)
     }
 }

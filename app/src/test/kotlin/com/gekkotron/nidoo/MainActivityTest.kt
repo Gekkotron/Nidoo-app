@@ -40,6 +40,9 @@ class MainActivityTest {
     val hilt = HiltAndroidRule(this)
 
     @get:Rule(order = 1)
+    val koin = KoinFromHiltRule()
+
+    @get:Rule(order = 2)
     val compose = createAndroidComposeRule<MainActivity>()
 
     private val brokers = mutableListOf<EmbeddedBroker>()

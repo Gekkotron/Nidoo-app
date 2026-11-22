@@ -3,14 +3,17 @@ package com.gekkotron.nidoo.di
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gekkotron.nidoo.connection.ConnectionTester
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.create
+import com.gekkotron.nidoo.feature.onboarding.OnboardingViewModel
 import com.gekkotron.nidoo.source.EntitySource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.emptyFlow
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -49,6 +52,8 @@ class KoinBridgeTest {
         override fun profiles() = profiles
         override fun preferences() = preferences
         override fun entitySource(): EntitySource = stub<EntitySource>().also { sourcesHandedOut++ }
+        val tester = ConnectionTester { emptyFlow() }
+        override fun connectionTester() = tester
     }
 
     @Test
@@ -58,6 +63,14 @@ class KoinBridgeTest {
         val koin = GlobalContext.get()
         assertSame(hilt.profiles, koin.get<ProfileRepository>())
         assertSame(hilt.preferences, koin.get<AppPreferences>())
+        assertSame(hilt.tester, koin.get<ConnectionTester>())
+    }
+
+    /** Onboarding's ViewModel comes from Koin now (iOS spec §9), built from Hilt's repository and tester. */
+    @Test
+    fun onboardingViewModelResolves() {
+        startNidooKoin(app, FakeBridge())
+        GlobalContext.get().get<OnboardingViewModel>()
     }
 
     @Test

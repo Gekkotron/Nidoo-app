@@ -64,7 +64,7 @@ jobs:
             # deadlocks next to the parallel :feature:*:test tasks (6 h hang on 2026-10-29).
             tasks: >-
               :feature:home:test
-              :feature:onboarding:test
+              :feature:onboarding:testAndroidHostTest
               :feature:energy:test
               :feature:history:test
               :feature:security:test
