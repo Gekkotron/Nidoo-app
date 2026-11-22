@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="house_devices">
+        <item quantity="one">%1$d appareil</item>
+        <item quantity="other">%1$d appareils</item>
+    </plurals>
+    <string name="house_set_up_again">Reconfigurer</string>
+</resources>

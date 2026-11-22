@@ -9,7 +9,7 @@ import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.PresenceConfig
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
-import com.gekkotron.nidoo.data.ThemePreference
+import com.gekkotron.nidoo.shared.toChoice
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.push.PushRegistrar
 import com.gekkotron.nidoo.transport.Route
@@ -22,13 +22,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-/** The stored preference as the design system's choice; exhaustive, so a new value fails the build instead of crashing. */
-internal fun ThemePreference.toChoice(): ThemeChoice = when (this) {
-    ThemePreference.SYSTEM -> ThemeChoice.SYSTEM
-    ThemePreference.NIGHT_GLASS -> ThemeChoice.NIGHT_GLASS
-    ThemePreference.IVOIRE -> ThemeChoice.IVOIRE
-}
 
 @HiltViewModel
 class AppViewModel @Inject constructor(

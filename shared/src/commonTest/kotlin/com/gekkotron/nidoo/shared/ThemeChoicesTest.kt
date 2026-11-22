@@ -1,12 +1,11 @@
-package com.gekkotron.nidoo
+package com.gekkotron.nidoo.shared
 
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.designsystem.ThemeChoice
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** `AppViewModel` needs a `ProfileRepository` (internal constructor), so the mapping it applies is tested directly. */
-class AppViewModelThemeTest {
+class ThemeChoicesTest {
     @Test
     fun `each stored preference maps to the same-named choice`() {
         assertEquals(ThemeChoice.SYSTEM, ThemePreference.SYSTEM.toChoice())

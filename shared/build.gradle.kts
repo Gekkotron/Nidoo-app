@@ -24,15 +24,24 @@ kotlin {
             api(project(":core:transport"))
             implementation(project(":core:demo"))
             implementation(project(":core:source"))
+            implementation(project(":core:data"))
+            implementation(project(":core:connection"))
+            implementation(project(":feature:onboarding"))
             implementation(project(":core:designsystem"))
             implementation(project.dependencies.platform(libs.koin.bom))
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.cmp.lifecycle.viewmodel.compose)
+            implementation(libs.cmp.lifecycle.runtime.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutines.test)
+            implementation(project(":core:transport-testing"))
         }
     }
+}
+
+compose.resources {
+    packageOfResClass = "com.gekkotron.nidoo.shared.resources"
 }

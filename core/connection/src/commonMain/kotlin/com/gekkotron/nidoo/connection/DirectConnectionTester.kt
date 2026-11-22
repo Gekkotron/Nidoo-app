@@ -131,7 +131,7 @@ class DirectConnectionTester(
 }
 
 /** Device names, plus entities that belong to no known device; sorted case-insensitively. */
-internal fun deviceNames(devices: Map<String, Device>, entities: Map<String, Entity>): List<String> {
+fun deviceNames(devices: Map<String, Device>, entities: Map<String, Entity>): List<String> {
     val loose = entities.values.filter { it.deviceId == null || it.deviceId !in devices }.map { it.name }
     return (devices.values.map { it.name } + loose).sortedBy { it.lowercase() }
 }
