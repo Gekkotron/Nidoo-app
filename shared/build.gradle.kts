@@ -24,6 +24,12 @@ kotlin {
             api(project(":core:transport"))
             implementation(project(":core:demo"))
             implementation(project(":core:source"))
+            implementation(project(":core:designsystem"))
+            implementation(project.dependencies.platform(libs.koin.bom))
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.cmp.lifecycle.viewmodel.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutines.test)
