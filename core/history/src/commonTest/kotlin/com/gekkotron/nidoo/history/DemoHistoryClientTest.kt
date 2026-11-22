@@ -32,6 +32,16 @@ class DemoHistoryClientTest {
     }
 
     @Test
+    fun `power is low at night and peaks in the evening`() = runTest {
+        val s = (demo.series(HistoryRef("demo_plug_power"), HistoryRange.H24) as HistoryResult.Ok).value
+        val night = s.points.filter { parisHourOfDay(it.t) in 2.0..5.0 }
+        assertTrue(night.isNotEmpty() && night.all { it.mean < 400 })
+        val top = s.points.maxBy { it.mean }
+        assertTrue(top.mean > 1500, "${top.mean}")
+        assertTrue(parisHourOfDay(top.t) in 18.0..21.5, "${parisHourOfDay(top.t)}")
+    }
+
+    @Test
     fun `daily and today follow the scale factor`() = runTest {
         val ref = HistoryRef("demo_total_kwh")
         val one = (demo.daily(ref, 3, EnergyScale(EnergyKind.COUNTER, 1.0)) as HistoryResult.Ok).value
