@@ -6,17 +6,6 @@ plugins {
 android {
     namespace = "com.gekkotron.nidoo.designsystem"
 
-    testOptions {
-        screenshotTests.create("screenshotTest") {
-            engineVersion = libs.versions.screenshot.get()
-            targetVariants.add("debug")
-            dependencies {
-                implementation(project.dependencies.platform(libs.compose.bom))
-                implementation(libs.compose.ui.tooling)
-                implementation(libs.screenshot.validation.api)
-            }
-        }
-    }
 }
 
 dependencies {

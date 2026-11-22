@@ -112,17 +112,17 @@ Free Apple ID limits still apply: at most 3 sideloaded apps at once (SideStore c
 
 ## Screenshot tests
 
-`:core:designsystem` has Compose screenshot tests (AGP test suites, experimental) that render a sheet of the design system and the opening icons in both Night Glass and Ivoire. They catch unintended theme changes.
+`:core:designsystem-screenshots` holds the design system's Compose screenshot tests (AGP test suites, experimental) that render a sheet of the design system and the opening icons in both Night Glass and Ivoire. They catch unintended theme changes.
 
 ```bash
 # Validate against the committed references
-./gradlew :core:designsystem:testDebugScreenshotTestDefaultTestSuite
+./gradlew :core:designsystem-screenshots:testDebugScreenshotTestDefaultTestSuite
 
 # Regenerate the references after an intended visual change
-./gradlew :core:designsystem:updateDebugScreenshotTestDefaultTestSuite
+./gradlew :core:designsystem-screenshots:updateDebugScreenshotTestDefaultTestSuite
 ```
 
-The sources live in `core/designsystem/src/screenshotTest/` and the reference PNGs in `core/designsystem/src/screenshotTestDefaultDebug/reference/`. This is local only: `check` and CI do not run it.
+The sources live in `core/designsystem-screenshots/src/screenshotTest/` and the reference PNGs in `core/designsystem-screenshots/src/screenshotTestDefaultDebug/reference/`. This is local only: `check` and CI do not run it.
 
 ## Highlights
 
