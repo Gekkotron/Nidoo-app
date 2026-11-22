@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -24,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.time.Duration.Companion.milliseconds
 
 /** The real SDK against MockWebServer playing the gateway (replies sealed with our own EnvelopeCrypto). */
 class AthenaGatewayApiTest {
@@ -193,5 +195,14 @@ class AthenaGatewayApiTest {
     @Test
     fun `failures map to refusal or retry`() {
         assertIs<IOException>(IllegalStateException("x").toStreamFailure())
+    }
+
+    /** iOS has no OkHttp call timeout: the API's own publish timeout must end a request the gateway never answers. */
+    @Test
+    fun `publish gives up after the timeout`() = runBlocking {
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+        val api = AthenaGatewayApi(AthenaGatewayClient(server.url("/").toString(), key.toHex(), OkHttpClient()), null, publishTimeout = 200.milliseconds)
+        val e = assertFailsWith<PublishFailed> { api.publish("nidoo/x/set", "on".encodeToByteArray(), 1, false) }
+        assertEquals("publish timed out", e.message)
     }
 }

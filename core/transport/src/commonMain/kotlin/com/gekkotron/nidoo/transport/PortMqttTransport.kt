@@ -42,14 +42,14 @@ class PortMqttTransport(
     reconnectMax: Duration = 30.seconds,
     /** Also bounds the wait for a subscribe or unsubscribe acknowledgement. */
     private val publishTimeout: Duration = 10.seconds,
-) : ManagedTransport {
+) : DirectLink {
     private val _link = MutableStateFlow<LinkState>(LinkState.Offline(LinkState.Offline.NOT_STARTED))
     override val link: StateFlow<LinkState> = _link.asStateFlow()
 
     private val _failure = MutableStateFlow<DirectFailure?>(null)
 
     /** Why the last attempt failed; cleared on connect. Read by the onboarding connection test. */
-    val failure: StateFlow<DirectFailure?> = _failure.asStateFlow()
+    override val failure: StateFlow<DirectFailure?> = _failure.asStateFlow()
 
     private val backoff = Backoff(reconnectInitial, reconnectMax)
     private val inbox = Channel<MqttMessage>(Channel.UNLIMITED)
