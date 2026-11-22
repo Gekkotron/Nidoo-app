@@ -63,6 +63,20 @@ class TileTextTest {
     @Test
     fun alarm_uses_the_shared_label() = assertEquals("Disarmed", TileText.of(context, TileValue.Alarm(AlarmState.DISARMED), Locale.US))
 
+    // The widget keeps its own copy of the design system's alarm labels (Glance needs them synchronously).
+    @Test
+    fun alarm_labels_match_the_design_system_for_every_state() = assertEquals(
+        listOf("Disarmed", "Armed · Home", "Armed · Away", "Armed · Night", "Armed · Vacation", "Armed · Custom", "Pending", "Arming…", "Disarming…", "Triggered!"),
+        AlarmState.entries.map { TileText.of(context, TileValue.Alarm(it), Locale.US) },
+    )
+
+    @Test
+    @Config(qualifiers = "fr")
+    fun alarm_labels_are_french_on_a_french_phone() = assertEquals(
+        listOf("Désarmée", "Armée · Maison", "Armée · Absent", "Armée · Nuit", "Armée · Vacances", "Armée · Perso", "En attente", "Armement…", "Désarmement…", "Déclenchée !"),
+        AlarmState.entries.map { TileText.of(context, TileValue.Alarm(it), Locale.FRANCE) },
+    )
+
     @Config(qualifiers = "fr")
     @Test
     fun french_on() = assertEquals("Allumé", TileText.of(context, TileValue.OnOff(true), Locale.FRANCE))

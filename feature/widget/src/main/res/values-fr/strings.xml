@@ -39,4 +39,15 @@
     <string name="voice_widget_description">Un appui pour dicter une commande à votre maison.</string>
     <string name="widget_voice_off">Voix désactivée</string>
     <string name="widget_voice_off_description">Assistant vocal désactivé. Ouvrez les Réglages pour l\'activer.</string>
+    <!-- The design system's alarm labels, copied: Glance needs them synchronously and CMP strings are composable or suspend. Keep in sync. -->
+    <string name="widget_alarm_disarmed">Désarmée</string>
+    <string name="widget_alarm_armed_home">Armée · Maison</string>
+    <string name="widget_alarm_armed_away">Armée · Absent</string>
+    <string name="widget_alarm_armed_night">Armée · Nuit</string>
+    <string name="widget_alarm_armed_vacation">Armée · Vacances</string>
+    <string name="widget_alarm_armed_custom">Armée · Perso</string>
+    <string name="widget_alarm_pending">En attente</string>
+    <string name="widget_alarm_arming">Armement…</string>
+    <string name="widget_alarm_disarming">Désarmement…</string>
+    <string name="widget_alarm_triggered">Déclenchée !</string>
 </resources>

@@ -1,7 +1,10 @@
 package com.gekkotron.nidoo.shared
 
 import androidx.compose.ui.window.ComposeUIViewController
+import com.gekkotron.nidoo.shared.di.sharedModule
 import com.gekkotron.nidoo.transport.MqttClientPort
+import org.koin.compose.KoinApplication
+import org.koin.dsl.koinConfiguration
 import platform.UIKit.UIViewController
 
 /**
@@ -11,7 +14,9 @@ import platform.UIKit.UIViewController
  */
 fun MainViewController(mqttPortFactory: () -> MqttClientPort): UIViewController {
     IosPlatform.mqttPortFactory = mqttPortFactory
-    return ComposeUIViewController { NidooRoot() }
+    return ComposeUIViewController {
+        KoinApplication(configuration = koinConfiguration { modules(sharedModule) }) { NidooRoot() }
+    }
 }
 
 /** What the Swift side hands to Kotlin at startup. */

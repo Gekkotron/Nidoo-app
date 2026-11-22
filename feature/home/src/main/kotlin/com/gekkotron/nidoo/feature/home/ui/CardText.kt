@@ -10,6 +10,7 @@ import com.gekkotron.nidoo.feature.home.presentation.CardValue
 import com.gekkotron.nidoo.feature.home.presentation.HeaterChip
 import com.gekkotron.nidoo.model.CoverState
 import com.gekkotron.nidoo.model.Kind
+import org.jetbrains.compose.resources.stringResource
 
 private val OPENING_CLASSES = setOf("door", "window", "garage_door", "opening")
 private val MOTION_CLASSES = setOf("motion", "occupancy", "presence")

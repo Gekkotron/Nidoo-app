@@ -19,6 +19,8 @@ composeBom = "2026.06.01"
 # the line composeBom pins, so the Android app keeps its Compose versions.
 composeMultiplatform = "1.11.1"
 screenshot = "0.0.1-alpha17"
+# Koin: DI on Android and iOS, alongside Hilt while modules move (iOS spec §9).
+koin = "4.2.2"
 activity = "1.13.0"
 lifecycle = "2.10.0"
 navigation3 = "1.1.7"
@@ -76,6 +78,18 @@ compose-multiplatform-gradle-plugin = { module = "org.jetbrains.compose:compose-
 cmp-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 cmp-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 cmp-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
+# CMP 1.11.1's material3 (the version its Gradle plugin maps to); on Android it resolves to the BOM's material3 1.4.0.
+cmp-material3 = { module = "org.jetbrains.compose.material3:material3", version = "1.9.0" }
+cmp-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }
+koin-core = { module = "io.insert-koin:koin-core" }
+koin-compose = { module = "io.insert-koin:koin-compose" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
+koin-android = { module = "io.insert-koin:koin-android" }
+koin-test = { module = "io.insert-koin:koin-test" }
+# Multiplatform ViewModel, matching the app's androidx lifecycle 2.10.0.
+cmp-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+cmp-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-compiler-gradle-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
 hilt-gradle-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
 ksp-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }

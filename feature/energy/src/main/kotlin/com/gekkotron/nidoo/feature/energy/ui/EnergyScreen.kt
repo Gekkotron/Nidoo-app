@@ -65,7 +65,14 @@ import com.gekkotron.nidoo.feature.energy.presentation.NodeStatus
 import com.gekkotron.nidoo.feature.energy.presentation.SensorEdit
 import com.gekkotron.nidoo.transport.Route
 import java.util.Locale
-import com.gekkotron.nidoo.designsystem.R as DsR
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_battery
+import com.gekkotron.nidoo.designsystem.resources.energy_consumer
+import com.gekkotron.nidoo.designsystem.resources.energy_grid
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import com.gekkotron.nidoo.designsystem.resources.energy_solar
+import com.gekkotron.nidoo.designsystem.resources.energy_water
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun EnergyRoute(
@@ -262,12 +269,12 @@ internal fun TodayText(node: EnergyNode, locale: Locale) {
 @Composable
 internal fun nodeLabel(node: EnergyNode): String = node.name ?: stringResource(
     when (node.kind) {
-        NodeKind.SOLAR -> DsR.string.energy_solar
-        NodeKind.GRID -> DsR.string.energy_grid
-        NodeKind.BATTERY -> DsR.string.energy_battery
-        NodeKind.HOUSE -> DsR.string.energy_house
-        NodeKind.WATER -> DsR.string.energy_water
-        NodeKind.CONSUMER, NodeKind.MORE -> DsR.string.energy_consumer
+        NodeKind.SOLAR -> Res.string.energy_solar
+        NodeKind.GRID -> Res.string.energy_grid
+        NodeKind.BATTERY -> Res.string.energy_battery
+        NodeKind.HOUSE -> Res.string.energy_house
+        NodeKind.WATER -> Res.string.energy_water
+        NodeKind.CONSUMER, NodeKind.MORE -> Res.string.energy_consumer
     },
 )
 

@@ -40,7 +40,7 @@ jobs:
               :core:climate:jvmTest
               :core:push:test
               :core:demo:jvmTest
-              :core:designsystem:test
+              :core:designsystem:testAndroidHostTest
               :core:model:koverXmlReport
               :core:crypto:koverXmlReport
               :core:transport:koverXmlReport
@@ -168,7 +168,12 @@ jobs:
         run: >-
           xcodebuild -project iosApp/Nidoo.xcodeproj -scheme Nidoo
           -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
-          CODE_SIGNING_ALLOWED=NO build
+          -derivedDataPath iosApp/build CODE_SIGNING_ALLOWED=NO build
+      # The app crashes at launch without its Compose resources (fonts, strings); the Gradle build phase copies them.
+      - name: Check the app bundles the Compose resources
+        run: |
+          find iosApp/build/Build/Products -path '*Nidoo.app/*' -name inter.ttf | grep -q . \
+            || { echo "Nidoo.app has no Compose resources (inter.ttf)"; exit 1; }
 
   brand:
     name: brand check

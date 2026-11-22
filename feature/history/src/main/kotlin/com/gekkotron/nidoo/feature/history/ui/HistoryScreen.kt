@@ -54,7 +54,9 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import com.gekkotron.nidoo.designsystem.R as DsR
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun HistoryRoute(
@@ -120,7 +122,7 @@ fun HistoryScreen(
 @Composable
 private fun Header(state: HistoryUi, locale: Locale) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(state.title ?: stringResource(DsR.string.energy_house), style = NidooTheme.type.cardName)
+        Text(state.title ?: stringResource(Res.string.energy_house), style = NidooTheme.type.cardName)
         state.room?.let { Text(it, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted) }
         state.live?.let { Text(withUnit(it, state.unit, locale), style = NidooTheme.type.display) }
     }
@@ -183,7 +185,7 @@ private fun Message(res: Int) {
 @Composable
 private fun LineBody(state: HistoryUi, line: ChartContent.Line, zone: ZoneId, locale: Locale) {
     val unit = state.unit
-    val title = state.title ?: stringResource(DsR.string.energy_house)
+    val title = state.title ?: stringResource(Res.string.energy_house)
     val formatTime = timeFormatter(state.range, zone, locale)
     if (state.binary) {
         // Binary sensors chart as 0/1 steps: use max within each bucket as "was active at any point".
@@ -250,7 +252,7 @@ private fun Stat(label: Int, value: String) {
 @Composable
 private fun BarsBody(state: HistoryUi, bars: ChartContent.Bars, zone: ZoneId, locale: Locale) {
     val chartBars = remember(bars) { bars.days.days.map { ChartBar(it.t, it.kwh) } }
-    val title = state.title ?: stringResource(DsR.string.energy_house)
+    val title = state.title ?: stringResource(Res.string.energy_house)
     val total = format(bars.total, 1, locale)
     val avg = format(bars.avg, 1, locale)
     val description = stringResource(R.string.history_cd_bars, title, stringResource(rangeDescription(state.range)), total, avg)

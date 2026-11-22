@@ -54,7 +54,15 @@ import com.gekkotron.nidoo.model.ConsumerIcon
 import com.gekkotron.nidoo.model.EnergyRole
 import com.gekkotron.nidoo.model.PowerUnits
 import java.util.Locale
-import com.gekkotron.nidoo.designsystem.R as DsR
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_battery
+import com.gekkotron.nidoo.designsystem.resources.energy_consumer
+import com.gekkotron.nidoo.designsystem.resources.energy_grid
+import com.gekkotron.nidoo.designsystem.resources.energy_grid_export
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import com.gekkotron.nidoo.designsystem.resources.energy_solar
+import com.gekkotron.nidoo.designsystem.resources.energy_water
+import org.jetbrains.compose.resources.stringResource
 
 /** A node's details: its value, the sensors behind it, and an editor per sensor (name, role, invert, icon, energy meter). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -259,12 +267,12 @@ private fun statusText(status: NodeStatus): String = stringResource(
 @Composable
 private fun roleLabel(role: EnergyRole): String = stringResource(
     when (role) {
-        EnergyRole.SOLAR -> DsR.string.energy_solar
-        EnergyRole.GRID -> DsR.string.energy_grid
-        EnergyRole.GRID_EXPORT -> DsR.string.energy_grid_export
-        EnergyRole.BATTERY -> DsR.string.energy_battery
-        EnergyRole.HOUSE -> DsR.string.energy_house
-        EnergyRole.CONSUMER -> DsR.string.energy_consumer
-        EnergyRole.WATER -> DsR.string.energy_water
+        EnergyRole.SOLAR -> Res.string.energy_solar
+        EnergyRole.GRID -> Res.string.energy_grid
+        EnergyRole.GRID_EXPORT -> Res.string.energy_grid_export
+        EnergyRole.BATTERY -> Res.string.energy_battery
+        EnergyRole.HOUSE -> Res.string.energy_house
+        EnergyRole.CONSUMER -> Res.string.energy_consumer
+        EnergyRole.WATER -> Res.string.energy_water
     },
 )

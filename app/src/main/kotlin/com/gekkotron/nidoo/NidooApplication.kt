@@ -29,6 +29,9 @@ import com.gekkotron.nidoo.transport.ActiveTransport
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
+import com.gekkotron.nidoo.di.KoinBridgeEntryPoint
+import com.gekkotron.nidoo.di.startNidooKoin
+import dagger.hilt.android.EntryPointAccessors
 
 @HiltAndroidApp
 class NidooApplication : Application(), PushComponentProvider, WidgetComponentProvider, ControlsComponentProvider, Configuration.Provider, SingletonImageLoader.Factory {
@@ -91,6 +94,7 @@ class NidooApplication : Application(), PushComponentProvider, WidgetComponentPr
 
     override fun onCreate() {
         super.onCreate()
+        startNidooKoin(this, EntryPointAccessors.fromApplication(this, KoinBridgeEntryPoint::class.java))
         Log.i("NidooApplication", "KMP shared ${NidooShared.VERSION}")
         channels.ensure()
         pushWiring.start()

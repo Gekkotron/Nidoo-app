@@ -109,12 +109,16 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    // Koin next to Hilt while modules move to common code (iOS spec §9); Hilt hands its singletons over.
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.android)
     implementation(libs.androidx.lifecycle.process)
     // Firebase ships in release (tester) builds only; debug builds carry none of it.
     releaseImplementation(platform(libs.firebase.bom))
     releaseImplementation(libs.firebase.crashlytics)
     releaseImplementation(libs.firebase.appdistribution)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.koin.test)
     testImplementation(libs.androidx.work.testing)
     testImplementation(project(":core:transport-testing"))
     kspTest(libs.hilt.compiler)
