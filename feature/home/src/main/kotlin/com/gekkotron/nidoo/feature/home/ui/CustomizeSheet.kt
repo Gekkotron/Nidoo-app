@@ -51,11 +51,19 @@ import com.gekkotron.nidoo.model.EnergyRole
 import com.gekkotron.nidoo.model.LightOnPreset
 import com.gekkotron.nidoo.model.PowerUnits
 import com.gekkotron.nidoo.model.Placement
-import com.gekkotron.nidoo.designsystem.R as DsR
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.SwitchType
 import com.gekkotron.nidoo.model.UiOverride
 import kotlin.math.roundToInt
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_battery
+import com.gekkotron.nidoo.designsystem.resources.energy_consumer
+import com.gekkotron.nidoo.designsystem.resources.energy_grid
+import com.gekkotron.nidoo.designsystem.resources.energy_grid_export
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import com.gekkotron.nidoo.designsystem.resources.energy_solar
+import com.gekkotron.nidoo.designsystem.resources.energy_water
+import org.jetbrains.compose.resources.stringResource
 
 /** Long-press override sheet (spec §5.2): rename, room, favourite, hide, position, card style, energy role. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -288,12 +296,12 @@ private fun switchTypeLabel(type: SwitchType): Int = when (type) {
 @Composable
 private fun energyLabel(role: EnergyRole): String = stringResource(
     when (role) {
-        EnergyRole.SOLAR -> DsR.string.energy_solar
-        EnergyRole.GRID -> DsR.string.energy_grid
-        EnergyRole.GRID_EXPORT -> DsR.string.energy_grid_export
-        EnergyRole.BATTERY -> DsR.string.energy_battery
-        EnergyRole.HOUSE -> DsR.string.energy_house
-        EnergyRole.CONSUMER -> DsR.string.energy_consumer
-        EnergyRole.WATER -> DsR.string.energy_water
+        EnergyRole.SOLAR -> Res.string.energy_solar
+        EnergyRole.GRID -> Res.string.energy_grid
+        EnergyRole.GRID_EXPORT -> Res.string.energy_grid_export
+        EnergyRole.BATTERY -> Res.string.energy_battery
+        EnergyRole.HOUSE -> Res.string.energy_house
+        EnergyRole.CONSUMER -> Res.string.energy_consumer
+        EnergyRole.WATER -> Res.string.energy_water
     },
 )

@@ -39,4 +39,15 @@
     <string name="voice_widget_description">One tap to say a command to your home.</string>
     <string name="widget_voice_off">Voice off</string>
     <string name="widget_voice_off_description">Voice assistant off. Open Settings to turn it on.</string>
+    <!-- The design system's alarm labels, copied: Glance needs them synchronously and CMP strings are composable or suspend. Keep in sync. -->
+    <string name="widget_alarm_disarmed">Disarmed</string>
+    <string name="widget_alarm_armed_home">Armed · Home</string>
+    <string name="widget_alarm_armed_away">Armed · Away</string>
+    <string name="widget_alarm_armed_night">Armed · Night</string>
+    <string name="widget_alarm_armed_vacation">Armed · Vacation</string>
+    <string name="widget_alarm_armed_custom">Armed · Custom</string>
+    <string name="widget_alarm_pending">Pending</string>
+    <string name="widget_alarm_arming">Arming…</string>
+    <string name="widget_alarm_disarming">Disarming…</string>
+    <string name="widget_alarm_triggered">Triggered!</string>
 </resources>

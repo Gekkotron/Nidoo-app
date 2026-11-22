@@ -40,7 +40,7 @@ jobs:
               :core:climate:jvmTest
               :core:push:test
               :core:demo:jvmTest
-              :core:designsystem:test
+              :core:designsystem:testAndroidHostTest
               :core:model:koverXmlReport
               :core:crypto:koverXmlReport
               :core:transport:koverXmlReport

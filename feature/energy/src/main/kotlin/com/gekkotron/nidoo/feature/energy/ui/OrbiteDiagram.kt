@@ -46,7 +46,9 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
-import com.gekkotron.nidoo.designsystem.R as DsR
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import org.jetbrains.compose.resources.stringResource
 
 /** Ring radii and stroke widths, as shares of the square's side. */
 internal object OrbiteGeometry {
@@ -162,7 +164,7 @@ internal fun OrbiteDiagram(
             sankey.houseW?.let { w ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(EnergyFormat.power(w, locale), style = NidooTheme.type.cardValue, color = colors.content)
-                    Text(stringResource(DsR.string.energy_house), style = NidooTheme.type.label, color = colors.contentMuted)
+                    Text(stringResource(Res.string.energy_house), style = NidooTheme.type.label, color = colors.contentMuted)
                 }
             }
         }

@@ -1,9 +1,9 @@
 package com.gekkotron.nidoo.feature.widget.ui
 
 import android.content.Context
-import com.gekkotron.nidoo.designsystem.alarm.alarmLabel
 import com.gekkotron.nidoo.feature.widget.R
 import com.gekkotron.nidoo.feature.widget.model.TileValue
+import com.gekkotron.nidoo.model.AlarmState
 import com.gekkotron.nidoo.model.CoverState
 import java.text.NumberFormat
 import java.time.Instant
@@ -39,6 +39,20 @@ object TileText {
         maximumFractionDigits = 1
         minimumFractionDigits = 0
     }.format(value)
+
+    /** The design system's `alarmLabel`, from the widget's own Android strings. */
+    private fun alarmLabel(state: AlarmState): Int = when (state) {
+        AlarmState.DISARMED -> R.string.widget_alarm_disarmed
+        AlarmState.ARMED_HOME -> R.string.widget_alarm_armed_home
+        AlarmState.ARMED_AWAY -> R.string.widget_alarm_armed_away
+        AlarmState.ARMED_NIGHT -> R.string.widget_alarm_armed_night
+        AlarmState.ARMED_VACATION -> R.string.widget_alarm_armed_vacation
+        AlarmState.ARMED_CUSTOM_BYPASS -> R.string.widget_alarm_armed_custom
+        AlarmState.PENDING -> R.string.widget_alarm_pending
+        AlarmState.ARMING -> R.string.widget_alarm_arming
+        AlarmState.DISARMING -> R.string.widget_alarm_disarming
+        AlarmState.TRIGGERED -> R.string.widget_alarm_triggered
+    }
 
     private fun onOff(context: Context, on: Boolean) = context.getString(if (on) R.string.widget_on else R.string.widget_off)
 

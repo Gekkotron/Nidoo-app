@@ -50,7 +50,13 @@ import com.gekkotron.nidoo.feature.energy.presentation.hit
 import com.gekkotron.nidoo.feature.energy.presentation.notReporting
 import com.gekkotron.nidoo.feature.energy.presentation.tapTarget
 import java.util.Locale
-import com.gekkotron.nidoo.designsystem.R as DsR
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_battery
+import com.gekkotron.nidoo.designsystem.resources.energy_consumer
+import com.gekkotron.nidoo.designsystem.resources.energy_grid
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import com.gekkotron.nidoo.designsystem.resources.energy_solar
+import org.jetbrains.compose.resources.stringResource
 
 /** Phones get the hub's vertical frame; wider windows the horizontal one. */
 private val WIDE_FROM = 600.dp
@@ -149,13 +155,13 @@ private fun FluxLabel(n: SankeyNode, locale: Locale, modifier: Modifier) {
 /** What a Sankey node is called: the role word, the consumer's name, "Others (3)", "Unmetered". */
 @Composable
 internal fun sankeyName(n: SankeyNode): String = when (n.role) {
-    SankeyRole.SOLAR -> stringResource(DsR.string.energy_solar)
-    SankeyRole.GRID -> stringResource(DsR.string.energy_grid)
-    SankeyRole.BATTERY -> stringResource(DsR.string.energy_battery)
-    SankeyRole.HOUSE -> stringResource(DsR.string.energy_house)
+    SankeyRole.SOLAR -> stringResource(Res.string.energy_solar)
+    SankeyRole.GRID -> stringResource(Res.string.energy_grid)
+    SankeyRole.BATTERY -> stringResource(Res.string.energy_battery)
+    SankeyRole.HOUSE -> stringResource(Res.string.energy_house)
     SankeyRole.EXPORT -> stringResource(R.string.energy_export)
     SankeyRole.BATTERY_CHARGE -> stringResource(R.string.energy_battery_charge)
-    SankeyRole.CONSUMER -> n.name ?: stringResource(DsR.string.energy_consumer)
+    SankeyRole.CONSUMER -> n.name ?: stringResource(Res.string.energy_consumer)
     SankeyRole.OTHERS -> stringResource(R.string.energy_others) + " (${n.count})"
     SankeyRole.UNITEMISED -> stringResource(R.string.energy_unitemised)
 }

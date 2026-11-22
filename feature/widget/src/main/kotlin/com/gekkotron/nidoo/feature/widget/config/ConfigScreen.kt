@@ -35,6 +35,7 @@ import com.gekkotron.nidoo.designsystem.alarm.armLabel
 import com.gekkotron.nidoo.feature.widget.R
 import com.gekkotron.nidoo.feature.widget.model.WidgetConfig
 import com.gekkotron.nidoo.model.AlarmMode
+import org.jetbrains.compose.resources.stringResource
 
 /** The entity picker (widgets spec §2.1): selected entities in widget order, then every entity grouped by area. */
 @OptIn(ExperimentalMaterial3Api::class)

@@ -19,7 +19,8 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
-        withHostTest {}
+        // Android resources in host tests: Robolectric Compose tests read CMP resources (strings, fonts) from them.
+        withHostTest { isIncludeAndroidResources = true }
     }
     sourceSets {
         commonTest.dependencies {
