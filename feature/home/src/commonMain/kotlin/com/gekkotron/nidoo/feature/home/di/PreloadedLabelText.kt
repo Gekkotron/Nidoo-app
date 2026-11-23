@@ -6,6 +6,7 @@ import com.gekkotron.nidoo.format.FormatLocale
 import com.gekkotron.nidoo.format.systemLocale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -42,6 +43,9 @@ class PreloadedLabelText(
         reloadIfStale()
         return loaded.value?.labels?.get(EntityLabels.normalize(label))
     }
+
+    /** Cancels the load in flight; called when the Koin application closes. */
+    fun close() = scope.cancel()
 
     /** Emits once at first, then after every completed load. */
     override val updates: Flow<Unit> = loaded.map { }

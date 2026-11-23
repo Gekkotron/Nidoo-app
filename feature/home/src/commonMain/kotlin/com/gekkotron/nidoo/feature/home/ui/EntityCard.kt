@@ -7,6 +7,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,6 +27,13 @@ import com.gekkotron.nidoo.feature.home.presentation.CardValue
 import com.gekkotron.nidoo.feature.home.presentation.TapAction
 import com.gekkotron.nidoo.feature.home.presentation.parseTint
 import com.gekkotron.nidoo.model.Command
+
+/** Whether the screen can open a history; false hides the tap of an `OPEN_HISTORY` card. */
+internal val LocalHistoryOpens = compositionLocalOf { true }
+
+/** The tap the card really has: opening a history that this screen cannot show is no tap. */
+@Composable
+internal fun CardUi.effectiveTap(): TapAction = if (tap == TapAction.OPEN_HISTORY && !LocalHistoryOpens.current) TapAction.NONE else tap
 
 @Composable
 internal fun EntityCard(
@@ -68,7 +76,7 @@ internal fun EntityCard(
         on = card.on,
         accent = icon.openContact,
         enabled = card.available,
-        onClick = if (card.tap != TapAction.NONE) onClick else null,
+        onClick = if (card.effectiveTap() != TapAction.NONE) onClick else null,
         onLongClick = onLongClick,
         onLongClickLabel = stringResource(if (card.hasSheet) Res.string.action_controls else Res.string.action_customize),
         tint = tint,

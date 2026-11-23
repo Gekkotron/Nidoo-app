@@ -1,6 +1,9 @@
 package com.gekkotron.nidoo.feature.home.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -91,6 +94,39 @@ class SensorStripTest {
         compose.onNodeWithTag("strip-t").performClick()
         assertEquals(emptyList(), clicks)
         assertFalse(SemanticsActions.OnClick in compose.onNodeWithTag("strip-t").fetchSemanticsNode().config)
+    }
+
+    private fun showWithHistory(opens: Boolean, content: @androidx.compose.runtime.Composable (CardUi) -> Unit) {
+        val card = strip(temperature("t", "Thermometer")).single().copy(tap = TapAction.OPEN_HISTORY, hasHistory = true)
+        compose.setContent {
+            NidooTheme(ThemeChoice.NIGHT_GLASS) {
+                CompositionLocalProvider(LocalHistoryOpens provides opens) { content(card) }
+            }
+        }
+    }
+
+    @Test
+    fun `a history tap without a history screen is inert on a strip pill`() {
+        showWithHistory(opens = false) { SensorStrip(listOf(it), onClick = { clicks += it.id }, onLongClick = {}) }
+        compose.onNodeWithTag("strip-t").assertHasNoClickAction()
+    }
+
+    @Test
+    fun `a history tap with a history screen is a click on a strip pill`() {
+        showWithHistory(opens = true) { SensorStrip(listOf(it), onClick = { clicks += it.id }, onLongClick = {}) }
+        compose.onNodeWithTag("strip-t").assertHasClickAction()
+    }
+
+    @Test
+    fun `a history tap without a history screen is inert on an entity card`() {
+        showWithHistory(opens = false) { EntityCard(it, onClick = { clicks += it.id }, onLongClick = {}) }
+        compose.onNodeWithTag("card-t").assertHasNoClickAction()
+    }
+
+    @Test
+    fun `a history tap with a history screen is a click on an entity card`() {
+        showWithHistory(opens = true) { EntityCard(it, onClick = { clicks += it.id }, onLongClick = {}) }
+        compose.onNodeWithTag("card-t").assertHasClickAction()
     }
 
     @Test

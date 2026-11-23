@@ -62,6 +62,7 @@ class NidooAppTest {
 
     @After
     fun tearDown() {
+        koinApp.close()
         scope.cancel()
         FileSystem.SYSTEM.deleteRecursively(dir)
     }

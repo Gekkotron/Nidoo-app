@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import org.koin.dsl.onClose
 
 /**
  * Home's ViewModels and its entity-label translations. Each app supplies `EntitySource`, `AppPreferences`,
@@ -19,7 +20,7 @@ import org.koin.dsl.module
  * defaults that Koin would not use.
  */
 val homeModule: Module = module {
-    single<LabelText> { PreloadedLabelText(CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
+    single<LabelText> { PreloadedLabelText(CoroutineScope(SupervisorJob() + Dispatchers.Default)) } onClose { (it as? PreloadedLabelText)?.close() }
     viewModel {
         HomeViewModel(
             source = get(),

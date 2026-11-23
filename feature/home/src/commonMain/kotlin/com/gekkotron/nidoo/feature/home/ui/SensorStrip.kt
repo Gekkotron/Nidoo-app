@@ -69,7 +69,7 @@ private fun SensorPill(card: CardUi, showName: Boolean, onClick: () -> Unit, onL
     val description = stringResource(Res.string.strip_pill_description, card.name, value, room)
     val customize = stringResource(Res.string.action_customize)
     val longClick by rememberUpdatedState(onLongClick)
-    val gestures = if (card.tap != TapAction.NONE) {
+    val gestures = if (card.effectiveTap() != TapAction.NONE) {
         Modifier.combinedClickable(
             onClick = onClick,
             onLongClick = {

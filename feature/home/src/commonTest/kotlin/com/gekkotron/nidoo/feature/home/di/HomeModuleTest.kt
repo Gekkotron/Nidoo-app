@@ -1,6 +1,8 @@
 package com.gekkotron.nidoo.feature.home.di
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.connection.EntitySourceSession
 import com.gekkotron.nidoo.dashboards.DashboardsRepository
@@ -26,6 +28,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import okio.FileSystem
+import org.koin.core.KoinApplication
 import org.koin.core.parameter.parametersOf
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
@@ -37,6 +40,8 @@ import kotlin.test.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeModuleTest {
     private val scope = CoroutineScope(Job())
+    private val viewModels = mutableListOf<ViewModel>()
+    private var koinApp: KoinApplication? = null
     private val dir = FileSystem.SYSTEM_TEMPORARY_DIRECTORY.resolve("nidoo-home-${Random.nextLong().toULong()}")
 
     @BeforeTest
@@ -44,8 +49,11 @@ class HomeModuleTest {
 
     @AfterTest
     fun tearDown() {
-        Dispatchers.resetMain()
+        // Stop everything that can still run before Main goes away and the directory is deleted.
+        viewModels.forEach { it.viewModelScope.cancel() }
+        koinApp?.close()
         scope.cancel()
+        Dispatchers.resetMain()
         FileSystem.SYSTEM.deleteRecursively(dir)
     }
 
@@ -73,10 +81,10 @@ class HomeModuleTest {
 
     @Test
     fun homeModuleResolvesItsViewModels() {
-        val koin = koinApplication { modules(platform, homeModule) }.koin
-        koin.get<HomeViewModel> { parametersOf(SavedStateHandle()) }
-        koin.get<RoomsViewModel> { parametersOf(SavedStateHandle()) }
-        koin.get<DashboardViewModel>()
-        koin.get<CustomizeViewModel>()
+        val koin = koinApplication { modules(platform, homeModule) }.also { koinApp = it }.koin
+        viewModels += koin.get<HomeViewModel> { parametersOf(SavedStateHandle()) }
+        viewModels += koin.get<RoomsViewModel> { parametersOf(SavedStateHandle()) }
+        viewModels += koin.get<DashboardViewModel>()
+        viewModels += koin.get<CustomizeViewModel>()
     }
 }

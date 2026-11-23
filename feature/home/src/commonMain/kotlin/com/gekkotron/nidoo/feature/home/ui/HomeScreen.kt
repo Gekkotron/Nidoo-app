@@ -44,6 +44,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -297,126 +298,129 @@ fun HomeScreen(
         val next = if (card.forceToggle == true) "eco" else "performance"
         onSend(card.id, Command.SetHvacMode(next))
     }
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentColor = NidooTheme.colors.content,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        contentWindowInsets = windowInsets,
-    ) { padding ->
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val columns = when {
-                maxWidth < 600.dp -> 2
-                maxWidth < 840.dp -> 3
-                else -> 4
-            }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                modifier = Modifier.testTag("home-grid"),
-                contentPadding = PaddingValues(
-                    start = padding.calculateStartPadding(layoutDirection) + 16.dp,
-                    end = padding.calculateEndPadding(layoutDirection) + 16.dp,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 24.dp,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
-                verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
-            ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, hour, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView.takeIf { !searching }, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled, onVoiceClick = onOpenVoice) }
-                if (searching || fieldAlways) {
-                    val opened = searchOpen && !fieldAlways
-                    item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
-                        HomeSearchField(
-                            text = searchText,
-                            onTextChange = { searchText = it; onSearch(it) },
-                            onClear = closeSearch,
-                            showClear = searchText.isNotEmpty() || opened,
-                            autoFocus = opened,
-                            onFocusChange = { fieldFocused = it },
-                        )
-                    }
+    // Without a history screen (iOS), a sensor card has no tap: it must not look pressable.
+    CompositionLocalProvider(LocalHistoryOpens provides (onOpenHistory != null)) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentColor = NidooTheme.colors.content,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            contentWindowInsets = windowInsets,
+        ) { padding ->
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val columns = when {
+                    maxWidth < 600.dp -> 2
+                    maxWidth < 840.dp -> 3
+                    else -> 4
                 }
-                // Results replace the pills while searching.
-                if (!searching && showDashboardHeader) {
-                    item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
-                        // On a dashboard a pill goes back to House, on that view.
-                        HomeChips(state, inRoom = roomInView != null, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
-                    }
-                }
-                val climat = state.climat
-                if (climat != null && !onDashboard && !searching) {
-                    item(key = "climat-banner", span = { GridItemSpan(maxLineSpan) }) {
-                        ClimatBanner(climat, onBoost = { boostSheet = true }, onCancel = { onCancelBoost(climat.zone) })
-                    }
-                }
-                if (onDashboard) {
-                    when (val view = dashboard.view) {
-                        is DashboardView.Loading -> item(key = "dashboard-loading", span = { GridItemSpan(maxLineSpan) }) {
-                            Text(stringResource(Res.string.dashboard_loading), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
-                        }
-                        is DashboardView.Shown -> if (view.ui.tiles.isEmpty()) {
-                            item(key = "dashboard-empty", span = { GridItemSpan(maxLineSpan) }) {
-                                Text(stringResource(Res.string.dashboard_empty), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
-                            }
-                        } else {
-                            dashboardTiles(
-                                view.ui.tiles, dashboard.runningFlows,
-                                onEntityClick = cardClick, onEntityLongClick = cardLongClick,
-                                onSendGroup = onSendGroup, onForce = cardForce, onSend = onSend,
-                                onRunFlow = onRunFlow, onOpenEnergy = onOpenEnergy, onOpenHistory = onOpenHistory,
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier.testTag("home-grid"),
+                    contentPadding = PaddingValues(
+                        start = padding.calculateStartPadding(layoutDirection) + 16.dp,
+                        end = padding.calculateEndPadding(layoutDirection) + 16.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
+                    verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
+                ) {
+                    item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, hour, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView.takeIf { !searching }, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled, onVoiceClick = onOpenVoice) }
+                    if (searching || fieldAlways) {
+                        val opened = searchOpen && !fieldAlways
+                        item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
+                            HomeSearchField(
+                                text = searchText,
+                                onTextChange = { searchText = it; onSearch(it) },
+                                onClear = closeSearch,
+                                showClear = searchText.isNotEmpty() || opened,
+                                autoFocus = opened,
+                                onFocusChange = { fieldFocused = it },
                             )
                         }
-                        DashboardView.House -> Unit
                     }
-                }
-                if (!onDashboard && !searching && state.selected == RoomFilter.Rooms) {
-                    // Two columns per card where they pair up; on an odd grid (3 columns) a 2-span card would leave a column empty on every row.
-                    items(state.roomCards, key = { "room-" + it.areaId }, span = { GridItemSpan(if (maxLineSpan % 2 == 0) 2 else maxLineSpan) }) { room ->
-                        RoomCard(
-                            room,
-                            onOpen = { onSelect(RoomFilter.Area(room.areaId)) },
-                            onLights = { onSendRoom(room.areaId, RoomKind.LIGHT) },
-                            onShutters = { onSendRoom(room.areaId, RoomKind.COVER) },
-                        )
-                    }
-                }
-                if (searching && state.query.isNotBlank() && state.cards.isEmpty()) {
-                    item(key = "no-match", span = { GridItemSpan(maxLineSpan) }) {
-                        Text(stringResource(Res.string.search_no_match, state.query.trim()), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
-                    }
-                }
-                if (state.loading && !onDashboard) {
-                    item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
-                        Text(stringResource(Res.string.home_discovering), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
-                    }
-                }
-                if (!onDashboard) {
-                    if (state.sections.isEmpty() && state.strip.isEmpty()) {
-                        // Favourites, Hidden and search results: one flat grid.
-                        homeCards(state.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
-                    } else {
-                        // A room or All devices (rooms design §6.4): sensors as pills, then one block per type.
-                        if (state.strip.isNotEmpty()) {
-                            item(key = "strip", span = { GridItemSpan(maxLineSpan) }) {
-                                SensorStrip(state.strip, onClick = cardClick, onLongClick = cardLongClick)
-                            }
-                        }
-                        state.sections.forEach { section ->
-                            if (section.showLabel) {
-                                item(key = "section-" + section.section.name, span = { GridItemSpan(maxLineSpan) }) { SectionLabel(section.section) }
-                            }
-                            homeCards(section.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
+                    // Results replace the pills while searching.
+                    if (!searching && showDashboardHeader) {
+                        item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
+                            // On a dashboard a pill goes back to House, on that view.
+                            HomeChips(state, inRoom = roomInView != null, onSelect = { if (onDashboard) onSelectDashboard(HOUSE_DASHBOARD_ID); onSelect(it) })
                         }
                     }
+                    val climat = state.climat
+                    if (climat != null && !onDashboard && !searching) {
+                        item(key = "climat-banner", span = { GridItemSpan(maxLineSpan) }) {
+                            ClimatBanner(climat, onBoost = { boostSheet = true }, onCancel = { onCancelBoost(climat.zone) })
+                        }
+                    }
+                    if (onDashboard) {
+                        when (val view = dashboard.view) {
+                            is DashboardView.Loading -> item(key = "dashboard-loading", span = { GridItemSpan(maxLineSpan) }) {
+                                Text(stringResource(Res.string.dashboard_loading), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                            }
+                            is DashboardView.Shown -> if (view.ui.tiles.isEmpty()) {
+                                item(key = "dashboard-empty", span = { GridItemSpan(maxLineSpan) }) {
+                                    Text(stringResource(Res.string.dashboard_empty), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                                }
+                            } else {
+                                dashboardTiles(
+                                    view.ui.tiles, dashboard.runningFlows,
+                                    onEntityClick = cardClick, onEntityLongClick = cardLongClick,
+                                    onSendGroup = onSendGroup, onForce = cardForce, onSend = onSend,
+                                    onRunFlow = onRunFlow, onOpenEnergy = onOpenEnergy, onOpenHistory = onOpenHistory,
+                                )
+                            }
+                            DashboardView.House -> Unit
+                        }
+                    }
+                    if (!onDashboard && !searching && state.selected == RoomFilter.Rooms) {
+                        // Two columns per card where they pair up; on an odd grid (3 columns) a 2-span card would leave a column empty on every row.
+                        items(state.roomCards, key = { "room-" + it.areaId }, span = { GridItemSpan(if (maxLineSpan % 2 == 0) 2 else maxLineSpan) }) { room ->
+                            RoomCard(
+                                room,
+                                onOpen = { onSelect(RoomFilter.Area(room.areaId)) },
+                                onLights = { onSendRoom(room.areaId, RoomKind.LIGHT) },
+                                onShutters = { onSendRoom(room.areaId, RoomKind.COVER) },
+                            )
+                        }
+                    }
+                    if (searching && state.query.isNotBlank() && state.cards.isEmpty()) {
+                        item(key = "no-match", span = { GridItemSpan(maxLineSpan) }) {
+                            Text(stringResource(Res.string.search_no_match, state.query.trim()), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                        }
+                    }
+                    if (state.loading && !onDashboard) {
+                        item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
+                            Text(stringResource(Res.string.home_discovering), style = NidooTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                        }
+                    }
+                    if (!onDashboard) {
+                        if (state.sections.isEmpty() && state.strip.isEmpty()) {
+                            // Favourites, Hidden and search results: one flat grid.
+                            homeCards(state.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
+                        } else {
+                            // A room or All devices (rooms design §6.4): sensors as pills, then one block per type.
+                            if (state.strip.isNotEmpty()) {
+                                item(key = "strip", span = { GridItemSpan(maxLineSpan) }) {
+                                    SensorStrip(state.strip, onClick = cardClick, onLongClick = cardLongClick)
+                                }
+                            }
+                            state.sections.forEach { section ->
+                                if (section.showLabel) {
+                                    item(key = "section-" + section.section.name, span = { GridItemSpan(maxLineSpan) }) { SectionLabel(section.section) }
+                                }
+                                homeCards(section.cards, cardClick, cardLongClick, cardForce, onSend, onSendGroup)
+                            }
+                        }
+                    }
                 }
+                // Edge-to-edge: keep scrolled cards from colliding with the clock and status icons.
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(padding.calculateTopPadding())
+                        .background(NidooTheme.colors.backgroundTop.copy(alpha = 0.92f))
+                        .testTag("status-scrim"),
+                )
             }
-            // Edge-to-edge: keep scrolled cards from colliding with the clock and status icons.
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(padding.calculateTopPadding())
-                    .background(NidooTheme.colors.backgroundTop.copy(alpha = 0.92f))
-                    .testTag("status-scrim"),
-            )
         }
     }
     val climatUi = state.climat
