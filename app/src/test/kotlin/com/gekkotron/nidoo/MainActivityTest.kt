@@ -29,6 +29,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import com.gekkotron.nidoo.push.RegistrationQueue
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /** The real graph: ProfileRepository → ActiveTransport → DemoBroker → MqttDiscoverySource → Home. */
 @OptIn(ExperimentalTestApi::class)
@@ -108,6 +109,16 @@ class MainActivityTest {
         openDemo()
         setUpAgain()
         compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
+    }
+
+    @Test
+    fun `back on an onboarding step returns to welcome instead of closing the app`() {
+        compose.waitUntilAtLeastOneExists(hasText("Enter manually"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Enter manually").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Broker settings"), timeoutMillis = 10_000)
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
+        compose.activityRule.scenario.onActivity { assertFalse(it.isFinishing) }
     }
 
     @Test

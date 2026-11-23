@@ -39,6 +39,16 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(project(":core:transport-testing"))
         }
+        // Robolectric Compose tests of the shell: NidooApp on a test Koin graph.
+        getByName("androidHostTest").dependencies {
+            implementation(libs.junit4)
+            implementation(kotlin("test-junit"))
+            implementation(libs.robolectric)
+            implementation(libs.androidx.test.ext.junit)
+            implementation(project.dependencies.platform(libs.compose.bom))
+            implementation(libs.compose.ui.test.junit4)
+            implementation(libs.compose.ui.test.manifest)
+        }
     }
 }
 
