@@ -3,12 +3,16 @@ package com.gekkotron.nidoo.shared
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.nidoo.connection.EntitySourceSession
+import com.gekkotron.nidoo.connection.routeChoice
+import com.gekkotron.nidoo.connection.toPreference
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import kotlinx.coroutines.flow.SharingStarted
+import com.gekkotron.nidoo.transport.Route
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -28,6 +32,15 @@ class AppShellViewModel(
     val theme: StateFlow<ThemeChoice?> = preferences.theme
         .map { it?.toChoice() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, preferences.theme.value?.toChoice())
+
+    /** The link sheet's route row; null hides it (no gateway in the profile). */
+    val route: StateFlow<Route?> =
+        combine(profiles.state, profiles.route, ::routeChoice).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Rebuilds the transport for the new route; the discovery source and the house on screen stay. */
+    fun setRoute(route: Route) {
+        viewModelScope.launch { profiles.setRoute(route.toPreference()) }
+    }
 
     fun finishRooms() {
         viewModelScope.launch { profiles.finishRooms() }

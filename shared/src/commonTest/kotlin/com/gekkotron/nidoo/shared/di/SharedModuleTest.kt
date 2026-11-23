@@ -5,7 +5,6 @@ import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.shared.AppShellViewModel
-import com.gekkotron.nidoo.shared.HouseSummaryViewModel
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +55,5 @@ class SharedModuleTest {
     fun sharedModuleResolvesItsViewModels() {
         val koin = koinApplication { modules(platform, sharedModule) }.koin
         koin.get<AppShellViewModel>()
-        koin.get<HouseSummaryViewModel>()
     }
 }

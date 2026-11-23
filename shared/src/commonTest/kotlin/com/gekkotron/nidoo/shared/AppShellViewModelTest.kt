@@ -3,18 +3,22 @@ package com.gekkotron.nidoo.shared
 import com.gekkotron.nidoo.connection.EntitySourceSession
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ConnectionProfile
+import com.gekkotron.nidoo.data.GatewayConfig
 import com.gekkotron.nidoo.data.LocalBroker
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
+import com.gekkotron.nidoo.data.RoutePreference
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.transport.Route
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -85,5 +89,15 @@ class AppShellViewModelTest {
         assertIs<ProfileState.Ready>(s.profiles.state.first { it is ProfileState.Ready && it.notificationsPending })
         s.vm.finishNotifications()
         assertFalse((s.profiles.state.first { it is ProfileState.Ready && !it.notificationsPending } as ProfileState.Ready).notificationsPending)
+    }
+
+    @Test
+    fun setRouteSavesThePreference() = runTest {
+        val s = shell()
+        s.profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local"), gateway = GatewayConfig("https://gw.example", ByteArray(GatewayConfig.KEY_BYTES), "broker.local")))
+        s.profiles.state.first { it is ProfileState.Ready }
+        s.vm.setRoute(checkNotNull(s.vm.route.first { it != null }).let { Route.GATEWAY })
+        advanceUntilIdle()
+        assertEquals(RoutePreference.GATEWAY, s.profiles.route.first { it == RoutePreference.GATEWAY })
     }
 }
