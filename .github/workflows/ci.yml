@@ -74,6 +74,7 @@ jobs:
               :feature:widget:test
               :feature:controls:test
               :feature:voice:test
+              :shared:testAndroidHostTest
               :feature:home:koverXmlReport
               :feature:onboarding:koverXmlReport
               :feature:energy:koverXmlReport
