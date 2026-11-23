@@ -96,7 +96,8 @@ class AppShellViewModelTest {
         val s = shell()
         s.profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local"), gateway = GatewayConfig("https://gw.example", ByteArray(GatewayConfig.KEY_BYTES), "broker.local")))
         s.profiles.state.first { it is ProfileState.Ready }
-        s.vm.setRoute(checkNotNull(s.vm.route.first { it != null }).let { Route.GATEWAY })
+        s.vm.route.first { it != null }
+        s.vm.setRoute(Route.GATEWAY)
         advanceUntilIdle()
         assertEquals(RoutePreference.GATEWAY, s.profiles.route.first { it == RoutePreference.GATEWAY })
     }

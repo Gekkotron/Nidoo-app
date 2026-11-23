@@ -17,6 +17,7 @@ import androidx.lifecycle.HasDefaultViewModelProviderFactory
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.SAVED_STATE_REGISTRY_OWNER_KEY
+import androidx.lifecycle.SavedStateViewModelFactory
 import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
@@ -111,8 +112,8 @@ internal class ScreenOwner : ViewModelStoreOwner, SavedStateRegistryOwner, HasDe
     private val controller = SavedStateRegistryController.create(this)
     override val lifecycle: Lifecycle get() = registry
     override val savedStateRegistry: SavedStateRegistry get() = controller.savedStateRegistry
-    override val defaultViewModelProviderFactory: ViewModelProvider.Factory
-        get() = throw UnsupportedOperationException("ViewModels come from Koin's factory")
+    /** Only for a plain `viewModel()`; the screens use `koinViewModel()`, which brings Koin's factory and takes the extras below. */
+    override val defaultViewModelProviderFactory: ViewModelProvider.Factory = SavedStateViewModelFactory()
     override val defaultViewModelCreationExtras: CreationExtras
         get() = MutableCreationExtras().apply {
             this[SAVED_STATE_REGISTRY_OWNER_KEY] = this@ScreenOwner

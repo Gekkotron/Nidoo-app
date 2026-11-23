@@ -146,8 +146,10 @@ class NidooAppTest {
         runBlocking { profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local"))) }
         waitFor("Which room is each device in?")
         // The button ends a long list, which a LazyColumn composes only once it is scrolled to.
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Skip"))
-        compose.onNodeWithText("Skip").performClick()
+        val finish = hasText("Skip") or hasText("Done")
+        compose.waitUntil(5_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasScrollAction()).performScrollToNode(finish)
+        compose.onNode(finish).performClick()
         waitForHome()
         // A demo device card, which only Home draws.
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Floor lamp", substring = true).fetchSemanticsNodes().isNotEmpty() }

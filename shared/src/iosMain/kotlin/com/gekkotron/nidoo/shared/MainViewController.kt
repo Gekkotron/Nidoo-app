@@ -18,10 +18,12 @@ import platform.UIKit.UIViewController
  * [mqttPortFactory] makes a new Swift MQTT client (CocoaMQTT) for each direct link (`PortMqttTransport`): the live
  * link and each connection test need their own connection.
  */
-fun MainViewController(mqttPortFactory: () -> MqttClientPort): UIViewController = ComposeUIViewController {
+fun MainViewController(mqttPortFactory: () -> MqttClientPort): UIViewController {
     // Home's media covers are http(s) images: Coil needs its Ktor fetcher (Darwin engine) registered on iOS.
     SingletonImageLoader.setSafe { context -> ImageLoader.Builder(context).components { add(KtorNetworkFetcherFactory()) }.build() }
-    KoinApplication(configuration = koinConfiguration { modules(iosModule(mqttPortFactory), sharedModule, onboardingModule, homeModule) }) {
-        NidooApp()
+    return ComposeUIViewController {
+        KoinApplication(configuration = koinConfiguration { modules(iosModule(mqttPortFactory), sharedModule, onboardingModule, homeModule) }) {
+            NidooApp()
+        }
     }
 }
