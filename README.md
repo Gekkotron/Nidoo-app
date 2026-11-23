@@ -40,6 +40,7 @@ Home cards are drawn, not emoji: the AC's airflow takes its mode's colour, the r
 | `:core:state` | Jinja-subset templates, one mapper per kind, `StateStore`, optimistic `CommandTracker` |
 | `:core:source` | HA MQTT Discovery parser and `MqttDiscoverySource` |
 | `:core:data` | Connection profiles, the setup QR payload, preferences, Keystore-backed secrets, the entity cache |
+| `:core:connection` | The connection wiring both apps share: the discovery session, the transport factory with the platform links injected, and the onboarding connection test |
 | `:core:history` | Client for the hub's history API: sensor series, energy totals, last change |
 | `:core:dashboards` | The hub's dashboards and their layout |
 | `:core:flows` | The hub's flows: list and enable/disable |
@@ -81,7 +82,7 @@ The shared modules' tests also run on iOS, but only on CI: they need the iOS Sim
 
 ## Run on your iPhone
 
-The iOS app is at its first step: it shows a placeholder screen built from the shared Kotlin code. It installs from Xcode with a free Apple ID; no paid developer account is needed.
+The iOS app sets itself up like the Android one, by scanning the hub's QR code or by entering the broker by hand. It then shows the live connection (direct at home, through the gateway away) and how many devices the hub announced. Home, dashboards and Settings come next. It installs from Xcode with a free Apple ID; no paid developer account is needed.
 
 1. Install the tools: Xcode, then `brew install xcodegen`. In Xcode → Settings → Accounts, add your Apple ID (a Personal Team is enough).
 2. Set up signing, once:

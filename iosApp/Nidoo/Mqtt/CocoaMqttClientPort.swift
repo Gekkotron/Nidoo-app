@@ -41,7 +41,8 @@ final class CocoaMqttClientPort: NSObject, MqttClientPort, CocoaMQTTDelegate {
         client = mqtt
         self.listener = listener
         lossReported = false
-        if !mqtt.connect() {
+        // A broker that never answers must fail the attempt (and back off) instead of hanging it.
+        if !mqtt.connect(timeout: 10) {
             reportLoss(.unreachable, "could not start the connection")
         }
     }

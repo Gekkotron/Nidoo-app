@@ -39,14 +39,14 @@ class DirectMqttTransport(
     reconnectInitial: Duration = 1.seconds,
     reconnectMax: Duration = 30.seconds,
     private val publishTimeout: Duration = 10.seconds,
-) : ManagedTransport {
+) : DirectLink {
     private val _link = MutableStateFlow<LinkState>(LinkState.Offline(LinkState.Offline.NOT_STARTED))
     override val link: StateFlow<LinkState> = _link.asStateFlow()
 
     private val _failure = MutableStateFlow<DirectFailure?>(null)
 
     /** Why the last attempt failed; cleared on connect. Read by the onboarding connection test. */
-    val failure: StateFlow<DirectFailure?> = _failure.asStateFlow()
+    override val failure: StateFlow<DirectFailure?> = _failure.asStateFlow()
 
     private val inbox = Channel<MqttMessage>(Channel.UNLIMITED)
     private val _messages = MutableSharedFlow<MqttMessage>(extraBufferCapacity = 1024)

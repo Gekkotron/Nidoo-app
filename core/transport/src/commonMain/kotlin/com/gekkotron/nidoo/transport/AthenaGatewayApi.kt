@@ -5,10 +5,13 @@ import io.github.gekkotron.athena.gateway.client.Broker
 import io.github.gekkotron.athena.gateway.client.GatewayException
 import io.github.gekkotron.athena.gateway.client.MqttEvent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.io.IOException
+import kotlin.time.Duration
 
 /**
  * [GatewayApi] over the gateway's own Kotlin SDK (`athena-gateway-client`, gateway spec §3.3). The SDK owns
@@ -19,6 +22,8 @@ import kotlinx.io.IOException
 class AthenaGatewayApi internal constructor(
     private val client: AthenaGatewayClient,
     private val broker: Broker?,
+    /** Bounds each publish; null leaves it to the HTTP client (the JVM's OkHttp call timeout). */
+    private val publishTimeout: Duration? = null,
 ) : GatewayApi {
 
     override fun stream(topics: Set<String>): Flow<GatewayEvent> =
@@ -36,7 +41,13 @@ class AthenaGatewayApi internal constructor(
     override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) {
         if (!isValidPublishTopic(topic)) throw PublishFailed("invalid publish topic '$topic'")
         try {
-            client.publish(topic, payload.decodeToString(), qos, retain, broker)
+            if (publishTimeout == null) {
+                client.publish(topic, payload.decodeToString(), qos, retain, broker)
+            } else {
+                withTimeout(publishTimeout) { client.publish(topic, payload.decodeToString(), qos, retain, broker) }
+            }
+        } catch (e: TimeoutCancellationException) {
+            throw PublishFailed("publish timed out")
         } catch (e: CancellationException) {
             throw e
         } catch (e: GatewayException) {
