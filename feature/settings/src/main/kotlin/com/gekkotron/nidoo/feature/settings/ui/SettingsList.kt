@@ -48,20 +48,22 @@ import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
 import com.gekkotron.nidoo.designsystem.icons.StaticIcon
 import com.gekkotron.nidoo.feature.settings.R
 import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
+import com.gekkotron.nidoo.feature.settings.presentation.PlatformRow
+import com.gekkotron.nidoo.feature.settings.presentation.RowStatus
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
-import com.gekkotron.nidoo.feature.voice.SpeechAvailability
-import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.transport.LinkState
 
-/** The list row's short push word (no age); null in the demo, where push does not exist. */
-@StringRes
-internal fun pushWord(status: PushStatus): Int? = when (status) {
-    is PushStatus.Registered -> R.string.settings_push_short_registered
-    PushStatus.Waiting -> R.string.settings_push_short_waiting
-    is PushStatus.Failed -> R.string.settings_push_short_failed
-    PushStatus.NotificationsOff -> R.string.settings_push_short_off
-    PushStatus.Demo -> null
+/** The status column's text for a platform row; empty for [RowStatus.NONE] (the demo has no push word). */
+@Composable
+private fun RowStatus.text(): String = when (this) {
+    RowStatus.NONE -> ""
+    RowStatus.ON -> stringResource(R.string.settings_on)
+    RowStatus.OFF -> stringResource(R.string.settings_off)
+    RowStatus.PUSH_REGISTERED -> stringResource(R.string.settings_push_short_registered)
+    RowStatus.PUSH_WAITING -> stringResource(R.string.settings_push_short_waiting)
+    RowStatus.PUSH_FAILED -> stringResource(R.string.settings_push_short_failed)
+    RowStatus.PUSH_OFF -> stringResource(R.string.settings_push_short_off)
 }
 
 @StringRes
@@ -103,6 +105,14 @@ private class Entry(
     val status: @Composable () -> String,
 )
 
+/** How a platform page looks in the list: title, hint, glyph and tone. */
+private fun platformEntry(row: PlatformRow): Entry = when (row.page) {
+    SettingsPage.NOTIFICATIONS -> Entry(row.page, R.string.settings_notifications, R.string.settings_notifications_hint, NidooGlyph.BELL, Tone.ROSE) { row.status.text() }
+    SettingsPage.PRESENCE -> Entry(row.page, R.string.presence_section_title, R.string.settings_presence_hint, NidooGlyph.PIN, Tone.CYAN) { row.status.text() }
+    SettingsPage.VOICE -> Entry(row.page, R.string.voice_section_title, R.string.settings_voice_hint, NidooGlyph.MIC, Tone.VIOLET) { row.status.text() }
+    else -> error("${row.page} is not a platform page")
+}
+
 /** The Settings list (settings sub-pages spec): a header, then the House and App groups. */
 @Composable
 fun SettingsListScreen(
@@ -116,18 +126,7 @@ fun SettingsListScreen(
         Entry(null, R.string.settings_rooms, R.string.settings_rooms_summary, NidooGlyph.HOUSE, Tone.AMBER) {
             if (state.roomCount > 0) state.roomCount.toString() else ""
         },
-        Entry(SettingsPage.NOTIFICATIONS, R.string.settings_notifications, R.string.settings_notifications_hint, NidooGlyph.BELL, Tone.ROSE) {
-            pushWord(state.push)?.let { stringResource(it) }.orEmpty()
-        },
-        Entry(SettingsPage.PRESENCE, R.string.presence_section_title, R.string.settings_presence_hint, NidooGlyph.PIN, Tone.CYAN) {
-            stringResource(if (state.presenceEnabled) R.string.settings_on else R.string.settings_off)
-        },
-        Entry(SettingsPage.VOICE, R.string.voice_section_title, R.string.settings_voice_hint, NidooGlyph.MIC, Tone.VIOLET) {
-            // Same rule as the page's toggle: on only when the phone can actually listen.
-            val on = state.voice.enabled && state.voice.availability == SpeechAvailability.Status.Ready
-            if (on) stringResource(R.string.settings_on) else stringResource(R.string.settings_off)
-        },
-    )
+    ) + state.platformRows.map(::platformEntry)
     val app = listOf(
         Entry(SettingsPage.APPEARANCE, R.string.settings_appearance, R.string.settings_appearance_hint, NidooGlyph.SUN_MOON, Tone.VIOLET) {
             stringResource(themeName(state.theme))

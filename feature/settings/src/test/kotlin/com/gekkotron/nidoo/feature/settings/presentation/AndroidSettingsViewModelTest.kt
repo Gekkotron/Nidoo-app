@@ -1,12 +1,10 @@
 package com.gekkotron.nidoo.feature.settings.presentation
 
 import com.gekkotron.nidoo.data.AppPreferences
-import com.gekkotron.nidoo.data.ProfileRepository
-import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.create
-import com.gekkotron.nidoo.feature.settings.FakeEntitySource
 import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
+import com.gekkotron.nidoo.push.PushStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,7 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SettingsVoiceTest {
+class AndroidSettingsViewModelTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
@@ -38,11 +36,6 @@ class SettingsVoiceTest {
     // DataStore runs on its own scope, not on the test's backgroundScope: its cancellation during @After
     // would otherwise hit Dispatchers.Main.immediate after resetMain and crash on CI runners.
     private val storage = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
-
-    private object PassThrough : SecretStore {
-        override fun encrypt(plain: ByteArray) = plain.copyOf()
-        override fun decrypt(cipher: ByteArray) = cipher.copyOf()
-    }
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -56,26 +49,46 @@ class SettingsVoiceTest {
         Dispatchers.resetMain()
     }
 
-    private fun kotlinx.coroutines.test.TestScope.vm(source: FakeEntitySource, prefs: AppPreferences): SettingsViewModel {
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), source, SpeechAvailability.Status.Ready)
-        backgroundScope.launch { vm.state.collect {} }
+    private fun kotlinx.coroutines.test.TestScope.vm(prefs: AppPreferences, push: FakePushStatusSource = FakePushStatusSource()): AndroidSettingsViewModel {
+        val vm = AndroidSettingsViewModel(push, prefs, SpeechAvailability.Status.Ready)
+        backgroundScope.launch { vm.voice.collect {} }
         return vm
     }
 
     @Test
     fun `voice is off by default`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
-        val vm = vm(FakeEntitySource(), prefs)
-        assertEquals(false, vm.state.value.voice.enabled)
+        val vm = vm(prefs)
+        assertEquals(false, vm.voice.value.enabled)
     }
 
     @Test
     fun `setVoiceEnabled persists the preference`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
-        val vm = vm(FakeEntitySource(), prefs)
+        val vm = vm(prefs)
         vm.setVoiceEnabled(true)
         assertEquals(true, prefs.voiceEnabled.first { it == true })
-        assertTrue(vm.state.first { it.voice.enabled }.voice.enabled)
+        assertTrue(vm.voice.first { it.enabled }.enabled)
+    }
+
+    @Test
+    fun `the push status is carried and followed`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs2.json"), storage)
+        val push = FakePushStatusSource(PushStatus.Waiting)
+        val vm = vm(prefs, push)
+        assertEquals(PushStatus.Waiting, vm.push.value)
+        push.status.value = PushStatus.NotificationsOff
+        assertEquals(PushStatus.NotificationsOff, vm.push.first { it == PushStatus.NotificationsOff })
+    }
+
+    @Test
+    fun `register again and refresh go to the push source`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs3.json"), storage)
+        val push = FakePushStatusSource()
+        val vm = vm(prefs, push)
+        vm.registerAgain()
+        vm.refreshPush()
+        assertEquals(1, push.registerAgains)
+        assertEquals(1, push.refreshes)
     }
 }

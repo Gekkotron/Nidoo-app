@@ -1,9 +1,5 @@
 package com.gekkotron.nidoo.feature.settings.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,19 +16,15 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.gekkotron.nidoo.data.DEFAULT_FRIGATE_URL
 import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.data.ThemePreference
@@ -44,8 +36,6 @@ import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
 import com.gekkotron.nidoo.transport.Route
-import kotlinx.coroutines.launch
-import java.time.Instant
 
 /** The page's top-bar title: the same words as its row in the Settings list. */
 private fun SettingsPage.title(): Int = when (this) {
@@ -64,19 +54,15 @@ fun SettingsPageScreen(
     state: SettingsUi,
     version: String,
     route: Route?,
-    now: Instant,
     onBack: () -> Unit,
     onTheme: (ThemePreference) -> Unit = {},
     onEnergyView: (EnergyViewPreference) -> Unit = {},
-    onRegisterAgain: () -> Unit = {},
-    onOpenChannels: () -> Unit = {},
     onRouteChange: (Route) -> Unit = {},
     onSetUpAgain: () -> Unit = {},
     onSaveHistoryUrl: (String) -> Boolean = { true },
     onSaveFrigate: (url: String, user: String, password: String) -> Boolean = { _, _, _ -> true },
-    onVoiceEnabled: (Boolean) -> Unit = {},
-    onOpenLicences: () -> Unit = {},
-    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = {},
+    onOpenLicences: (() -> Unit)? = null,
+    platformPage: @Composable (SettingsPage, SnackbarHostState) -> Unit = { _, _ -> },
 ) {
     val snackbar = remember { SnackbarHostState() }
     Scaffold(
@@ -91,12 +77,7 @@ fun SettingsPageScreen(
         ) {
             when (page) {
                 SettingsPage.APPEARANCE -> AppearanceBody(state, onTheme, onEnergyView)
-                SettingsPage.NOTIFICATIONS -> NotificationsBody(state.push, now, onRegisterAgain, onOpenChannels)
-                SettingsPage.PRESENCE -> {
-                    val scope = rememberCoroutineScope()
-                    presenceSection { msg -> scope.launch { snackbar.showSnackbar(msg) } }
-                }
-                SettingsPage.VOICE -> VoiceBody(state, snackbar, onVoiceEnabled)
+                SettingsPage.NOTIFICATIONS, SettingsPage.PRESENCE, SettingsPage.VOICE -> platformPage(page, snackbar)
                 SettingsPage.CONNECTION -> ConnectionBody(state, route, onRouteChange, onSetUpAgain, onSaveHistoryUrl, onSaveFrigate)
                 SettingsPage.ABOUT -> AboutBody(version, onOpenLicences)
             }
@@ -116,28 +97,6 @@ private fun AppearanceBody(state: SettingsUi, onTheme: (ThemePreference) -> Unit
     Section(stringResource(R.string.settings_energy_view)) {
         EnergyViewSection(state.energyView, onEnergyView)
     }
-}
-
-/** The voice toggle asks for the microphone first; a refusal turns voice off and says why. */
-@Composable
-private fun VoiceBody(state: SettingsUi, snackbar: SnackbarHostState, onVoiceEnabled: (Boolean) -> Unit) {
-    val context = LocalContext.current
-    val deniedMessage = stringResource(R.string.voice_permission_denied_snackbar)
-    var micDenied by remember { mutableStateOf(false) }
-    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) onVoiceEnabled(true) else { onVoiceEnabled(false); micDenied = true }
-    }
-    LaunchedEffect(micDenied) {
-        if (micDenied) {
-            snackbar.showSnackbar(deniedMessage)
-            micDenied = false
-        }
-    }
-    val onVoiceToggle: (Boolean) -> Unit = { on ->
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        if (!on || granted) onVoiceEnabled(on) else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
-    }
-    VoiceSection(state.voice, onVoiceToggle, showTitle = false)
 }
 
 @Composable
@@ -185,10 +144,10 @@ private fun ConnectionBody(
 }
 
 @Composable
-private fun AboutBody(version: String, onOpenLicences: () -> Unit) {
+private fun AboutBody(version: String, onOpenLicences: (() -> Unit)?) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.settings_version, version), style = NidooTheme.type.body)
         Text(stringResource(R.string.settings_notice), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
-        NavRow(stringResource(R.string.settings_licences), null, onOpenLicences)
+        if (onOpenLicences != null) NavRow(stringResource(R.string.settings_licences), null, onOpenLicences)
     }
 }

@@ -12,7 +12,6 @@ import com.gekkotron.nidoo.data.EnergyViewPreference
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.data.normalizeFrigateUrl
 import com.gekkotron.nidoo.data.normalizeHistoryUrl
-import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.push.PushStatusSource
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import com.gekkotron.nidoo.model.Area
@@ -24,7 +23,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,18 +30,17 @@ import javax.inject.Inject
 data class SettingsUi(
     val theme: ThemePreference = ThemePreference.SYSTEM,
     val connection: ConnectionSummary? = null,
-    val push: PushStatus = PushStatus.Waiting,
-    val voice: VoiceSettingsUi = VoiceSettingsUi(),
     val energyView: EnergyViewPreference = EnergyViewPreference.CLASSIC,
     /** Broker link, for the Settings header and the Connection row. */
     val link: LinkState = LinkState.Connecting,
     /** Rooms the house has, Unassigned not counted (the Rooms row's status). */
     val roomCount: Int = 0,
-    val presenceEnabled: Boolean = false,
+    /** The rows only this platform has, after Rooms in the House group. */
+    val platformRows: List<PlatformRow> = emptyList(),
 )
 
 /** What only the Settings list shows. */
-private data class ListExtras(val link: LinkState, val roomCount: Int, val presenceEnabled: Boolean)
+private data class ListExtras(val link: LinkState, val roomCount: Int)
 
 private fun roomCount(areas: List<Area>) = areas.count { it.id != UNASSIGNED_AREA }
 
@@ -51,10 +48,10 @@ private fun roomCount(areas: List<Area>) = areas.count { it.id != UNASSIGNED_ARE
 class SettingsViewModel internal constructor(
     private val profiles: ProfileRepository,
     private val preferences: AppPreferences,
-    private val push: PushStatusSource,
     private val source: EntitySource,
-    availability: SpeechAvailability.Status,
+    private val platform: PlatformSettings,
 ) : ViewModel() {
+    // Until Task 2 moves the module to Koin, Hilt builds the Android platform here.
     @Inject
     constructor(
         profiles: ProfileRepository,
@@ -62,38 +59,31 @@ class SettingsViewModel internal constructor(
         push: PushStatusSource,
         source: EntitySource,
         @ApplicationContext context: Context,
-    ) : this(profiles, preferences, push, source, SpeechAvailability.check(context))
+    ) : this(profiles, preferences, source, AndroidPlatformSettings(push, preferences, SpeechAvailability.check(context)))
 
-    private val voiceUi = preferences.voiceEnabled.map { VoiceSettingsUi(it ?: false, availability) }
-
-    private val listExtras = combine(source.link, source.areas, preferences.presence) { link, areas, presence ->
-        ListExtras(link, roomCount(areas), presence?.enabled == true)
-    }
+    private val listExtras = combine(source.link, source.areas) { link, areas -> ListExtras(link, roomCount(areas)) }
 
     val state: StateFlow<SettingsUi> = combine(
-        combine(preferences.theme, profiles.state, push.status, voiceUi, preferences.energyView) { theme, profile, status, voice, energyView ->
-            SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), status, voice, energyView ?: EnergyViewPreference.CLASSIC)
+        combine(preferences.theme, profiles.state, preferences.energyView, platform.rows) { theme, profile, energyView, rows ->
+            SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), energyView ?: EnergyViewPreference.CLASSIC, platformRows = rows)
         },
         listExtras,
-    ) { ui, extras -> ui.copy(link = extras.link, roomCount = extras.roomCount, presenceEnabled = extras.presenceEnabled) }.stateIn(
+    ) { ui, extras -> ui.copy(link = extras.link, roomCount = extras.roomCount) }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         // Seeded from the live values so the radio does not show System for a frame.
         SettingsUi(
             preferences.theme.value ?: ThemePreference.SYSTEM,
             ConnectionSummary.from(profiles.state.value),
-            push.status.value,
-            VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability),
             preferences.energyView.value ?: EnergyViewPreference.CLASSIC,
             source.link.value,
             roomCount(source.areas.value),
-            preferences.presence.value?.enabled == true,
+            platform.currentRows(),
         ),
     )
 
-    fun setVoiceEnabled(enabled: Boolean) {
-        viewModelScope.launch { preferences.setVoiceEnabled(enabled) }
-    }
+    /** The list is shown again: let the platform re-read what may have changed while the app was away. */
+    fun refresh() = platform.refresh()
 
     fun setEnergyView(view: EnergyViewPreference) {
         viewModelScope.launch { preferences.setEnergyView(view) }
@@ -131,10 +121,4 @@ class SettingsViewModel internal constructor(
         viewModelScope.launch { profiles.setFrigate(FrigateConfig(normalized, username, pass)) }
         return true
     }
-
-    /** "Register again" in the push sheet (push alerts spec §7.4). */
-    fun registerAgain() = push.registerAgain()
-
-    /** The notification permission may have changed while the app was away. */
-    fun refreshPush() = push.refresh()
 }

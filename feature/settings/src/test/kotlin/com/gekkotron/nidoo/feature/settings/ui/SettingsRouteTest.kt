@@ -13,16 +13,12 @@ import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
-import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
-import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
+import com.gekkotron.nidoo.feature.settings.FakeEntitySource
+import com.gekkotron.nidoo.feature.settings.FakePlatformSettings
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
-import com.gekkotron.nidoo.transport.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import com.gekkotron.nidoo.push.PushStatus
-import androidx.compose.ui.test.onNodeWithText
-import java.time.Instant
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -30,7 +26,6 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h914dp")
@@ -52,106 +47,13 @@ class SettingsRouteTest {
     }
 
     @Test
-    fun `the push status is re-read every time the notifications page resumes`(): Unit {
-        val push = FakePushStatusSource()
+    fun `the list asks the platform to refresh on every resume`() {
+        val platform = FakePlatformSettings()
         val vm = SettingsViewModel(
             ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
             AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
-            push,
-            com.gekkotron.nidoo.feature.settings.FakeEntitySource(),
-            com.gekkotron.nidoo.feature.voice.SpeechAvailability.Status.Ready,
-        )
-        lateinit var registry: LifecycleRegistry
-        val owner = object : LifecycleOwner {
-            override val lifecycle: Lifecycle get() = registry
-        }
-        registry = LifecycleRegistry.createUnsafe(owner)
-        registry.currentState = Lifecycle.State.STARTED
-        compose.setContent {
-            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
-                NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsPageRoute(SettingsPage.NOTIFICATIONS, Route.AUTO, {}, {}, {}, {}, viewModel = vm, presenceSection = {})
-                }
-            }
-        }
-        compose.runOnIdle { assertEquals(0, push.refreshes) }
-        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
-        compose.runOnIdle { assertEquals(1, push.refreshes) }
-        compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
-        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
-        compose.runOnIdle { assertEquals(2, push.refreshes) }
-        assertTrue(push.refreshes >= 2)
-    }
-
-    @Test
-    fun `other pages leave the push status alone on resume`() {
-        val push = FakePushStatusSource()
-        val vm = SettingsViewModel(
-            ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
-            AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
-            push,
-            com.gekkotron.nidoo.feature.settings.FakeEntitySource(),
-            com.gekkotron.nidoo.feature.voice.SpeechAvailability.Status.Ready,
-        )
-        lateinit var registry: LifecycleRegistry
-        val owner = object : LifecycleOwner {
-            override val lifecycle: Lifecycle get() = registry
-        }
-        registry = LifecycleRegistry.createUnsafe(owner)
-        registry.currentState = Lifecycle.State.RESUMED
-        compose.setContent {
-            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
-                NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsPageRoute(SettingsPage.APPEARANCE, Route.AUTO, {}, {}, {}, {}, viewModel = vm, presenceSection = {})
-                }
-            }
-        }
-        compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
-        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
-        compose.runOnIdle { assertEquals(0, push.refreshes) }
-    }
-
-    @Test
-    fun `the registered age moves on at resume without a new status emission`() {
-        val at = Instant.parse("2026-10-07T10:00:00Z")
-        var clock = at.plusSeconds(120)
-        val push = FakePushStatusSource(PushStatus.Registered(at))
-        val vm = SettingsViewModel(
-            ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
-            AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
-            push,
-            com.gekkotron.nidoo.feature.settings.FakeEntitySource(),
-            com.gekkotron.nidoo.feature.voice.SpeechAvailability.Status.Ready,
-        )
-        lateinit var registry: LifecycleRegistry
-        val owner = object : LifecycleOwner {
-            override val lifecycle: Lifecycle get() = registry
-        }
-        registry = LifecycleRegistry.createUnsafe(owner)
-        registry.currentState = Lifecycle.State.RESUMED
-        compose.setContent {
-            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
-                NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsPageRoute(SettingsPage.NOTIFICATIONS, Route.AUTO, {}, {}, {}, {}, viewModel = vm, clock = { clock }, presenceSection = {})
-                }
-            }
-        }
-        compose.onNodeWithText("Registered · 2 min", substring = true).assertExists()
-        clock = at.plusSeconds(420)
-        compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
-        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
-        compose.onNodeWithText("Registered · 7 min", substring = true).assertExists()
-    }
-
-    @Test
-    fun `the list re-reads the push status on resume`() {
-        val push = FakePushStatusSource()
-        val vm = SettingsViewModel(
-            ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
-            AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
-            push,
-            com.gekkotron.nidoo.feature.settings.FakeEntitySource(),
-            com.gekkotron.nidoo.feature.voice.SpeechAvailability.Status.Ready,
+            FakeEntitySource(),
+            platform,
         )
         lateinit var registry: LifecycleRegistry
         val owner = object : LifecycleOwner {
@@ -166,8 +68,11 @@ class SettingsRouteTest {
                 }
             }
         }
-        compose.runOnIdle { assertEquals(0, push.refreshes) }
+        compose.runOnIdle { assertEquals(0, platform.refreshes) }
         compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
-        compose.runOnIdle { assertEquals(1, push.refreshes) }
+        compose.runOnIdle { assertEquals(1, platform.refreshes) }
+        compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
+        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
+        compose.runOnIdle { assertEquals(2, platform.refreshes) }
     }
 }

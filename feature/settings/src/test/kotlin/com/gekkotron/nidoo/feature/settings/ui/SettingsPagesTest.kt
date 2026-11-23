@@ -4,15 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.activity.compose.LocalActivityResultRegistryOwner
-import androidx.activity.result.ActivityResultRegistry
-import androidx.activity.result.ActivityResultRegistryOwner
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.core.app.ActivityOptionsCompat
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -26,10 +18,7 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
-import com.gekkotron.nidoo.feature.settings.presentation.VoiceSettingsUi
-import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.transport.Route
-import java.time.Instant
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,12 +41,12 @@ class SettingsPagesTest {
 
     private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "nidoo", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null, historyDefault = "http://192.168.1.91:8081")
 
-    private fun show(page: SettingsPage, state: SettingsUi = SettingsUi(connection = direct), route: Route? = Route.AUTO) = compose.setContent {
+    private fun show(page: SettingsPage, state: SettingsUi = SettingsUi(connection = direct), route: Route? = Route.AUTO, onOpenLicences: (() -> Unit)? = { licences++ }) = compose.setContent {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             SettingsPageScreen(
-                page, state, version = "0.12 · debug", route = route, now = Instant.now(), onBack = {},
+                page, state, version = "0.12 · debug", route = route, onBack = {},
                 onTheme = { themes += it }, onRouteChange = {}, onSetUpAgain = { setUpAgain++ },
-                onOpenLicences = { licences++ },
+                onOpenLicences = onOpenLicences,
                 onSaveHistoryUrl = { saveHistory(it) },
             )
         }
@@ -114,75 +103,17 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun licencesRowHiddenWithoutCallback() {
+        show(SettingsPage.ABOUT, onOpenLicences = null)
+        compose.onNodeWithText("Nidoo 0.12 · debug").assertExists()
+        compose.onNodeWithText("Open-source licences").assertDoesNotExist()
+    }
+
+    @Test
     fun `no profile shows no connection rows and does not crash`() {
         show(SettingsPage.CONNECTION, SettingsUi(connection = null), route = null)
         compose.onNodeWithText("Broker").assertDoesNotExist()
         compose.onNodeWithText("Set up connection again").performScrollTo().assertExists()
-    }
-
-    private var registerAgain = 0
-    private var channels = 0
-
-    private fun showPush(status: PushStatus) = compose.setContent {
-        NidooTheme(ThemeChoice.NIGHT_GLASS) {
-            SettingsPageScreen(
-                SettingsPage.NOTIFICATIONS, SettingsUi(connection = direct, push = status), version = "0.12 · debug", route = Route.AUTO,
-                now = Instant.now(), onBack = {},
-                onRegisterAgain = { registerAgain++ }, onOpenChannels = { channels++ },
-            )
-        }
-    }
-
-    @Test
-    fun `the notifications page shows each status in words`() {
-        showPush(PushStatus.Registered(Instant.now().minusSeconds(120)))
-        compose.onNodeWithText("Registered · ", substring = true).performScrollTo().assertExists()
-        compose.onNodeWithText("2 min", substring = true).assertExists()
-    }
-
-    @Test
-    fun `waiting`() {
-        showPush(PushStatus.Waiting)
-        compose.onNodeWithText("Waiting for connection").performScrollTo().assertExists()
-    }
-
-    @Test
-    fun `a failure carries its reason`() {
-        showPush(PushStatus.Failed("broker did not answer in time"))
-        compose.onNodeWithText("Failed: broker did not answer in time").performScrollTo().assertExists()
-    }
-
-    @Test
-    fun `notifications off and the demo have their own words`() {
-        showPush(PushStatus.NotificationsOff)
-        compose.onNodeWithText("Notifications off").performScrollTo().assertExists()
-    }
-
-    @Test
-    fun `the demo says it is not available`() {
-        showPush(PushStatus.Demo)
-        compose.onNodeWithText("Not available in demo").performScrollTo().assertExists()
-    }
-
-    @Test
-    fun `Register again reports and the page stays`() {
-        showPush(PushStatus.Waiting)
-        compose.onNodeWithText("Register again").performClick()
-        assertEquals(1, registerAgain)
-        compose.onNodeWithText("Notification channels").assertExists()
-    }
-
-    @Test
-    fun `Notification channels reports`() {
-        showPush(PushStatus.Waiting)
-        compose.onNodeWithText("Notification channels").performClick()
-        assertEquals(1, channels)
-    }
-
-    @Test
-    fun `in the demo Register again is disabled`() {
-        showPush(PushStatus.Demo)
-        compose.onNodeWithText("Register again").assertIsNotEnabled()
     }
 
     /** Drives the paused clock and lets the dialog window attach. */
@@ -200,7 +131,7 @@ class SettingsPagesTest {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 SettingsPageScreen(
                     SettingsPage.CONNECTION, SettingsUi(connection = direct), version = "0.12 · debug", route = null,
-                    now = Instant.now(), onBack = {},
+                    onBack = {},
                     onSaveHistoryUrl = { saveHistory(it) },
                 )
             }
@@ -287,7 +218,7 @@ class SettingsPagesTest {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 SettingsPageScreen(
                     SettingsPage.CONNECTION, SettingsUi(connection = connection), version = "0.12 · debug", route = null,
-                    now = Instant.now(), onBack = {},
+                    onBack = {},
                     onSaveFrigate = { u, n, p -> savedFrigate += Triple(u, n, p); frigateAccepts },
                 )
             }
@@ -368,7 +299,7 @@ class SettingsPagesTest {
         var backs = 0
         compose.setContent {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                SettingsPageScreen(page, SettingsUi(connection = direct), version = "0.12 · debug", route = null, now = Instant.now(), onBack = { backs++ })
+                SettingsPageScreen(page, SettingsUi(connection = direct), version = "0.12 · debug", route = null, onBack = { backs++ })
             }
         }
         val titles = mapOf(
@@ -382,30 +313,5 @@ class SettingsPagesTest {
             compose.onNode(hasContentDescription("Back")).performClick()
         }
         assertEquals(titles.size, backs)
-    }
-
-    @Test
-    fun `the voice page shows the denied snackbar when the mic is refused`() {
-        val voice = mutableListOf<Boolean>()
-        // Answers every permission request with "denied", as a user tapping Don't allow would.
-        val registry = object : ActivityResultRegistry() {
-            override fun <I, O> onLaunch(requestCode: Int, contract: ActivityResultContract<I, O>, input: I, options: ActivityOptionsCompat?) {
-                dispatchResult(requestCode, false)
-            }
-        }
-        val owner = object : ActivityResultRegistryOwner { override val activityResultRegistry = registry }
-        compose.setContent {
-            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
-                NidooTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsPageScreen(
-                        SettingsPage.VOICE, SettingsUi(connection = direct, voice = VoiceSettingsUi(enabled = false)), version = "0.12 · debug",
-                        route = null, now = Instant.now(), onBack = {}, onVoiceEnabled = { voice += it },
-                    )
-                }
-            }
-        }
-        compose.onNodeWithText("Voice commands").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Microphone permission is needed for voice commands.").fetchSemanticsNodes().isNotEmpty() }
-        assertEquals(listOf(false), voice)
     }
 }

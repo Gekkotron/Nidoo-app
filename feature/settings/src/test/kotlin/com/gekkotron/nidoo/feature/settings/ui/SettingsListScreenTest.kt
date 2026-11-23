@@ -1,6 +1,5 @@
 package com.gekkotron.nidoo.feature.settings.ui
 
-import com.gekkotron.nidoo.feature.voice.SpeechAvailability
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -16,11 +15,10 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsUi
-import com.gekkotron.nidoo.feature.settings.presentation.VoiceSettingsUi
-import com.gekkotron.nidoo.push.PushStatus
+import com.gekkotron.nidoo.feature.settings.presentation.PlatformRow
+import com.gekkotron.nidoo.feature.settings.presentation.RowStatus
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.transport.TransportMode
-import java.time.Instant
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,11 +40,15 @@ class SettingsListScreenTest {
     private val full = SettingsUi(
         theme = ThemePreference.IVOIRE,
         connection = direct,
-        push = PushStatus.Registered(Instant.parse("2026-11-02T10:00:00Z")),
-        voice = VoiceSettingsUi(enabled = true),
         link = LinkState.Connected(TransportMode.DIRECT),
         roomCount = 6,
-        presenceEnabled = true,
+        platformRows = androidRows(),
+    )
+
+    private fun androidRows(push: RowStatus = RowStatus.PUSH_REGISTERED, presence: RowStatus = RowStatus.ON, voice: RowStatus = RowStatus.ON) = listOf(
+        PlatformRow(SettingsPage.NOTIFICATIONS, push),
+        PlatformRow(SettingsPage.PRESENCE, presence),
+        PlatformRow(SettingsPage.VOICE, voice),
     )
 
     private fun show(state: SettingsUi = full) = compose.setContent {
@@ -96,7 +98,7 @@ class SettingsListScreenTest {
 
     @Test
     fun `the demo house shows no host and no push word`() {
-        show(full.copy(connection = ConnectionSummary.Demo, push = PushStatus.Demo))
+        show(full.copy(connection = ConnectionSummary.Demo, platformRows = androidRows(push = RowStatus.NONE)))
         compose.onAllNodesWithText("Demo house", useUnmergedTree = true).assertCountEquals(2)
         compose.onAllNodesWithText("Online", useUnmergedTree = true).assertCountEquals(0)
         for (word in listOf("Registered", "Waiting", "Failed", "Not available in demo")) {
@@ -115,8 +117,17 @@ class SettingsListScreenTest {
 
     @Test
     fun `voice reads Off when the phone cannot listen, as its page's toggle does`() {
-        show(full.copy(voice = full.voice.copy(availability = SpeechAvailability.Status.NoOnDevice)))
+        show(full.copy(platformRows = androidRows(voice = RowStatus.OFF)))
         compose.onNode(hasText("Voice") and hasText("Off") and hasClickAction()).assertExists()
+    }
+
+    @Test
+    fun noPlatformRowsMeansOnlyRooms() {
+        show(full.copy(platformRows = emptyList()))
+        for (text in listOf("Notifications", "Presence", "Voice")) {
+            compose.onAllNodesWithText(text, useUnmergedTree = true).assertCountEquals(0)
+        }
+        compose.onNodeWithText("Rooms").assertExists()
     }
 
     @Test

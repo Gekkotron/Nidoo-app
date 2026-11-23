@@ -6,16 +6,12 @@ import com.gekkotron.nidoo.data.FrigateConfig
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.ThemePreference
-import com.gekkotron.nidoo.data.PresenceConfig
 import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState
 import com.gekkotron.nidoo.feature.settings.FakeEntitySource
-import com.gekkotron.nidoo.feature.settings.FakePushStatusSource
-import com.gekkotron.nidoo.feature.voice.SpeechAvailability
-import kotlinx.coroutines.flow.MutableStateFlow
-import com.gekkotron.nidoo.push.PushStatus
+import com.gekkotron.nidoo.feature.settings.FakePlatformSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -72,7 +68,7 @@ class SettingsViewModelTest {
     fun `state follows the theme and the profile`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
+        val vm = SettingsViewModel(profiles, prefs, FakeEntitySource(), NoPlatformSettings)
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
         assertEquals(ConnectionSummary.Demo, vm.state.first { it.connection != null }.connection)
@@ -84,7 +80,7 @@ class SettingsViewModelTest {
     fun `setEnergyViewWritesPreference`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
+        val vm = SettingsViewModel(profiles, prefs, FakeEntitySource(), NoPlatformSettings)
         backgroundScope.launch { vm.state.collect {} }
         vm.setEnergyView(com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE)
         assertEquals(com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE, prefs.energyView.first { it == com.gekkotron.nidoo.data.EnergyViewPreference.ORBITE })
@@ -95,7 +91,7 @@ class SettingsViewModelTest {
     fun `a cleared profile leaves no connection summary`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
+        val vm = SettingsViewModel(profiles, prefs, FakeEntitySource(), NoPlatformSettings)
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
         vm.state.first { it.connection != null }
@@ -104,43 +100,41 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `state carries the push status and follows it`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs2.json"), storage)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile2.json"), PassThrough, storage)
-        val push = FakePushStatusSource(PushStatus.Waiting)
-        val vm = SettingsViewModel(profiles, prefs, push, FakeEntitySource(), SpeechAvailability.Status.Ready)
-        backgroundScope.launch { vm.state.collect {} }
-        assertEquals(PushStatus.Waiting, vm.state.value.push)
-        push.status.value = PushStatus.NotificationsOff
-        assertEquals(PushStatus.NotificationsOff, vm.state.first { it.push == PushStatus.NotificationsOff }.push)
-    }
-
-    @Test
-    fun `state carries the link, the room count without Unassigned, and the presence flag`() = runTest(dispatcher) {
+    fun `state carries the link and the room count without Unassigned`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs-list.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile-list.json"), PassThrough, storage)
         val source = FakeEntitySource()
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), source, SpeechAvailability.Status.Ready)
+        val vm = SettingsViewModel(profiles, prefs, source, NoPlatformSettings)
         backgroundScope.launch { vm.state.collect {} }
         source.link.value = LinkState.Offline(LinkState.Offline.PAUSED)
         source.areas.value = listOf(Area("kitchen", "Kitchen"), Area("salon", "Salon"), Area(UNASSIGNED_AREA, "Unassigned"))
-        prefs.setPresence(PresenceConfig(enabled = true))
-        val ui = vm.state.first { it.presenceEnabled && it.roomCount == 2 && it.link is LinkState.Offline }
+        val ui = vm.state.first { it.roomCount == 2 && it.link is LinkState.Offline }
         assertTrue(ui.link is LinkState.Offline)
         source.areas.value = listOf(Area(UNASSIGNED_AREA, "Unassigned"))
         assertEquals(0, vm.state.first { it.roomCount == 0 }.roomCount)
     }
 
     @Test
-    fun `register again and refresh go to the push source`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs3.json"), storage)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile3.json"), PassThrough, storage)
-        val push = FakePushStatusSource()
-        val vm = SettingsViewModel(profiles, prefs, push, FakeEntitySource(), SpeechAvailability.Status.Ready)
-        vm.registerAgain()
-        vm.refreshPush()
-        assertEquals(1, push.registerAgains)
-        assertEquals(1, push.refreshes)
+    fun `platformRowsReachTheUi`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs-p.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile-p.json"), PassThrough, storage)
+        val seed = PlatformRow(SettingsPage.PRESENCE, RowStatus.OFF)
+        val platform = FakePlatformSettings(listOf(seed))
+        val vm = SettingsViewModel(profiles, prefs, FakeEntitySource(), platform)
+        assertEquals(listOf(seed), vm.state.value.platformRows) // seeded from currentRows(), before anyone collects
+        backgroundScope.launch { vm.state.collect {} }
+        val row = PlatformRow(SettingsPage.VOICE, RowStatus.ON)
+        platform.flow.value = listOf(row)
+        assertEquals(listOf(row), vm.state.first { it.platformRows == listOf(row) }.platformRows)
+    }
+
+    @Test
+    fun `refreshAsksThePlatform`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs-r.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile-r.json"), PassThrough, storage)
+        val platform = FakePlatformSettings()
+        SettingsViewModel(profiles, prefs, FakeEntitySource(), platform).refresh()
+        assertEquals(1, platform.refreshes)
     }
 
     private suspend fun ProfileRepository.awaitHistoryUrl(u: String?) =
@@ -151,7 +145,7 @@ class SettingsViewModelTest {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs4.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile4.json"), PassThrough, storage)
         profiles.save(ConnectionProfile.Direct(LocalBroker("h")))
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
+        val vm = SettingsViewModel(profiles, prefs, FakeEntitySource(), NoPlatformSettings)
         assertTrue(vm.setHistoryUrl(" http://192.168.1.91:8081/ "))
         profiles.awaitHistoryUrl("http://192.168.1.91:8081")
         assertFalse(vm.setHistoryUrl("192.168.1.91"))
@@ -167,7 +161,7 @@ class SettingsViewModelTest {
     fun `setFrigate saves, keeps the password for the same user only, and a blank url clears`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs-f.json"), storage)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile-f.json"), PassThrough, storage)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
+        val vm = SettingsViewModel(profiles, prefs, FakeEntitySource(), NoPlatformSettings)
         profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
         profiles.state.first { it is ProfileState.Ready }
 

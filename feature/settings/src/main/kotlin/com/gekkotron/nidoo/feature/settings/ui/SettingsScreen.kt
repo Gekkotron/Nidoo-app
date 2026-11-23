@@ -9,14 +9,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,23 +28,17 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
-import com.gekkotron.nidoo.designsystem.permissions.openNotificationSettings
 import com.gekkotron.nidoo.feature.settings.R
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.nidoo.feature.settings.presentation.appVersion
 import com.gekkotron.nidoo.transport.Route
-import kotlinx.coroutines.delay
-import java.time.Instant
 
-/** The Settings list. The push status is re-read on every resume: notification permission may have changed away. */
+/** The Settings list. The platform re-reads what the system may have changed (Android's push status) on every resume. */
 @Composable
 fun SettingsRoute(
     onOpenPage: (SettingsPage) -> Unit,
@@ -58,55 +50,33 @@ fun SettingsRoute(
     val context = LocalContext.current
     val version = remember { appVersion(context) }
     LifecycleResumeEffect(viewModel) {
-        viewModel.refreshPush()
+        viewModel.refresh()
         onPauseOrDispose {}
     }
     SettingsListScreen(state, version, onOpenPage, onOpenRooms, onBack)
 }
 
-/** One Settings sub-page, wired to the view-model. */
+/** One Settings sub-page, wired to the view-model. The Android-only pages come through [platformPage]. */
 @Composable
 fun SettingsPageRoute(
     page: SettingsPage,
     route: Route?,
     onRouteChange: (Route) -> Unit,
     onSetUpAgain: () -> Unit,
-    onOpenLicences: () -> Unit,
+    onOpenLicences: (() -> Unit)?,
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
-    clock: () -> Instant = Instant::now,
-    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = { info -> PresenceSettingsSlot(onInfoMessage = info, showTitle = false) },
+    platformPage: @Composable (SettingsPage, SnackbarHostState) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val version = remember { appVersion(context) }
-    // The "N min ago" text must move on without a new status emission, so the clock is state here. Only the
-    // Notifications page shows the push status, so only it ticks and re-reads it (settings sub-pages spec).
-    var now by remember { mutableStateOf(clock()) }
-    if (page == SettingsPage.NOTIFICATIONS) {
-        val owner = LocalLifecycleOwner.current
-        LaunchedEffect(owner) {
-            owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                while (true) {
-                    delay(60_000)
-                    now = clock()
-                }
-            }
-        }
-        LifecycleResumeEffect(viewModel) {
-            now = clock()
-            viewModel.refreshPush()
-            onPauseOrDispose {}
-        }
-    }
     SettingsPageScreen(
-        page, state, version, route, now, onBack,
+        page, state, version, route, onBack,
         onTheme = viewModel::setTheme, onEnergyView = viewModel::setEnergyView,
-        onRegisterAgain = viewModel::registerAgain, onOpenChannels = { openNotificationSettings(context) },
         onRouteChange = onRouteChange, onSetUpAgain = onSetUpAgain,
         onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
-        onVoiceEnabled = viewModel::setVoiceEnabled,
-        onOpenLicences = onOpenLicences, presenceSection = presenceSection,
+        onOpenLicences = onOpenLicences, platformPage = platformPage,
     )
 }
 
