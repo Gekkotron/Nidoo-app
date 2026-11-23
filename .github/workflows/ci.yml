@@ -67,7 +67,7 @@ jobs:
             # :app:testDebugUnitTest in despite -x :app:koverXmlReport, and that task
             # deadlocks next to the parallel :feature:*:test tasks (6 h hang on 2026-10-29).
             tasks: >-
-              :feature:home:test
+              :feature:home:testAndroidHostTest
               :feature:onboarding:testAndroidHostTest
               :feature:energy:test
               :feature:history:test
@@ -167,6 +167,7 @@ jobs:
           :core:climate:iosSimulatorArm64Test
           :core:assist:iosSimulatorArm64Test
           :feature:onboarding:iosSimulatorArm64Test
+          :feature:home:iosSimulatorArm64Test
           :shared:iosSimulatorArm64Test
           :shared:linkDebugFrameworkIosArm64
           -Dorg.gradle.configuration-cache=false --stacktrace --continue

@@ -6,9 +6,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import java.net.URLEncoder
 
-/** The hub answered a flow toggle with a non-2xx [status]. */
-class FlowsHttpError(val status: Int) : Exception("the hub answered HTTP $status")
-
 @Serializable
 private class EnabledBody(val enabled: Boolean)
 

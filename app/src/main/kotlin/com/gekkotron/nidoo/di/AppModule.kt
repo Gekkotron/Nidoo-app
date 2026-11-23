@@ -16,7 +16,6 @@ import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.dashboards.DashboardsRepository
 import com.gekkotron.nidoo.flows.FlowsRepository
-import com.gekkotron.nidoo.feature.home.presentation.DefaultDispatcher
 import com.gekkotron.nidoo.connection.ConnectionTester
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.transport.ActiveTransport
@@ -26,7 +25,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,10 +43,6 @@ object AppModule {
     @Singleton
     @ApplicationScope
     fun applicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    @Provides
-    @DefaultDispatcher
-    fun defaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
 
     @Provides
     @Singleton
