@@ -12,7 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.util.Locale
+import com.gekkotron.nidoo.format.systemLocale
 import javax.inject.Inject
 
 /** What the override sheet opened from another tab has to show. */
@@ -38,7 +38,7 @@ class CustomizeViewModel @Inject constructor(
     fun load(id: String): Flow<CustomizeLoad> = combine(source.entities, source.states(), source.areas) { entities, states, areas ->
         when {
             entities.isEmpty() -> CustomizeLoad.Loading
-            else -> HomeUiBuilder.cardFor(entities, states, areas, id, Locale.getDefault(), labels, history.available.value)
+            else -> HomeUiBuilder.cardFor(entities, states, areas, id, systemLocale(), labels, history.available.value)
                 ?.let {
                     val occupied = entities.values.mapTo(mutableSetOf()) { e -> e.area }
                     CustomizeLoad.Ready(it, areas.filter { a -> a.id != UNASSIGNED_AREA && a.id in occupied })

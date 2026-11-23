@@ -33,7 +33,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalTime
 import java.util.Locale
 import kotlin.test.assertTrue
 
@@ -77,7 +76,7 @@ class GroupScreenshotTest {
     }
 
     private fun home(theme: ThemeChoice) = compose.setContent {
-        NidooTheme(theme) { NidooBackground { HomeScreen(state = state(), onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON) } }
+        NidooTheme(theme) { NidooBackground { HomeScreen(state = state(), onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12) } }
     }
 
     private fun sheet(theme: ThemeChoice, kind: Kind) = compose.setContent {

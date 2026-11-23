@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
+import com.gekkotron.nidoo.format.systemLocale
 import javax.inject.Inject
 
 /** The Rooms step (spec §5.2 step 5): runs on the live source, so every choice is written at once. */
@@ -34,7 +34,7 @@ class RoomsViewModel @Inject constructor(
 
     // Captured from the first build, so assigning a row doesn't move it (spec §5.2 step 5); rows that
     // appear later (a fresh device announcement) are simply not in it yet and sort after the rest.
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var rowOrder: List<String> = emptyList()
 
     val state: StateFlow<RoomsUiState> = combine(
@@ -43,7 +43,7 @@ class RoomsViewModel @Inject constructor(
         source.areas,
         savedState.getStateFlow(KEY_CHANGED, false),
     ) { entities, devices, areas, changed ->
-        val built = RoomsUiBuilder.build(entities, devices, areas, Locale.getDefault())
+        val built = RoomsUiBuilder.build(entities, devices, areas, systemLocale())
         if (rowOrder.isEmpty()) rowOrder = built.rows.map { it.id }
         val rank = rowOrder.withIndex().associate { (i, id) -> id to i }
         val ordered = built.rows.sortedBy { rank[it.id] ?: Int.MAX_VALUE }

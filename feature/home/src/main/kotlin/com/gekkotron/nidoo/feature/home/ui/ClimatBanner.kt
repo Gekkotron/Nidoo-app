@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -41,22 +40,20 @@ import com.gekkotron.nidoo.feature.home.presentation.CardFormatter
 import com.gekkotron.nidoo.feature.home.presentation.ClimatBannerUi
 import com.gekkotron.nidoo.feature.home.presentation.ClimatWhy
 import com.gekkotron.nidoo.feature.home.presentation.StepMath
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
+import com.gekkotron.nidoo.format.formatEpochSeconds
+import com.gekkotron.nidoo.format.systemLocale
+import kotlin.time.Clock
 
 /** The boost lengths the app offers, in minutes (spec §6). */
 internal val BOOST_DURATIONS = listOf(60, 90, 120)
 private const val BOOST_STEP = 0.5
 private const val DEFAULT_BOOST_TARGET = 20.0
 
-private val clockFormat = DateTimeFormatter.ofPattern("HH:mm")
-
 /** Unix seconds as the phone's local "HH:mm". */
-private fun clock(unixSec: Long): String = clockFormat.format(Instant.ofEpochSecond(unixSec).atZone(ZoneId.systemDefault()))
+private fun clock(unixSec: Long): String = formatEpochSeconds(unixSec, "HH:mm", systemLocale())
 
-private fun degrees(value: Double?, locale: Locale): String = (value?.let { CardFormatter.number(it, locale) } ?: "—") + "°"
+private fun degrees(value: Double?, locale: FormatLocale): String = (value?.let { CardFormatter.number(it, locale) } ?: "—") + "°"
 
 @Composable
 private fun whyText(why: ClimatWhy): String = stringResource(
@@ -77,7 +74,7 @@ private fun whyText(why: ClimatWhy): String = stringResource(
 /** The room's Climat banner (mockup option A): room reading, Climat's target and why, with Boost or Cancel. */
 @Composable
 internal fun ClimatBanner(ui: ClimatBannerUi, onBoost: () -> Unit, onCancel: () -> Unit) {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = currentFormatLocale()
     NidooCard(
         modifier = Modifier.fillMaxWidth().testTag("climat-banner"),
         accent = ui.boost != null,
@@ -127,8 +124,8 @@ internal fun BoostSheet(
     onCancel: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val locale = LocalConfiguration.current.locales[0]
-    val nowSec = remember { System.currentTimeMillis() / 1_000 }
+    val locale = currentFormatLocale()
+    val nowSec = remember { Clock.System.now().epochSeconds }
     val start = (ui.boost?.target ?: ui.target ?: DEFAULT_BOOST_TARGET).coerceIn(ui.min, ui.max)
     var target by remember(ui.zone) { mutableDoubleStateOf(start) }
     var minutes by remember(ui.zone) { mutableIntStateOf(ui.boost?.let { nearestDuration((it.until - nowSec) / 60) } ?: BOOST_DURATIONS.first()) }

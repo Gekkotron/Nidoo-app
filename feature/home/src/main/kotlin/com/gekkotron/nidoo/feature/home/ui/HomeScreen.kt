@@ -63,8 +63,6 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -99,7 +97,8 @@ import com.gekkotron.nidoo.model.Command
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.UiOverride
 import com.gekkotron.nidoo.transport.Route
-import java.time.LocalTime
+import com.gekkotron.nidoo.format.localHour
+import kotlin.time.Clock
 
 @Composable
 fun HomeRoute(
@@ -109,8 +108,9 @@ fun HomeRoute(
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    onOpenHistory: (String) -> Unit = {},
+    onOpenHistory: ((String) -> Unit)? = null,
     onOpenEnergy: () -> Unit = {},
+    onOpenVoice: (() -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
 ) {
@@ -175,6 +175,7 @@ fun HomeRoute(
         onSendRoom = viewModel::sendRoom,
         onCustomizeGroup = { id, name, favorite -> viewModel.customizeGroup(id, name, favorite, cardOf(id)) },
         voiceEnabled = voiceEnabled,
+        onOpenVoice = onOpenVoice,
         dashboard = dashboard,
         onSelectDashboard = dashboardViewModel::select,
         onRunFlow = dashboardViewModel::runFlow,
@@ -193,7 +194,7 @@ fun HomeScreen(
     onTap: (CardUi) -> Unit,
     onSend: (String, Command) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    now: LocalTime = LocalTime.now(),
+    hour: Int = localHour(Clock.System.now().epochSeconds),
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     onCustomize: (String, List<Area>, UiOverride) -> Unit = { _, _, _ -> },
     onOpenSettings: () -> Unit = {},
@@ -201,11 +202,12 @@ fun HomeScreen(
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     onSearch: (String) -> Unit = {},
-    onOpenHistory: (String) -> Unit = {},
+    onOpenHistory: ((String) -> Unit)? = null,
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
     onSendRoom: (areaId: String, kind: RoomKind) -> Unit = { _, _ -> },
     onCustomizeGroup: (String, String, Boolean) -> Unit = { _, _, _ -> },
     voiceEnabled: Boolean = false,
+    onOpenVoice: (() -> Unit)? = null,
     dashboard: DashboardScreenState = DashboardScreenState(),
     onSelectDashboard: (String) -> Unit = {},
     onRunFlow: (String) -> Unit = {},
@@ -279,7 +281,7 @@ fun HomeScreen(
     val cardClick: (CardUi) -> Unit = { card ->
         when (card.tap) {
             TapAction.OPEN_SHEET -> sheetId = card.id
-            TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
+            TapAction.OPEN_HISTORY -> onOpenHistory?.invoke(card.id)
             else -> onTap(card)
         }
     }
@@ -317,7 +319,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView.takeIf { !searching }, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, hour, dashboard = dashboard, showGreeting = showDashboardHeader, room = roomInView.takeIf { !searching }, onSwitcherClick = { picker = true }, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, showSearch = !fieldAlways, onSearchClick = { searchOpen = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled, onVoiceClick = onOpenVoice) }
                 if (searching || fieldAlways) {
                     val opened = searchOpen && !fieldAlways
                     item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
@@ -435,7 +437,7 @@ fun HomeScreen(
                 onSend = onSend,
                 onCustomize = { sheetId = null; customizeId = sheetCard.id },
                 onDismiss = { sheetId = null },
-                onOpenHistory = { sheetId = null; onOpenHistory(sheetCard.id) },
+                onOpenHistory = onOpenHistory?.let { open -> { sheetId = null; open(sheetCard.id) } },
                 onSendGroup = onSendGroup,
                 onCustomizeMember = { member -> sheetId = null; customizeId = member },
             )
@@ -526,10 +528,8 @@ private fun SectionLabel(section: HomeSection) {
     )
 }
 
-private const val VOICE_ACTIVITY = "com.gekkotron.nidoo.feature.voice.VoiceActivity"
-
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, room: RoomCardUi? = null, showSearch: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
+private fun HomeHeader(state: HomeUiState, hour: Int, dashboard: DashboardScreenState = DashboardScreenState(), showGreeting: Boolean = true, room: RoomCardUi? = null, showSearch: Boolean = true, onSwitcherClick: () -> Unit = {}, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false, onVoiceClick: (() -> Unit)? = null) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
@@ -550,7 +550,7 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
             Text(roomName(room), style = NidooTheme.type.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("room-title").semantics { heading() })
             Text(roomStatus(room), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, modifier = Modifier.testTag("room-status"))
         } else if (showGreeting) Row(verticalAlignment = Alignment.Bottom) {
-            Text(greeting(now), style = NidooTheme.type.display, modifier = Modifier.weight(1f))
+            Text(greeting(hour), style = NidooTheme.type.display, modifier = Modifier.weight(1f))
             state.hero?.let { hero ->
                 Text(
                     cardValueText(hero.value),
@@ -577,11 +577,10 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, dashboard: DashboardS
         Row(verticalAlignment = Alignment.CenterVertically) {
             LinkPill(state.link, onClick = onPillClick)
             Spacer(Modifier.weight(1f))
-            if (voiceEnabled) {
-                val ctx = LocalContext.current
+            if (voiceEnabled && onVoiceClick != null) {
                 val voiceLabel = stringResource(R.string.home_voice_cd)
                 // Addressed by class name so :feature:home does not depend on :feature:voice.
-                IconButton(onClick = { ctx.startActivity(Intent().setClassName(ctx, VOICE_ACTIVITY)) }) {
+                IconButton(onClick = onVoiceClick) {
                     StaticIcon(NidooGlyph.MIC, modifier = Modifier.size(24.dp).semantics { contentDescription = voiceLabel })
                 }
             }
@@ -621,8 +620,8 @@ private fun HomeChips(state: HomeUiState, inRoom: Boolean, onSelect: (RoomFilter
 }
 
 @Composable
-private fun greeting(now: LocalTime): String = stringResource(
-    when (now.hour) {
+private fun greeting(hour: Int): String = stringResource(
+    when (hour) {
         in 5..11 -> R.string.greeting_morning
         in 12..17 -> R.string.greeting_afternoon
         else -> R.string.greeting_evening

@@ -14,7 +14,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalTime
 import kotlin.test.assertTrue
 
 /** Dashboards spec: one tile of every content type, in both themes. */
@@ -30,7 +29,7 @@ class DashboardScreenshotTest {
             NidooTheme(theme) {
                 NidooBackground {
                     HomeScreen(
-                        state = DashboardFixtures.house, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                        state = DashboardFixtures.house, onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                         dashboard = DashboardFixtures.everything(),
                     )
                 }

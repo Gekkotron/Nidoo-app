@@ -2,15 +2,13 @@ package com.gekkotron.nidoo.feature.home.presentation
 
 import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
-import java.text.Normalizer
-import java.util.Locale
+import com.gekkotron.nidoo.format.stripMarks
 
 /** A typed room name → the `Area` it means: an existing room with that name, or a new one with a fresh id. */
 object AreaNames {
     data class Resolved(val area: Area, val isNew: Boolean)
 
     private val SPACES = Regex("\\s+")
-    private val MARKS = Regex("\\p{M}+")
     private val NON_ID = Regex("[^a-z0-9]+")
 
     /** @return null for a blank name, or for "Unassigned", which is reserved (it is what "No room" writes). */
@@ -33,8 +31,8 @@ object AreaNames {
 
     /** Lowercase ASCII letters and digits joined by `_`; empty when the name has none (emoji, CJK…). */
     private fun key(name: String): String =
-        Normalizer.normalize(name, Normalizer.Form.NFD).replace(MARKS, "")
-            .lowercase(Locale.ROOT).replace(NON_ID, "_").trim('_')
+        stripMarks(name)
+            .lowercase().replace(NON_ID, "_").trim('_')
 
     /** The `_areas` document after adding [area]. Implicit areas (from suggested_area) become declared ones. */
     fun withArea(existing: List<Area>, area: Area): List<Area> = existing.filter { it.id != UNASSIGNED_AREA } + area

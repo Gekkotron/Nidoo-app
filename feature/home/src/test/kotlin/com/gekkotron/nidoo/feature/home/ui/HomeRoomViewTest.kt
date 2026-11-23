@@ -37,7 +37,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.LocalTime
 import java.util.Locale
 import kotlin.test.assertEquals
 
@@ -80,7 +79,7 @@ class HomeRoomViewTest {
                     onSelect = { selected = it; query = "" },
                     onTap = {}, onSend = { _, _ -> },
                     onSearch = { query = it },
-                    now = LocalTime.NOON,
+                    hour = 12,
                 )
             }
         }

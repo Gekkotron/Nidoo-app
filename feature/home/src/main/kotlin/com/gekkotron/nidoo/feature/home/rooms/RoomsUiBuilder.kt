@@ -4,13 +4,13 @@ import com.gekkotron.nidoo.model.Area
 import com.gekkotron.nidoo.model.Device
 import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
 
 /** Entities + devices + areas → one row per device, the ones without a room first (spec §5.2 step 5). */
 object RoomsUiBuilder {
     private const val ENTITY_ROW = "entity:"
 
-    fun build(entities: Map<String, Entity>, devices: Map<String, Device>, areas: List<Area>, locale: Locale): RoomsUiState {
+    fun build(entities: Map<String, Entity>, devices: Map<String, Device>, areas: List<Area>, locale: FormatLocale): RoomsUiState {
         val names = areas.associate { it.id to it.name }
         val rows = entities.values
             .groupBy { e -> e.deviceId?.takeIf { it in devices } ?: (ENTITY_ROW + e.uniqueId) }

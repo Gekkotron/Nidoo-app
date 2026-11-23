@@ -40,7 +40,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.LocalTime
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -72,7 +71,7 @@ class LightSheetTest {
             HomeScreen(
                 state = HomeUiBuilder.build(entities, states, emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
                 onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
-                now = LocalTime.NOON,
+                hour = 12,
             )
         }
     }
@@ -140,7 +139,7 @@ class LightSheetTest {
                 HomeScreen(
                     state = HomeUiBuilder.build(entities, whiteStates, emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
                     onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
-                    now = LocalTime.NOON,
+                    hour = 12,
                 )
             }
         }
@@ -186,7 +185,7 @@ class LightSheetTest {
                 HomeScreen(
                     state = HomeUiBuilder.build(entities, states + ("strip" to strip.value), emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
                     onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
-                    now = LocalTime.NOON,
+                    hour = 12,
                 )
             }
         }
@@ -213,7 +212,7 @@ class LightSheetTest {
                 HomeScreen(
                     state = HomeUiBuilder.build(entities, states + ("lamp" to lamp.value), emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
                     onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
-                    now = LocalTime.NOON,
+                    hour = 12,
                 )
             }
         }

@@ -1,14 +1,12 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
-import java.text.Normalizer
-import java.util.Locale
+import com.gekkotron.nidoo.format.stripMarks
 
 /** Home search (case- and accent-insensitive; every word of the query must appear in one of the fields). */
 object SearchMatch {
-    private val marks = Regex("\\p{Mn}+")
     private val spaces = Regex("\\s+")
 
-    fun normalize(text: String): String = marks.replace(Normalizer.normalize(text, Normalizer.Form.NFD), "").lowercase(Locale.ROOT)
+    fun normalize(text: String): String = stripMarks(text).lowercase()
 
     fun matches(query: String, vararg fields: String?): Boolean {
         val words = normalize(query).split(spaces).filter { it.isNotEmpty() }

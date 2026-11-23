@@ -3,12 +3,12 @@ package com.gekkotron.nidoo.feature.home.presentation
 import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
-import java.text.NumberFormat
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
+import com.gekkotron.nidoo.format.formatNumber
 import kotlin.math.roundToInt
 
 object CardFormatter {
-    fun format(entity: Entity, value: StateValue, locale: Locale): CardValue = when (value) {
+    fun format(entity: Entity, value: StateValue, locale: FormatLocale): CardValue = when (value) {
         StateValue.Unknown, StateValue.Unsupported -> CardValue.None
         is StateValue.OnOff ->
             if (entity.kind == Kind.BINARY_SENSOR) CardValue.Contact(entity.deviceClass, value.on) else CardValue.OnOff(value.on)
@@ -32,9 +32,6 @@ object CardFormatter {
     /** 0..255 → 0..100. */
     fun percent(brightness: Int): Int = (brightness * 100 / 255.0).roundToInt()
 
-    fun number(value: Double, locale: Locale): String =
-        NumberFormat.getNumberInstance(locale).apply {
-            maximumFractionDigits = 1
-            minimumFractionDigits = 0
-        }.format(value)
+    fun number(value: Double, locale: FormatLocale): String =
+        formatNumber(value, locale, minFraction = 0, maxFraction = 1)
 }

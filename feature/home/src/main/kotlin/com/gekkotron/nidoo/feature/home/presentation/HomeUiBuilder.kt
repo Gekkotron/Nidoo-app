@@ -11,7 +11,7 @@ import com.gekkotron.nidoo.model.Placement
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.transport.LinkState
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
 
 /** Translates an entity label published by the source ("Local temperature"); null keeps it as is. */
 fun interface LabelText {
@@ -32,7 +32,7 @@ object HomeUiBuilder {
         areas: List<Area>,
         selected: RoomFilter,
         link: LinkState,
-        locale: Locale,
+        locale: FormatLocale,
         labels: LabelText = LabelText { null },
         /** Non-blank: search every room, hidden devices included, instead of [selected]. */
         query: String = "",
@@ -147,7 +147,7 @@ object HomeUiBuilder {
         states: Map<String, EntityState>,
         areas: List<Area>,
         id: String,
-        locale: Locale,
+        locale: FormatLocale,
         labels: LabelText = LabelText { null },
         historyEnabled: Boolean = false,
     ): CardUi? {
@@ -165,7 +165,7 @@ object HomeUiBuilder {
         entities: Map<String, Entity>,
         states: Map<String, EntityState>,
         areaNames: Map<String, String>,
-        locale: Locale,
+        locale: FormatLocale,
         labels: LabelText,
         historyEnabled: Boolean,
     ): List<CardUi> {
@@ -217,7 +217,7 @@ object HomeUiBuilder {
         name: String,
         state: EntityState?,
         areaNames: Map<String, String>,
-        locale: Locale,
+        locale: FormatLocale,
         companions: List<CardUi>,
         historyEnabled: Boolean,
     ): CardUi {

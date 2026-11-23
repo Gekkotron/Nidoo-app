@@ -45,7 +45,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
+import com.gekkotron.nidoo.format.systemLocale
+import kotlin.time.Clock
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -73,7 +74,7 @@ class DashboardViewModel internal constructor(
         history: HistoryClient,
         labels: LabelText,
         @DefaultDispatcher dispatcher: CoroutineDispatcher,
-    ) : this(source, dashboards, flows, preferences, history, labels, dispatcher, 5.minutes, System::currentTimeMillis)
+    ) : this(source, dashboards, flows, preferences, history, labels, dispatcher, 5.minutes, { Clock.System.now().toEpochMilliseconds() })
 
     /** What the shown dashboard needs fetched: energy windows (days) and history series (entity, range). */
     private data class Needs(val days: Set<Int> = emptySet(), val series: Set<Pair<String, WidgetRange>> = emptySet())
@@ -146,7 +147,7 @@ class DashboardViewModel internal constructor(
                         null
                     }
                     val extras = TileExtras(flowSnap.flows, EnergyFigures(fetchedNow.kwhByDays, live), fetchedNow.series, flowSnap.isSettled)
-                    val ui = DashboardUiBuilder.build(dashboard, house, extras, Locale.getDefault(), labels, clock())
+                    val ui = DashboardUiBuilder.build(dashboard, house, extras, systemLocale(), labels, clock())
                     DashboardScreenState(true, entriesOf(sel), dashboard.id, DashboardView.Shown(ui), runningNow)
                 }
             }

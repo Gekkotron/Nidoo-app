@@ -16,7 +16,7 @@ import com.gekkotron.nidoo.model.EntityState
 import com.gekkotron.nidoo.model.HubGroup
 import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.transport.LinkState
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
 
 /** Everything of the House a dashboard tile can draw from. */
 data class HouseData(
@@ -46,7 +46,7 @@ object DashboardUiBuilder {
         dashboard: Dashboard,
         house: HouseData,
         extras: TileExtras,
-        locale: Locale,
+        locale: FormatLocale,
         labels: LabelText,
         nowMillis: Long,
     ): DashboardUi {
@@ -74,7 +74,7 @@ object DashboardUiBuilder {
         else -> HistoryRange.H24
     }
 
-    private fun content(w: Widget, h: HouseData, x: TileExtras, locale: Locale, labels: LabelText, now: Long): TileContent {
+    private fun content(w: Widget, h: HouseData, x: TileExtras, locale: FormatLocale, labels: LabelText, now: Long): TileContent {
         val c = w.config
         return when (w.kind) {
             WidgetKind.LIGHT, WidgetKind.COVER, WidgetKind.CLIMATE, WidgetKind.SENSOR, WidgetKind.WATER_HEATER, WidgetKind.MEDIA_PLAYER -> {
@@ -104,7 +104,7 @@ object DashboardUiBuilder {
         }
     }
 
-    private fun room(areaId: String?, title: String?, h: HouseData, locale: Locale, labels: LabelText): TileContent {
+    private fun room(areaId: String?, title: String?, h: HouseData, locale: FormatLocale, labels: LabelText): TileContent {
         val area = h.areas.firstOrNull { it.id == areaId } ?: return TileContent.Unavailable(title)
         val filter = RoomFilter.Area(area.id)
         val ui = HomeUiBuilder.build(h.entities, h.states, h.areas, filter, h.link, locale, labels, historyEnabled = h.historyEnabled, hubGroups = h.hubGroups)
@@ -120,7 +120,7 @@ object DashboardUiBuilder {
         EnergyMetric.SELF_CONSUMPTION_PCT -> e.live?.selfConsumption?.let(EnergyValue::Percent)
     }
 
-    private fun history(w: Widget, h: HouseData, x: TileExtras, locale: Locale, labels: LabelText, nowMillis: Long): TileContent {
+    private fun history(w: Widget, h: HouseData, x: TileExtras, locale: FormatLocale, labels: LabelText, nowMillis: Long): TileContent {
         val c = w.config
         val entity = c.entityId?.let { h.entities[it] }
         val range = c.range

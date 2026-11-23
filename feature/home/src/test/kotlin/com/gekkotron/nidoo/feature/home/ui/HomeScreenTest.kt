@@ -54,7 +54,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.LocalTime
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -107,7 +106,7 @@ class HomeScreenTest {
                     onCustomize = { id, _, o -> customized += id to o },
                     onOpenHistory = { histories += it },
                     onSendRoom = { area, kind -> roomSends += area to kind },
-                    now = LocalTime.NOON,
+                    hour = 12,
                     windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
             }
@@ -125,7 +124,7 @@ class HomeScreenTest {
             HomeScreen(
                 state = state,
                 onSelect = {}, onTap = {}, onSend = { _, _ -> },
-                now = LocalTime.NOON,
+                hour = 12,
                 onStartBoost = { z, t, m -> boosts += Triple(z, t, m) },
             )
         }
@@ -148,7 +147,7 @@ class HomeScreenTest {
         compose.setContent {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
-                    state = ui, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    state = ui, onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                     climatResults = results,
                     onCancelBoost = { ui = ui.copy(climatSending = true) },
                     onDismissClimatError = { ui = ui.copy(climatError = false) },
@@ -171,7 +170,7 @@ class HomeScreenTest {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
                     state = state().copy(selected = RoomFilter.Area("living"), climat = climat),
-                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                     climatResults = results,
                 )
             }
@@ -210,7 +209,7 @@ class HomeScreenTest {
         compose.setContent {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
-                    state = state(), onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    state = state(), onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                     onOpenSettings = { list++ }, onOpenConnectionSettings = { connection++ },
                 )
             }
@@ -391,7 +390,7 @@ class HomeScreenTest {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
                     state = HomeUiBuilder.build(withHidden, states, areas, RoomFilter.Hidden, LinkState.Connected(TransportMode.DEMO), Locale.US),
-                    onSelect = { selects += it }, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onSelect = { selects += it }, onTap = {}, onSend = { _, _ -> }, hour = 12,
                 )
             }
         }
@@ -408,7 +407,7 @@ class HomeScreenTest {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
                     state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
-                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                     onCustomize = { id, _, o -> customizedHere += id to o },
                 )
             }
@@ -426,7 +425,7 @@ class HomeScreenTest {
             NidooTheme(ThemeChoice.NIGHT_GLASS) {
                 HomeScreen(
                     state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
-                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                 )
             }
         }
@@ -491,7 +490,7 @@ class HomeScreenTest {
                     onTap = { taps += it.id },
                     onSend = { _, _ -> },
                     onOpenHistory = { histories += it },
-                    now = LocalTime.NOON,
+                    hour = 12,
                 )
             }
         }

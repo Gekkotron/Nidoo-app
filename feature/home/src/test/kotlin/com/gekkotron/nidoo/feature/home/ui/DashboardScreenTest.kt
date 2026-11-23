@@ -28,7 +28,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -45,7 +44,7 @@ class DashboardScreenTest {
     private fun show(dashboard: DashboardScreenState, house: HomeUiState = DashboardFixtures.house) = compose.setContent {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             HomeScreen(
-                state = house, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                state = house, onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12,
                 dashboard = dashboard,
                 onSelectDashboard = { picks += it },
                 onRunFlow = { runs += it },

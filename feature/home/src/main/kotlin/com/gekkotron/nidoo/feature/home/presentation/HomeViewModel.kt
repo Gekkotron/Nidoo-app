@@ -40,7 +40,8 @@ import com.gekkotron.nidoo.model.Kind
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.async
-import java.util.Locale
+import com.gekkotron.nidoo.format.systemLocale
+import kotlin.time.Clock
 import javax.inject.Inject
 import javax.inject.Qualifier
 
@@ -76,7 +77,7 @@ class HomeViewModel @Inject constructor(
         combine(source.link, history.available, source.hubGroups, ::Triple),
     ) { entities, states, areas, (key, query), linkHistoryHub ->
         val (link, historyOn, hubGroups) = linkHistoryHub
-        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels, query, historyOn, hubGroups)
+        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, systemLocale(), labels, query, historyOn, hubGroups)
         // The selected chip may no longer exist (its last card was unhidden, its area emptied…); build()
         // already falls back to All for this state, but the saved key must follow, or a stale "hidden"
         // key comes back to life and jumps the screen back there as soon as something is hidden again.
@@ -92,7 +93,7 @@ class HomeViewModel @Inject constructor(
     /** Wall-clock seconds, every [CLIMAT_TICK_MS], so a boost's end and expiry stay right on screen. */
     private val climatClock = flow {
         while (true) {
-            emit(System.currentTimeMillis() / 1_000)
+            emit(Clock.System.now().epochSeconds)
             delay(CLIMAT_TICK_MS)
         }
     }

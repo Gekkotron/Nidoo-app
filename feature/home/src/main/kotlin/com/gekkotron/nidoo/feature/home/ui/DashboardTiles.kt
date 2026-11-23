@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -42,10 +41,9 @@ import com.gekkotron.nidoo.feature.home.presentation.EnergyValue
 import com.gekkotron.nidoo.feature.home.presentation.TileContent
 import com.gekkotron.nidoo.feature.home.presentation.TileUi
 import com.gekkotron.nidoo.model.Command
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
+import com.gekkotron.nidoo.format.formatEpochSeconds
+import com.gekkotron.nidoo.format.formatNumber
 import kotlin.math.min
 
 /** The tiles of a hub dashboard as grid items; the grid's own column count caps each tile's span. */
@@ -59,7 +57,7 @@ internal fun LazyGridScope.dashboardTiles(
     onSend: (String, Command) -> Unit,
     onRunFlow: (String) -> Unit,
     onOpenEnergy: () -> Unit,
-    onOpenHistory: (String) -> Unit,
+    onOpenHistory: ((String) -> Unit)?,
 ) {
     items(
         tiles,
@@ -131,12 +129,12 @@ private fun FlowTile(flow: TileContent.FlowButton, running: Boolean, modifier: M
 
 @Composable
 private fun EnergyTile(stat: TileContent.EnergyStat, modifier: Modifier, onOpenEnergy: () -> Unit) {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = currentFormatLocale()
     val label = stat.title ?: stringResource(metricLabel(stat.metric))
     val value = when (val v = stat.value) {
         is EnergyValue.Kwh -> EnergyFormat.energy(v.v, locale)
         is EnergyValue.Watts -> EnergyFormat.power(v.v, locale)
-        is EnergyValue.Percent -> "%d %%".format(locale, v.v)
+        is EnergyValue.Percent -> formatNumber(v.v.toDouble(), locale, 0, 0, grouping = false) + " %"
         null -> "—"
     }
     NidooCard(modifier = modifier.fillMaxWidth().testTag("energy-${stat.metric.wire}"), onClick = onOpenEnergy) {
@@ -155,15 +153,15 @@ private fun metricLabel(metric: EnergyMetric): Int = when (metric) {
 }
 
 @Composable
-private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpenHistory: (String) -> Unit) {
-    val locale = LocalConfiguration.current.locales[0]
+private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpenHistory: ((String) -> Unit)?) {
+    val locale = currentFormatLocale()
     val points = remember(history.points) { history.points.orEmpty().map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val time = remember(history.range, locale) { timeFormat(history.range, locale) }
-    val value = { v: Double -> listOfNotNull(String.format(locale, "%.1f", v), history.unit).joinToString(" ") }
+    val value = { v: Double -> listOfNotNull(formatNumber(v, locale, 1, 1, grouping = false), history.unit).joinToString(" ") }
     // As on the hub: the day-spanning ranges are buckets, so their min/max spread shades a band.
     val band = (history.range == WidgetRange.D7 || history.range == WidgetRange.D30) && points.any { it.min < it.max }
     val bandLine = stringResource(R.string.widget_history_band)
-    NidooCard(modifier = modifier.fillMaxWidth().testTag("history-${history.entityId}"), onClick = { onOpenHistory(history.entityId) }) {
+    NidooCard(modifier = modifier.fillMaxWidth().testTag("history-${history.entityId}"), onClick = onOpenHistory?.let { open -> { open(history.entityId) } }) {
         Text(history.title, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         HistoryLineChart(
             points = points,
@@ -172,18 +170,17 @@ private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpen
             formatTime = time,
             contentDescription = history.title,
             modifier = Modifier.padding(top = 8.dp),
-            formatBand = if (band) { lo, hi -> bandLine.format(locale, value(lo), value(hi)) } else null,
+            formatBand = if (band) { lo, hi -> bandLine.replace("%1\$s", value(lo)).replace("%2\$s", value(hi)) } else null,
         )
     }
 }
 
-private fun timeFormat(range: WidgetRange, locale: Locale): (Long) -> String {
+private fun timeFormat(range: WidgetRange, locale: FormatLocale): (Long) -> String {
     val pattern = when (range) {
         WidgetRange.D7, WidgetRange.D30 -> "d MMM"
         else -> "HH:mm"
     }
-    val formatter = DateTimeFormatter.ofPattern(pattern, locale).withZone(ZoneId.systemDefault())
-    return { seconds -> formatter.format(Instant.ofEpochSecond(seconds)) }
+    return { seconds -> formatEpochSeconds(seconds, pattern, locale) }
 }
 
 @Composable

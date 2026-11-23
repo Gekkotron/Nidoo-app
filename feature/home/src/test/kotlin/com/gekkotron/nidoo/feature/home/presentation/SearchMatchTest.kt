@@ -1,6 +1,7 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -22,5 +23,12 @@ class SearchMatchTest {
     fun `a blank query matches everything and null fields are skipped`() {
         assertTrue(SearchMatch.matches("  ", "Anything"))
         assertTrue(SearchMatch.matches("plug", null, "Garage plug"))
+    }
+
+    @Test
+    fun foldsAccentsInBothDirections() {
+        assertEquals("sejour", SearchMatch.normalize("Séjour"))
+        assertEquals("sejour", SearchMatch.normalize("sejour"))
+        assertEquals("ete", SearchMatch.normalize("ÉTÉ"))
     }
 }

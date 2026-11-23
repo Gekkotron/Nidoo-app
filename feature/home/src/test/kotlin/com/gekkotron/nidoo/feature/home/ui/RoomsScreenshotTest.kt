@@ -15,7 +15,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -33,7 +32,7 @@ class RoomsScreenshotTest {
         compose.setContent {
             NidooTheme(theme) {
                 NidooBackground {
-                    HomeScreen(state = state, onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON)
+                    HomeScreen(state = state, onSelect = {}, onTap = {}, onSend = { _, _ -> }, hour = 12)
                 }
             }
         }

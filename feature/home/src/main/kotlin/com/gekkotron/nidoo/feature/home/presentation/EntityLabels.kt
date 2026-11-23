@@ -1,13 +1,12 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
 import com.gekkotron.nidoo.feature.home.R
-import java.util.Locale
 
 /** English entity labels published by discovery sources (Z2M, Tasmota, ESPHome…) → a translated string resource. */
 object EntityLabels {
-    /** trim, lowercase (Locale.ROOT), '_' and '-' become spaces, runs of whitespace collapse to one space. */
+    /** trim, lowercase, '_' and '-' become spaces, runs of whitespace collapse to one space. */
     fun normalize(label: String): String =
-        label.trim().lowercase(Locale.ROOT).replace('_', ' ').replace('-', ' ').replace(Regex("\\s+"), " ")
+        label.trim().lowercase().replace('_', ' ').replace('-', ' ').replace(Regex("\\s+"), " ")
 
     /** The string resource for [label], or null when the label is not a known one. */
     fun resId(label: String): Int? = map[normalize(label)]

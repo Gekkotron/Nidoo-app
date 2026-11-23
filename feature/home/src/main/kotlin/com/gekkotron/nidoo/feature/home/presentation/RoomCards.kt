@@ -13,8 +13,8 @@ import com.gekkotron.nidoo.model.Placement
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.model.UiOverride
-import java.text.Normalizer
-import java.util.Locale
+import com.gekkotron.nidoo.format.FormatLocale
+import com.gekkotron.nidoo.format.stripMarks
 
 /** A room card's icon (rooms design §6.2): the area's own key when known, else guessed from its name. */
 enum class RoomIcon(private vararg val keywords: String) {
@@ -35,11 +35,9 @@ enum class RoomIcon(private vararg val keywords: String) {
     val key: String get() = name.lowercase()
 
     companion object {
-        private val MARKS = Regex("\\p{Mn}+")
-
         fun of(areaIcon: String?, areaName: String?): RoomIcon {
             entries.firstOrNull { it != GENERIC && it.key == areaIcon }?.let { return it }
-            val name = areaName?.let { Normalizer.normalize(it.lowercase(), Normalizer.Form.NFD).replace(MARKS, "") } ?: return GENERIC
+            val name = areaName?.let { stripMarks(it.lowercase()) } ?: return GENERIC
             return entries.firstOrNull { icon -> icon.keywords.any { it in name } } ?: GENERIC
         }
     }
@@ -106,7 +104,7 @@ object RoomCards {
         states: Map<String, EntityState>,
         areas: List<Area>,
         names: Map<String, String>,
-        locale: Locale,
+        locale: FormatLocale,
     ): List<RoomCardUi> {
         val byArea = entities
             .filter { it.partOf == null && Placement.onHome(it.kind, it.deviceClass, it.ui) }
@@ -128,7 +126,7 @@ object RoomCards {
         entities: List<Entity>,
         states: Map<String, EntityState>,
         names: Map<String, String>,
-        locale: Locale,
+        locale: FormatLocale,
     ): RoomCardUi {
         fun target(e: Entity): RoomTarget {
             val state = states[e.uniqueId]

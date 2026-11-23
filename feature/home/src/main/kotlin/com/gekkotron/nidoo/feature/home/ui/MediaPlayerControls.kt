@@ -38,6 +38,7 @@ import com.gekkotron.nidoo.feature.home.presentation.mediaProgress
 import com.gekkotron.nidoo.feature.home.presentation.mediaToggle
 import com.gekkotron.nidoo.model.Command
 import kotlinx.coroutines.delay
+import kotlin.time.Clock
 
 /** The sheet's line under the name: playing, paused or idle. */
 @Composable
@@ -117,12 +118,12 @@ internal fun TintedSheetColors(tint: Color?, content: @Composable () -> Unit) {
 @Composable
 private fun MediaProgressLine(value: CardValue.MediaPlayer) {
     val playing = value.state == "playing"
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(Clock.System.now().toEpochMilliseconds()) }
     LaunchedEffect(playing, value.positionS, value.positionAtMs) {
-        now = System.currentTimeMillis()
+        now = Clock.System.now().toEpochMilliseconds()
         while (playing) {
             delay(1_000)
-            now = System.currentTimeMillis()
+            now = Clock.System.now().toEpochMilliseconds()
         }
     }
     val progress = mediaProgress(value.durationS, value.positionS, value.positionAtMs, playing, now) ?: return

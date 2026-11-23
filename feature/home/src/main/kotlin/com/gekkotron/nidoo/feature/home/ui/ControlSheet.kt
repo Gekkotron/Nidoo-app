@@ -37,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -217,7 +216,7 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     DisposableEffect(card.id) {
         onDispose { draft.value?.let { draft.value = null; send(Command.SetTemperature(it)) } }
     }
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = currentFormatLocale()
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
     val powerable = "off" in caps.hvacModes && caps.hvacModes.any { it != "off" }
@@ -298,7 +297,7 @@ internal fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSend
     val min = caps.minTemp ?: 43.0
     val max = caps.maxTemp ?: 60.0
     val step = caps.tempStep ?: 1.0
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = currentFormatLocale()
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
 
@@ -353,7 +352,7 @@ private fun NumberControls(card: CardUi, onSend: (Command) -> Unit) {
     val current = (card.state as? StateValue.Numeric)?.value ?: min
     val slider = rememberSliderValue(current.toFloat())
     val steps = ((max - min) / step).roundToInt() - 1
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = currentFormatLocale()
     Text(
         listOfNotNull(CardFormatter.number(StepMath.snap(slider.value.toDouble(), min, step), locale), card.unit).joinToString(" "),
         style = NidooTheme.type.display,

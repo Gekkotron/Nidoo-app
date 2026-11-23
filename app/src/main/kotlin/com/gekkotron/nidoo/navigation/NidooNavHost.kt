@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.navigation
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -53,6 +54,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data object OnboardingKey : NavKey
+
+private const val VOICE_ACTIVITY = "com.gekkotron.nidoo.feature.voice.VoiceActivity"
 
 @Serializable
 data object HomeKey : NavKey
@@ -225,6 +228,8 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         windowInsets = tabInsets,
                         onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
                         onOpenEnergy = { selectTab(backStack, EnergyKey) },
+                        // Addressed by class name so :feature:home does not depend on :feature:voice.
+                        onOpenVoice = { context.startActivity(Intent().setClassName(context, VOICE_ACTIVITY)) },
                     )
                 }
                 entry<SettingsKey> {

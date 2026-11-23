@@ -1,6 +1,7 @@
 package com.gekkotron.nidoo.feature.home.ui
 
 import com.gekkotron.nidoo.model.Hs
+import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -14,7 +15,7 @@ internal object WheelMath {
         val dy = y - r
         val distance = hypot(dx, dy)
         if (r <= 0.0 || distance == 0.0) return Hs(0.0, 0.0)
-        var hue = Math.toDegrees(atan2(dx, -dy))
+        var hue = atan2(dx, -dy) * 180 / PI
         if (hue < 0) hue += 360.0
         if (hue >= 360.0) hue -= 360.0
         return Hs(hue, (distance / r).coerceAtMost(1.0))
@@ -22,7 +23,7 @@ internal object WheelMath {
 
     fun pointOf(hs: Hs, diameter: Float): Pair<Float, Float> {
         val r = diameter / 2.0
-        val a = Math.toRadians(hs.hue)
+        val a = hs.hue * PI / 180
         return Pair((r + hs.saturation * r * sin(a)).toFloat(), (r - hs.saturation * r * cos(a)).toFloat())
     }
 }

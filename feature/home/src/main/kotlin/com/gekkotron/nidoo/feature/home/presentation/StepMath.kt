@@ -1,7 +1,6 @@
 package com.gekkotron.nidoo.feature.home.presentation
 
-import java.math.BigDecimal
-import java.math.RoundingMode
+import com.gekkotron.nidoo.format.roundHalfUp
 import kotlin.math.roundToLong
 
 object StepMath {
@@ -13,5 +12,5 @@ object StepMath {
     fun snap(value: Double, min: Double, step: Double): Double =
         if (step <= 0) value else round2(min + ((value - min) / step).roundToLong() * step)
 
-    private fun round2(v: Double) = BigDecimal(v).setScale(2, RoundingMode.HALF_UP).toDouble()
+    private fun round2(v: Double) = roundHalfUp(v, 2)
 }

@@ -28,7 +28,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.LocalTime
 import java.util.Locale
 import kotlin.test.assertEquals
 
@@ -63,7 +62,7 @@ class GroupCardTest {
                 onTap = { taps += it.id },
                 onSend = { id, c -> sends += id to c },
                 onSendGroup = { id, c -> groupSends += id to c },
-                now = LocalTime.NOON,
+                hour = 12,
             )
         }
     }

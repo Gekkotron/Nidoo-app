@@ -12,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,7 +25,7 @@ import com.gekkotron.nidoo.feature.home.presentation.HeaterView
 /** "Inlet 17.9 °C": the inlet temperature in the heater's own unit, °C when it has none. */
 @Composable
 internal fun inletText(card: CardUi, inlet: Double): String {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = currentFormatLocale()
     return stringResource(R.string.water_heater_inlet, "${CardFormatter.number(inlet, locale)} ${card.unit ?: "°C"}")
 }
 
