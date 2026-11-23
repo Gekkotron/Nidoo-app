@@ -8,7 +8,7 @@ import com.gekkotron.nidoo.model.EnergyRole
 import com.gekkotron.nidoo.model.Entity
 import com.gekkotron.nidoo.model.EntityState
 import com.gekkotron.nidoo.transport.LinkState
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue

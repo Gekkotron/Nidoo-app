@@ -36,6 +36,7 @@ jobs:
               :core:alerts:test
               :core:history:jvmTest
               :core:format:jvmTest
+              :core:energy:jvmTest
               :core:flows:jvmTest
               :core:assist:jvmTest
               :core:dashboards:jvmTest
@@ -53,6 +54,7 @@ jobs:
               :core:alerts:koverXmlReport
               :core:history:koverXmlReport
               :core:format:koverXmlReport
+              :core:energy:koverXmlReport
               :core:flows:koverXmlReport
               :core:assist:koverXmlReport
               :core:dashboards:koverXmlReport

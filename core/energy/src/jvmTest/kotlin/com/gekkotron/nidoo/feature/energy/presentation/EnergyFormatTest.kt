@@ -1,6 +1,6 @@
 package com.gekkotron.nidoo.feature.energy.presentation
 
-import org.junit.Test
+import kotlin.test.Test
 import java.util.Locale
 import kotlin.test.assertEquals
 

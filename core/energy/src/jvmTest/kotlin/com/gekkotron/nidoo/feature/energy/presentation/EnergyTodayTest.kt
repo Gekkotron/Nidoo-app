@@ -6,7 +6,7 @@ import com.gekkotron.nidoo.history.EnergyKind
 import com.gekkotron.nidoo.history.HistoryRef
 import com.gekkotron.nidoo.model.EnergyRole
 import com.gekkotron.nidoo.model.Entity
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class EnergyTodayTest {

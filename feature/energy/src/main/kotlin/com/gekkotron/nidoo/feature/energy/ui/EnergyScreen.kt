@@ -250,7 +250,7 @@ private fun EnergyValueCard(node: EnergyNode, locale: Locale, onClick: () -> Uni
             TodayText(node, locale)
             if (water && node.waterTotal != null) {
                 Text(
-                    stringResource(R.string.energy_water_meter, EnergyFormat.meter(node.waterTotal, node.waterTotalUnit, locale)),
+                    stringResource(R.string.energy_water_meter, EnergyFormat.meter(node.waterTotal!!, node.waterTotalUnit, locale)),
                     style = NidooTheme.type.label,
                     color = NidooTheme.colors.contentMuted,
                 )
@@ -284,7 +284,7 @@ private fun cardValueText(node: EnergyNode, locale: Locale): String = when {
     !node.hasMeter -> stringResource(R.string.energy_unknown)
     node.totalStatus == NodeStatus.UNAVAILABLE -> stringResource(R.string.energy_unavailable)
     node.totalKwh == null -> stringResource(R.string.energy_unknown)
-    else -> EnergyFormat.energy(node.totalKwh, locale)
+    else -> EnergyFormat.energy(node.totalKwh!!, locale)
 }
 
 /** "—", "Unavailable", or the value; grid and battery get ↙ (into the house) or ↗ (out of it). */
