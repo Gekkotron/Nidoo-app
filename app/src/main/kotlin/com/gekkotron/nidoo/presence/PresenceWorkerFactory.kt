@@ -29,7 +29,11 @@ class PresenceWorkerFactory(
         }
 }
 
-/** Enqueues one publish per transition. A newer transition replaces an unfinished older one, so a stale state never lands last. */
+/**
+ * Enqueues one publish per transition. The opposite transition cancels unfinished work, so a stale state never lands last.
+ * The same transition again leaves it alone: the geofence is registered again on every process start and reports the side
+ * the phone is on each time, and replacing the work there would reset the attempts an unsettled EXIT is counting.
+ */
 object PresenceWork {
     fun enqueue(context: Context, state: PresenceState) {
         val request = OneTimeWorkRequestBuilder<PresenceWorker>()
@@ -39,8 +43,12 @@ object PresenceWork {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(PresenceWorker.TAG, ExistingWorkPolicy.REPLACE, request)
+        val workManager = WorkManager.getInstance(context)
+        PresenceState.entries.filter { it != state }.forEach { workManager.cancelUniqueWork(uniqueName(it)) }
+        workManager.enqueueUniqueWork(uniqueName(state), ExistingWorkPolicy.KEEP, request)
     }
+
+    private fun uniqueName(state: PresenceState): String = "${PresenceWorker.TAG}-${state.name}"
 }
 
 /** Enqueues a refresh in response to a silent FCM `cmd=presence_refresh`. Network-constrained, expedited when possible. */

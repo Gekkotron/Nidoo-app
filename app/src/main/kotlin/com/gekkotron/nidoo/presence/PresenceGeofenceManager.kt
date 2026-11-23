@@ -14,6 +14,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.Task
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.PresenceConfig
 
@@ -34,6 +37,9 @@ class PresenceGeofenceManager(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val client: GeofencingClient = LocationServices.getGeofencingClient(context),
 ) {
+    /** One remove-then-add at a time: the collector and [reapply] both run at a boot start. */
+    private val applying = Mutex()
+
     /** Collects [AppPreferences.presence] and (re)applies the spec. Call once from Application.onCreate. */
     fun start() {
         scope.launch {
@@ -41,14 +47,27 @@ class PresenceGeofenceManager(
         }
     }
 
-    suspend fun apply(config: PresenceConfig) {
+    /**
+     * Registers again from the stored config, then calls [onDone]. Play services drops every geofence at reboot, and until
+     * something else starts the process nothing would put the home one back.
+     */
+    fun reapply(onDone: () -> Unit) {
+        scope.launch {
+            try {
+                apply(preferences.presence.filterNotNull().first())
+            } finally {
+                onDone()
+            }
+        }
+    }
+
+    suspend fun apply(config: PresenceConfig) = applying.withLock {
         val spec = PresenceGeofenceSpec.from(config)
         if (spec == null) {
             removeAll()
-            return
+        } else if (hasFineLocation()) {
+            register(spec)
         }
-        if (!hasFineLocation()) return
-        register(spec)
     }
 
     private suspend fun register(spec: PresenceGeofenceSpec) {
@@ -65,14 +84,20 @@ class PresenceGeofenceManager(
         removeAll()
         try {
             client.addGeofences(request, pendingIntent()).await()
-        } catch (_: SecurityException) {
-            // Permission revoked between the check and the call; the next AppPreferences change (or user re-enable) will retry.
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Permission revoked between the check and the call (SecurityException), or Play services refuses: location is
+            // off (GEOFENCE_NOT_AVAILABLE), background access is missing. Thrown on, it would crash the process from the
+            // application scope. The next process start or config change registers again.
         }
     }
 
     private suspend fun removeAll() {
         try {
             client.removeGeofences(pendingIntent()).await()
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Nothing to remove, or Play services unavailable; a no-op is fine.
         }
@@ -89,6 +114,13 @@ class PresenceGeofenceManager(
 }
 
 private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
-    addOnSuccessListener { cont.resume(it) }
-    addOnFailureListener { cont.resumeWithException(it) }
+    // Completes on the calling thread of Play services, not the main looper, which a blocked caller would never reach.
+    addOnCompleteListener(Runnable::run) { task ->
+        val error = task.exception
+        when {
+            task.isCanceled -> cont.cancel()
+            error != null -> cont.resumeWithException(error)
+            else -> cont.resume(task.result)
+        }
+    }
 }
