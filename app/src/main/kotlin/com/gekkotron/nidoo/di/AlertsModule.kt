@@ -16,14 +16,16 @@ import com.gekkotron.nidoo.alerts.media.MediaSource
 import com.gekkotron.nidoo.alerts.media.VideoCache
 import com.gekkotron.nidoo.alerts.sync.HistorySync
 import com.gekkotron.nidoo.connection.HistoryWiring
-import com.gekkotron.nidoo.connection.ProfileMediaRoutes
+import com.gekkotron.nidoo.connection.ProfileHttpRoutes
 import com.gekkotron.nidoo.connection.SharedSubscriptions
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.data.isLikelyLocalHost
 import com.gekkotron.nidoo.transport.ActiveTransport
+import com.gekkotron.nidoo.transport.AthenaGatewayDownloader
 import com.gekkotron.nidoo.transport.LanOrGatewayGet
+import com.gekkotron.nidoo.transport.TcpProbe
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -65,7 +67,7 @@ object AlertsModule {
 
     @Provides
     @Singleton
-    fun mediaRoutes(profiles: ProfileRepository, http: OkHttpClient): MediaRoutes = ProfileMediaRoutes(profiles, http)
+    fun mediaRoutes(profiles: ProfileRepository, http: OkHttpClient): MediaRoutes = ProfileHttpRoutes(profiles, ::TcpProbe) { AthenaGatewayDownloader(it, http) }
 
     @Provides
     @Singleton

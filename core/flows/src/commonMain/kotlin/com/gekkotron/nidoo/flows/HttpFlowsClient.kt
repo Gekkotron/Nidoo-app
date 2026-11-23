@@ -4,7 +4,6 @@ import com.gekkotron.nidoo.transport.HttpPostResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
-import java.net.URLEncoder
 
 @Serializable
 private class EnabledBody(val enabled: Boolean)
@@ -27,7 +26,7 @@ class HttpFlowsClient(
 
     private suspend fun postTo(id: String, action: String, body: String): Result<Unit> {
         val base = baseUrl() ?: return Result.failure(IllegalStateException("no hub url"))
-        val url = "${base.trimEnd('/')}/api/v1/flows/${encode(id)}/$action"
+        val url = "${base.trimEnd('/')}/api/v1/flows/${encodePathPart(id)}/$action"
         return try {
             when (val r = post(url, body)) {
                 is HttpPostResult.Response ->
@@ -41,6 +40,4 @@ class HttpFlowsClient(
             Result.failure(e)
         }
     }
-
-    private fun encode(v: String) = URLEncoder.encode(v, Charsets.UTF_8).replace("+", "%20")
 }

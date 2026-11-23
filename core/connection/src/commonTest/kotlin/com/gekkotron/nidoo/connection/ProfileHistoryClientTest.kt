@@ -10,7 +10,7 @@ import com.gekkotron.nidoo.transport.HttpGetResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -25,7 +25,7 @@ class ProfileHistoryClientTest {
     )
 
     @Test
-    fun `available for any direct profile and the demo, not without a profile`() = runTest {
+    fun `available for a direct profile and the demo but not without a profile`() = runTest {
         val c = client()
         assertEquals(false, c.available.value)
         states.value = ProfileState.Ready(direct)
@@ -50,7 +50,7 @@ class ProfileHistoryClientTest {
     }
 
     @Test
-    fun `direct with an override asks the override, the demo never asks`() = runTest {
+    fun `direct with an override asks the override and the demo never asks`() = runTest {
         val c = client()
         states.value = ProfileState.Ready(direct.copy(historyUrl = "http://nas:9000"))
         assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t"), HistoryRange.H24))
