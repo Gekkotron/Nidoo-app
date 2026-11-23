@@ -33,6 +33,7 @@ targets:
       path: Nidoo/Info.plist
       properties:
         CFBundleDisplayName: Nidoo
+        CFBundleLocalizations: [en, fr]
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CADisableMinimumFrameDurationOnPhone: true
