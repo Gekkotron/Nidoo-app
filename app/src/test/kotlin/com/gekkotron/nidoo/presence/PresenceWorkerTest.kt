@@ -101,27 +101,57 @@ class PresenceWorkerTest {
     }
 
     @Test
-    fun `an EXIT whose retry finds the phone at home publishes home`() {
+    fun `an EXIT whose fix still reads home publishes home and checks again`() {
+        // The EXIT fires at the edge of the radius: the first fix can still read inside. Final, it would leave the hub on home for the whole absence.
         prefs = prefs()
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
         assertEquals(Result.retry(), run(PresenceState.AWAY, attempt = 0))
-        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
-        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = 1))
         assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test
-    fun `an EXIT while the phone is still at home publishes home`() {
+    fun `an EXIT whose later check finds the phone outside publishes not_home`() {
         prefs = prefs()
         fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
-        assertEquals(Result.success(), run(PresenceState.AWAY))
+        assertEquals(Result.retry(), run(PresenceState.AWAY, attempt = 0))
+        publisher.sent.clear()
+        fix = LocationFix(48.01, 2.01, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = 1))
+        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `a false EXIT settles on home once every check has read home`() {
+        prefs = prefs()
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.AWAY, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
         assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 
     @Test
-    fun `an ENTER that runs once the phone has left again publishes not_home`() {
+    fun `an ENTER whose fix still reads outside publishes not_home and checks again`() {
         prefs = prefs()
         fix = LocationFix(48.01, 2.01, accuracyM = 20f)
-        assertEquals(Result.success(), run(PresenceState.HOME))
+        assertEquals(Result.retry(), run(PresenceState.HOME, attempt = 0))
+        assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an ENTER whose later check finds the phone inside publishes home`() {
+        prefs = prefs()
+        fix = LocationFix(48.01, 2.01, accuracyM = 20f)
+        assertEquals(Result.retry(), run(PresenceState.HOME, attempt = 0))
+        publisher.sent.clear()
+        fix = LocationFix(48.0005, 2.0005, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.HOME, attempt = 1))
+        assertEquals("home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
+    }
+
+    @Test
+    fun `an ENTER that runs once the phone has left for good settles on not_home`() {
+        prefs = prefs()
+        fix = LocationFix(48.01, 2.01, accuracyM = 20f)
+        assertEquals(Result.success(), run(PresenceState.HOME, attempt = PresenceWorker.MAX_ATTEMPTS - 1))
         assertEquals("not_home", publisher.sent.single { it.topic.endsWith("/state") }.payload)
     }
 

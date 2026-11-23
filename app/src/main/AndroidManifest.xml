@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- A reboot clears the home geofence; PresenceBootReceiver registers it again. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".NidooApplication"
@@ -49,6 +51,15 @@
         <receiver
             android:name=".presence.PresenceTransitionReceiver"
             android:exported="false" />
+
+        <!-- Only the system sends BOOT_COMPLETED, and it reaches a receiver that is not exported. -->
+        <receiver
+            android:name=".presence.PresenceBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- WorkManager starts on demand with PushWorkerFactory (NidooApplication.workManagerConfiguration). -->
         <provider

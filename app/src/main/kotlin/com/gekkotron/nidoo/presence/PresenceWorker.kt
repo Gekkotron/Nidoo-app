@@ -20,6 +20,11 @@ import kotlinx.coroutines.flow.first
  * A wrong AWAY arms whatever the hub ties to presence, and an indoor phone often has no clear fix for a while. An ENTER
  * with no clear fix is published at once, since a late HOME is the costlier mistake there.
  *
+ * A clear fix that contradicts the transition is not final either. Play services fires at the edge of the radius, so the
+ * fix taken right then often still reads the side the phone is leaving, and no other transition follows to correct it.
+ * That state is published and the work retries on the same backoff, until a fix agrees with the transition or the
+ * attempts run out (a false EXIT then stays on HOME).
+ *
  * Publishes HA MQTT Discovery for the device_tracker and the new presence state. Retained so a late HA pick-up still sees
  * the right value. Three publishes: discovery config, availability online, state (home / not_home).
  */
@@ -41,7 +46,9 @@ class PresenceWorker(
             hint == PresenceState.AWAY && !isLastAttempt() -> return Result.retry()
             else -> hint
         }
-        return publishAll(config, state)
+        val published = publishAll(config, state)
+        // The fix contradicts the transition: it is published, since that is where the phone is, and checked again.
+        return if (published == Result.success() && state != hint && !isLastAttempt()) Result.retry() else published
     }
 
     private fun isLastAttempt(): Boolean = runAttemptCount + 1 >= MAX_ATTEMPTS
