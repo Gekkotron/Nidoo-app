@@ -2,34 +2,17 @@ package com.gekkotron.nidoo.shared
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
-import androidx.lifecycle.HasDefaultViewModelProviderFactory
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.SAVED_STATE_REGISTRY_OWNER_KEY
-import androidx.lifecycle.SavedStateViewModelFactory
-import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.enableSavedStateHandles
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.MutableCreationExtras
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.designsystem.NidooBackground
 import com.gekkotron.nidoo.designsystem.NidooTheme
@@ -37,9 +20,13 @@ import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.feature.home.rooms.RoomsRoute
 import com.gekkotron.nidoo.feature.home.ui.HomeRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.OnboardingRoute
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
+import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderRoute
+import com.gekkotron.nidoo.feature.settings.ui.SettingsPageRoute
+import com.gekkotron.nidoo.feature.settings.ui.SettingsRoute
 import org.koin.compose.viewmodel.koinViewModel
 
-/** The iOS app (spec §7.6 phase 4): onboarding until a profile is saved, then the Rooms step for a new setup, then Home. */
+/** The iOS app (spec §7.6 phase 4): onboarding until a profile is saved, then the Rooms step for a new setup, then Home and Settings. */
 @Composable
 fun NidooApp(shell: AppShellViewModel = koinViewModel()) {
     val theme by shell.theme.collectAsStateWithLifecycle()
@@ -47,88 +34,75 @@ fun NidooApp(shell: AppShellViewModel = koinViewModel()) {
     NidooTheme(theme ?: ThemeChoice.SYSTEM) {
         // Until the preferences have loaded only the background is drawn, so nothing flashes in the wrong theme.
         NidooBackground(Modifier.fillMaxSize()) {
-            if (theme != null) {
-                when (val p = profile) {
-                    ProfileState.Loading -> Unit
-                    // Each visit gets fresh ViewModels: the root store (the iOS view controller's) lives for the whole app.
-                    ProfileState.None, ProfileState.Locked -> ScreenViewModels(Unit) { OnboardingRoute() }
-                    is ProfileState.Ready -> {
-                        // No push on iOS (spec §3): the notification step is closed without being shown.
-                        if (p.notificationsPending) LaunchedEffect(Unit) { shell.finishNotifications() }
-                        if (p.roomsPending) {
-                            ScreenViewModels(p.profile to "rooms") { RoomsRoute(onDone = shell::finishRooms) }
-                        } else {
-                            // A new profile gets a new ViewModel, so a new house never shows the previous one's source.
-                            ScreenViewModels(p.profile) { HomeWithSettings(shell) }
-                        }
-                    }
-                }
+            val p = profile
+            val root = rootFor(p)
+            if (theme != null && root != null) {
+                // No push on iOS (spec §3): the notification step is closed without being shown.
+                if ((p as? ProfileState.Ready)?.notificationsPending == true) LaunchedEffect(Unit) { shell.finishNotifications() }
+                Screens(shell, root)
             }
         }
     }
 }
 
-/** Home, with [InterimSettings] in its place while open (4C's Settings screens replace it). */
-@OptIn(ExperimentalComposeUiApi::class) // the common BackHandler (iOS edge swipe)
+/**
+ * One back stack for the app's lifetime. A new root (onboarding finished, or "set up again") replaces the entries inside
+ * it, so NavDisplay pops the old ones and clears their ViewModel stores. iOS has no process-death restore, so a plain
+ * state list is enough.
+ */
 @Composable
-private fun HomeWithSettings(shell: AppShellViewModel) {
-    var settingsOpen by rememberSaveable { mutableStateOf(false) }
+private fun Screens(shell: AppShellViewModel, root: NavKey) {
     val route by shell.route.collectAsStateWithLifecycle()
-    if (settingsOpen) {
-        BackHandler { settingsOpen = false }
-        InterimSettings(onSetUpAgain = shell::setUpAgain, onBack = { settingsOpen = false })
-    } else {
-        // Energy, History and Security are Phase 5: no history or voice callback, so Home hides those actions.
-        HomeRoute(
-            onOpenSettings = { settingsOpen = true },
-            onOpenConnectionSettings = { settingsOpen = true },
-            route = route,
-            onRouteChange = shell::setRoute,
-        )
-    }
-}
-
-/**
- * Gives [content] its own ViewModel store, cleared when it leaves the composition or [key] changes. Without it every
- * `koinViewModel()` resolves from the root store and gets back the instance of the previous visit (Android's nav entries
- * each have a store; 4C's Navigation 3 shell brings the same on iOS).
- */
-@Composable
-private fun ScreenViewModels(key: Any?, content: @Composable () -> Unit) {
-    val owner = remember(key) { ScreenOwner() }
-    DisposableEffect(owner) { onDispose { owner.destroy() } }
-    // Only the ViewModel store is provided: Home keeps the root lifecycle for collectAsStateWithLifecycle.
-    CompositionLocalProvider(LocalViewModelStoreOwner provides owner, content = content)
-}
-
-/**
- * A screen's ViewModel store with its own saved state: Home's ViewModels take a `SavedStateHandle`, which Koin builds from
- * this owner's creation extras. It enables saved-state handles itself because iOS's root owner never does. iOS has no
- * process-death restore, so the state is kept in memory only.
- */
-internal class ScreenOwner : ViewModelStoreOwner, SavedStateRegistryOwner, HasDefaultViewModelProviderFactory {
-    override val viewModelStore = ViewModelStore()
-    private val registry = LifecycleRegistry.createUnsafe(this)
-    private val controller = SavedStateRegistryController.create(this)
-    override val lifecycle: Lifecycle get() = registry
-    override val savedStateRegistry: SavedStateRegistry get() = controller.savedStateRegistry
-    /** Only for a plain `viewModel()`; the screens use `koinViewModel()`, which brings Koin's factory and takes the extras below. */
-    override val defaultViewModelProviderFactory: ViewModelProvider.Factory = SavedStateViewModelFactory()
-    override val defaultViewModelCreationExtras: CreationExtras
-        get() = MutableCreationExtras().apply {
-            this[SAVED_STATE_REGISTRY_OWNER_KEY] = this@ScreenOwner
-            this[VIEW_MODEL_STORE_OWNER_KEY] = this@ScreenOwner
-        }
-
-    init {
-        controller.performAttach()
-        enableSavedStateHandles()
-        controller.performRestore(null)
-        registry.currentState = Lifecycle.State.CREATED
-    }
-
-    fun destroy() {
-        viewModelStore.clear()
-        registry.currentState = Lifecycle.State.DESTROYED
-    }
+    val backStack = remember { mutableStateListOf(root) }
+    LaunchedEffect(root) { resetToRoot(backStack, root) }
+    NavDisplay(
+        backStack = backStack,
+        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
+        entryProvider = entryProvider {
+            entry<OnboardingKey> { OnboardingRoute() }
+            entry<RoomsKey> {
+                RoomsRoute(onDone = {
+                    // First run: finishing flips the root to Home, which replaces this entry. From Settings: pop back.
+                    shell.finishRooms()
+                    pop(backStack, RoomsKey)
+                })
+            }
+            entry<HomeKey> {
+                // Energy, History and Security are Phase 5: no history or voice callback, so Home hides those actions.
+                HomeRoute(
+                    onOpenSettings = { push(backStack, SettingsKey) },
+                    onOpenConnectionSettings = {
+                        push(backStack, SettingsKey)
+                        push(backStack, SettingsPageKey(SettingsPage.CONNECTION))
+                    },
+                    route = route,
+                    onRouteChange = shell::setRoute,
+                )
+            }
+            entry<SettingsKey> {
+                SettingsRoute(
+                    onOpenPage = { push(backStack, SettingsPageKey(it)) },
+                    onOpenRooms = { push(backStack, RoomOrderKey) },
+                    onBack = { pop(backStack, SettingsKey) },
+                )
+            }
+            entry<SettingsPageKey> { key ->
+                SettingsPageRoute(
+                    page = key.page,
+                    route = route,
+                    onRouteChange = shell::setRoute,
+                    onSetUpAgain = shell::setUpAgain,
+                    onOpenLicences = null, // no licence report is bundled on iOS yet
+                    onBack = { pop(backStack, key) },
+                )
+            }
+            entry<RoomOrderKey> {
+                RoomOrderRoute(onAssignRooms = { push(backStack, RoomsKey) }, onBack = { pop(backStack, RoomOrderKey) })
+            }
+        },
+    )
 }

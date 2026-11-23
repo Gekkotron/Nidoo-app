@@ -7,6 +7,10 @@ import com.gekkotron.nidoo.dashboards.DashboardsRepository
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
 import com.gekkotron.nidoo.feature.home.presentation.LabelText
+import com.gekkotron.nidoo.feature.settings.di.settingsModule
+import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
+import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderViewModel
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.shared.AppShellViewModel
@@ -27,7 +31,7 @@ class IosModuleTest {
 
     @Test
     fun iosGraphResolves() {
-        val app = koinApplication { modules(iosModule { NoopPort }, sharedModule, onboardingModule, homeModule) }
+        val app = koinApplication { modules(iosModule { NoopPort }, sharedModule, onboardingModule, homeModule, settingsModule) }
         try {
             val koin = app.koin
             koin.get<EntitySourceSession>()
@@ -38,6 +42,9 @@ class IosModuleTest {
             koin.get<LabelText>()
             koin.get<ConnectionTester>()
             koin.get<AppShellViewModel>()
+            koin.get<SettingsViewModel>()
+            koin.get<RoomOrderViewModel>()
+            koin.get<PlatformSettings>()
         } finally {
             app.close()
         }
