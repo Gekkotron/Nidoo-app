@@ -8,8 +8,11 @@ import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
+import com.gekkotron.nidoo.feature.settings.di.androidSettingsModule
+import com.gekkotron.nidoo.feature.settings.di.settingsModule
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.HistoryClient
+import com.gekkotron.nidoo.push.PushStatusSource
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.transport.MqttTransport
 import dagger.hilt.EntryPoint
@@ -37,6 +40,7 @@ interface KoinBridgeEntryPoint {
     fun flows(): FlowsRepository
     fun climate(): ClimateRepository
     fun transport(): MqttTransport
+    fun pushStatus(): PushStatusSource
 }
 
 /** Each type is a factory that asks Hilt, so Hilt keeps owning the lifetimes (EntitySource is unscoped there). */
@@ -50,6 +54,7 @@ fun hiltBridgeModule(bridge: KoinBridgeEntryPoint): Module = module {
     factory { bridge.flows() }
     factory { bridge.climate() }
     factory { bridge.transport() }
+    factory { bridge.pushStatus() }
 }
 
 /** Starts (or restarts, if a previous Application in this process started it) the app's Koin graph. */
@@ -57,6 +62,6 @@ fun startNidooKoin(app: Application, bridge: KoinBridgeEntryPoint) {
     stopKoin()
     startKoin {
         androidContext(app)
-        modules(hiltBridgeModule(bridge), onboardingModule, homeModule)
+        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, settingsModule, androidSettingsModule)
     }
 }

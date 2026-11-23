@@ -73,7 +73,7 @@ jobs:
               :feature:history:test
               :feature:security:test
               :feature:automations:test
-              :feature:settings:test
+              :feature:settings:testAndroidHostTest
               :feature:alerts:test
               :feature:widget:test
               :feature:controls:test
@@ -168,6 +168,7 @@ jobs:
           :core:assist:iosSimulatorArm64Test
           :feature:onboarding:iosSimulatorArm64Test
           :feature:home:iosSimulatorArm64Test
+          :feature:settings:iosSimulatorArm64Test
           :shared:iosSimulatorArm64Test
           :shared:linkDebugFrameworkIosArm64
           -Dorg.gradle.configuration-cache=false --stacktrace --continue
