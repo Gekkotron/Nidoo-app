@@ -14,17 +14,21 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.lifecycle.HasDefaultViewModelProviderFactory
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.SAVED_STATE_REGISTRY_OWNER_KEY
 import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.enableSavedStateHandles
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.designsystem.NidooBackground
 import com.gekkotron.nidoo.designsystem.NidooTheme
@@ -90,23 +94,40 @@ private fun HomeWithSettings(shell: AppShellViewModel) {
  */
 @Composable
 private fun ScreenViewModels(key: Any?, content: @Composable () -> Unit) {
-    val saved = LocalSavedStateRegistryOwner.current
-    val owner = remember(key, saved) { ScreenOwner(saved) }
-    DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
+    val owner = remember(key) { ScreenOwner() }
+    DisposableEffect(owner) { onDispose { owner.destroy() } }
+    // Only the ViewModel store is provided: Home keeps the root lifecycle for collectAsStateWithLifecycle.
     CompositionLocalProvider(LocalViewModelStoreOwner provides owner, content = content)
 }
 
 /**
- * A ViewModel store of its own, with the root's saved-state owner in its creation extras: Home's ViewModels take a
- * `SavedStateHandle`, which Koin builds from those extras.
+ * A screen's ViewModel store with its own saved state: Home's ViewModels take a `SavedStateHandle`, which Koin builds from
+ * this owner's creation extras. It enables saved-state handles itself because iOS's root owner never does. iOS has no
+ * process-death restore, so the state is kept in memory only.
  */
-private class ScreenOwner(private val saved: SavedStateRegistryOwner) : ViewModelStoreOwner, HasDefaultViewModelProviderFactory {
+internal class ScreenOwner : ViewModelStoreOwner, SavedStateRegistryOwner, HasDefaultViewModelProviderFactory {
     override val viewModelStore = ViewModelStore()
+    private val registry = LifecycleRegistry.createUnsafe(this)
+    private val controller = SavedStateRegistryController.create(this)
+    override val lifecycle: Lifecycle get() = registry
+    override val savedStateRegistry: SavedStateRegistry get() = controller.savedStateRegistry
     override val defaultViewModelProviderFactory: ViewModelProvider.Factory
         get() = throw UnsupportedOperationException("ViewModels come from Koin's factory")
     override val defaultViewModelCreationExtras: CreationExtras
         get() = MutableCreationExtras().apply {
-            this[SAVED_STATE_REGISTRY_OWNER_KEY] = saved
+            this[SAVED_STATE_REGISTRY_OWNER_KEY] = this@ScreenOwner
             this[VIEW_MODEL_STORE_OWNER_KEY] = this@ScreenOwner
         }
+
+    init {
+        controller.performAttach()
+        enableSavedStateHandles()
+        controller.performRestore(null)
+        registry.currentState = Lifecycle.State.CREATED
+    }
+
+    fun destroy() {
+        viewModelStore.clear()
+        registry.currentState = Lifecycle.State.DESTROYED
+    }
 }
