@@ -17,6 +17,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import android.provider.Settings
+import androidx.test.core.app.ApplicationProvider
+import org.robolectric.Shadows.shadowOf
 import androidx.core.app.ActivityOptionsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -126,6 +129,16 @@ class AndroidSettingsPageTest {
         compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
         compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
         compose.onNodeWithText("Registered · 7 min", substring = true).assertExists()
+    }
+
+    @Test
+    fun `the channels button opens the app's notification settings`() {
+        showPage(SettingsPage.NOTIFICATIONS, viewModel(FakePushStatusSource(PushStatus.Demo)))
+        compose.onNodeWithText("Notification channels").performClick()
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val started = shadowOf(app).nextStartedActivity
+        assertEquals(Settings.ACTION_APP_NOTIFICATION_SETTINGS, started?.action)
+        assertEquals(app.packageName, started?.getStringExtra(Settings.EXTRA_APP_PACKAGE))
     }
 
     @Test

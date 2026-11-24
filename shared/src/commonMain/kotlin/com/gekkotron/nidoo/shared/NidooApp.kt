@@ -34,6 +34,7 @@ fun NidooApp(shell: AppShellViewModel = koinViewModel()) {
     NidooTheme(theme ?: ThemeChoice.SYSTEM) {
         // Until the preferences have loaded only the background is drawn, so nothing flashes in the wrong theme.
         NidooBackground(Modifier.fillMaxSize()) {
+            // Loading and a null theme occur only before the first load (stateIn seeds), so once the screens show, they and the back stack never leave composition.
             val p = profile
             val root = rootFor(p)
             if (theme != null && root != null) {

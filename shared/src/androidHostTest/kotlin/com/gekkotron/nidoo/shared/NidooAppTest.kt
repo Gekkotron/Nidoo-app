@@ -157,6 +157,8 @@ class NidooAppTest {
         waitForHome()
 
         assertEquals(2, sources.size)
+        // The rule behind it: a new house gets a new HomeViewModel, one per house.
+        assertEquals(2, homeCreations.get())
     }
 
     @Test
