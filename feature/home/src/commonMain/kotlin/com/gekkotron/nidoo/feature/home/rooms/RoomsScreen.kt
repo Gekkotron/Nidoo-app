@@ -45,14 +45,16 @@ import com.gekkotron.nidoo.feature.home.resources.*
 import com.gekkotron.nidoo.feature.home.ui.RoomPicker
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.rememberResourceEnvironment
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun RoomsRoute(onDone: () -> Unit, viewModel: RoomsViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val environment = rememberResourceEnvironment()
     LaunchedEffect(viewModel, snackbar) {
-        viewModel.events.collect { snackbar.showSnackbar(getString(Res.string.home_save_failed)) }
+        viewModel.events.collect { snackbar.showSnackbar(getString(environment, Res.string.home_save_failed)) }
     }
     RoomsScreen(state, viewModel::assign, viewModel::createRoom, onDone, snackbar)
 }

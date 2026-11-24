@@ -10,9 +10,9 @@
 |---|---|---|---|
 | **4A** (this file, detailed) | `feat/ios-phase4a-onboarding` | app's connection wiring into a new `:core:connection`, and `:feature:onboarding` | Set up by QR or by hand. The iPhone then shows the live link (direct at home, gateway away) and the device count, and has a "Set up again" button. |
 | **4B** (`2026-11-2x-ios-phase4b-home.md`, written after 4A) | `feat/ios-phase4b-home` | `:feature:home` (with a new `:core:format` for locale numbers, dates and accents; `EnergyStats`/`EnergyFormat` leave `:feature:energy`) | Rooms step, Home, dashboards, control and customize sheets, history availability. |
-| **4C** (`2026-11-2x-ios-phase4c-settings.md`, written after 4B) | `feat/ios-phase4c-settings` | `:feature:settings` (the pages iOS has; Presence, Notifications and Voice stay Android-only), and the common shell on Navigation 3 | Settings with the connection pages, room order, theme; swipe-back; the iPhone checklist. |
+| **4C** (`2026-11-24-ios-phase4c-settings.md`, written after 4B) | `feat/ios-phase4c-settings` | `:feature:settings` (the pages iOS has; Presence, Notifications and Voice stay Android-only), and the common shell on Navigation 3 | Settings with the connection pages, room order, theme; swipe-back; the iPhone checklist. |
 
-4A is the plan below. Plans 4B and 4C are written when the previous PR is open, against the code as it is then.
+4A is the plan below. Plans 4B and 4C were written once the previous PR was open, against the code as it was then; 4C is `2026-11-24-ios-phase4c-settings.md`.
 
 **Tech Stack:** Kotlin 2.4.20, AGP 9.5, Compose Multiplatform 1.11.1, JetBrains lifecycle 2.10.0 (`lifecycle-runtime-compose`, `lifecycle-viewmodel-compose`), `org.jetbrains.compose.ui:ui-backhandler:1.11.1`, Koin 4.2.2, AVFoundation (iOS QR), CocoaMQTT 2.4.2 (Swift, unchanged).
 

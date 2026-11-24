@@ -15,6 +15,7 @@ import com.gekkotron.nidoo.model.Kind
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.rememberResourceEnvironment
 
 /** Spec §4.4 / §7: "Not confirmed — Retry" and refused commands, as snackbars. */
 @Composable
@@ -33,40 +34,41 @@ fun HomeEventsEffect(
     val ask by rememberUpdatedState(onAsk)
     val retryRoom by rememberUpdatedState(onRetryRoom)
     val nameOf by rememberUpdatedState(roomName)
+    val environment = rememberResourceEnvironment()
     LaunchedEffect(events, snackbar) {
         events.collect { event ->
             when (event) {
                 is HomeEvent.AskBeforeAction -> ask(event)
                 is HomeEvent.NotConfirmed -> {
                     val result = snackbar.showSnackbar(
-                        message = getString(Res.string.home_not_confirmed),
-                        actionLabel = getString(Res.string.home_retry),
+                        message = getString(environment, Res.string.home_not_confirmed),
+                        actionLabel = getString(environment, Res.string.home_retry),
                         duration = SnackbarDuration.Long,
                     )
                     if (result == SnackbarResult.ActionPerformed) retry(event.id, event.command)
                 }
-                is HomeEvent.Rejected -> snackbar.showSnackbar(getString(Res.string.home_rejected, event.reason))
-                HomeEvent.SaveFailed -> snackbar.showSnackbar(getString(Res.string.home_save_failed))
-                HomeEvent.WaitingForConnection -> snackbar.showSnackbar(getString(Res.string.home_waiting_connection))
+                is HomeEvent.Rejected -> snackbar.showSnackbar(getString(environment, Res.string.home_rejected, event.reason))
+                HomeEvent.SaveFailed -> snackbar.showSnackbar(getString(environment, Res.string.home_save_failed))
+                HomeEvent.WaitingForConnection -> snackbar.showSnackbar(getString(environment, Res.string.home_waiting_connection))
                 is HomeEvent.RoomNotConfirmed -> {
                     val count = event.failed.size
                     val message = if (count == 1) {
-                        getString(Res.string.home_group_not_confirmed_one, event.failedNames.single())
+                        getString(environment, Res.string.home_group_not_confirmed_one, event.failedNames.single())
                     } else {
                         val plural = if (event.kind == RoomKind.COVER) Res.plurals.home_room_not_confirmed_covers else Res.plurals.home_room_not_confirmed_lights
-                        getPluralString(plural, count, count, nameOf(event.areaId))
+                        getPluralString(environment, plural, count, count, nameOf(event.areaId))
                     }
-                    val result = snackbar.showSnackbar(message = message, actionLabel = getString(Res.string.home_retry), duration = SnackbarDuration.Long)
+                    val result = snackbar.showSnackbar(message = message, actionLabel = getString(environment, Res.string.home_retry), duration = SnackbarDuration.Long)
                     if (result == SnackbarResult.ActionPerformed) retryRoom(event)
                 }
                 is HomeEvent.GroupNotConfirmed -> {
                     val message = if (event.failedIds.size == 1) {
-                        getString(Res.string.home_group_not_confirmed_one, event.failedNames.single())
+                        getString(environment, Res.string.home_group_not_confirmed_one, event.failedNames.single())
                     } else {
                         val plural = if (event.kind == Kind.COVER) Res.plurals.home_group_not_confirmed_covers else Res.plurals.home_group_not_confirmed_lights
-                        getPluralString(plural, event.failedIds.size, event.failedIds.size)
+                        getPluralString(environment, plural, event.failedIds.size, event.failedIds.size)
                     }
-                    val result = snackbar.showSnackbar(message = message, actionLabel = getString(Res.string.home_retry), duration = SnackbarDuration.Long)
+                    val result = snackbar.showSnackbar(message = message, actionLabel = getString(environment, Res.string.home_retry), duration = SnackbarDuration.Long)
                     if (result == SnackbarResult.ActionPerformed) retryGroup(event.groupId, event.command, event.failedIds)
                 }
             }
