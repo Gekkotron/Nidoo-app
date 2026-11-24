@@ -88,14 +88,17 @@ class EntryViewModelsTest {
     @Test
     fun aPoppedEntryClearsItsViewModel() = runComposeUiTest {
         try {
-            val stack = mutableStateListOf<NavKey>(First, Second)
+            // NavDisplay composes only the top entry, so the second ViewModel exists once Second is pushed.
+            val stack = mutableStateListOf<NavKey>(First)
             show(stack)
-            waitUntil(timeoutMillis = 5_000) { created.isNotEmpty() }
-            val second = created.last()
+            waitForIdle()
+            stack.add(Second)
+            waitUntil(timeoutMillis = 5_000) { created.size == 2 }
             stack.removeLast()
-            waitUntil(timeoutMillis = 5_000) { second.cleared }
-            assertTrue(second.cleared)
-            assertTrue(created.first() !== second && !created.first().cleared)
+            waitUntil(timeoutMillis = 5_000) { created[1].cleared }
+            // First's ViewModel survived and was reused, not recreated.
+            assertEquals(2, created.size)
+            assertTrue(!created[0].cleared)
         } finally {
             koinApp.close()
         }
