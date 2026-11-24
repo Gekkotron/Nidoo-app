@@ -47,6 +47,10 @@ kotlin {
             implementation(libs.coil.network.ktor3) // Home's media covers over Ktor
             implementation(libs.ktor.client.darwin)
         }
+        // Compose UI tests of the iOS runtime (run in CI only).
+        iosTest.dependencies {
+            implementation(libs.cmp.ui.test)
+        }
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutines.test)
             implementation(project(":core:transport-testing"))
