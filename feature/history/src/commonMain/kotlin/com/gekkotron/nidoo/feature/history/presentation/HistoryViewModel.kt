@@ -17,7 +17,6 @@ import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.model.UNASSIGNED_AREA
 import com.gekkotron.nidoo.source.EntitySource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,11 +27,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class HistoryViewModel @Inject constructor(
+class HistoryViewModel(
     private val source: EntitySource,
     private val history: HistoryClient,
     private val energy: EnergyHistory,

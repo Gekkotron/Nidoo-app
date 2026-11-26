@@ -29,12 +29,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.charts.ChartBar
@@ -44,16 +42,56 @@ import com.gekkotron.nidoo.designsystem.charts.DailyBarsChart
 import com.gekkotron.nidoo.designsystem.charts.HistoryBandKey
 import com.gekkotron.nidoo.designsystem.charts.HistoryLineChart
 import com.gekkotron.nidoo.feature.history.HistoryTarget
-import com.gekkotron.nidoo.feature.history.R
 import com.gekkotron.nidoo.feature.history.presentation.ChartContent
 import com.gekkotron.nidoo.feature.history.presentation.ChartMode
 import com.gekkotron.nidoo.feature.history.presentation.HistoryUi
 import com.gekkotron.nidoo.feature.history.presentation.HistoryViewModel
+import com.gekkotron.nidoo.designsystem.currentFormatLocale
+import com.gekkotron.nidoo.feature.history.resources.history_avg
+import com.gekkotron.nidoo.feature.history.resources.history_avg_per_day
+import com.gekkotron.nidoo.feature.history.resources.history_back
+import com.gekkotron.nidoo.feature.history.resources.history_band
+import com.gekkotron.nidoo.feature.history.resources.history_binary_clear
+import com.gekkotron.nidoo.feature.history.resources.history_binary_closed
+import com.gekkotron.nidoo.feature.history.resources.history_binary_detected
+import com.gekkotron.nidoo.feature.history.resources.history_binary_off
+import com.gekkotron.nidoo.feature.history.resources.history_binary_on
+import com.gekkotron.nidoo.feature.history.resources.history_binary_open
+import com.gekkotron.nidoo.feature.history.resources.history_cd_bars
+import com.gekkotron.nidoo.feature.history.resources.history_cd_line
+import com.gekkotron.nidoo.feature.history.resources.history_cd_range_1h
+import com.gekkotron.nidoo.feature.history.resources.history_cd_range_1y
+import com.gekkotron.nidoo.feature.history.resources.history_cd_range_24h
+import com.gekkotron.nidoo.feature.history.resources.history_cd_range_30d
+import com.gekkotron.nidoo.feature.history.resources.history_cd_range_6h
+import com.gekkotron.nidoo.feature.history.resources.history_cd_range_7d
+import com.gekkotron.nidoo.feature.history.resources.history_cd_step
+import com.gekkotron.nidoo.feature.history.resources.history_key_average
+import com.gekkotron.nidoo.feature.history.resources.history_key_band
+import com.gekkotron.nidoo.feature.history.resources.history_max
+import com.gekkotron.nidoo.feature.history.resources.history_min
+import com.gekkotron.nidoo.feature.history.resources.history_mode_daily
+import com.gekkotron.nidoo.feature.history.resources.history_mode_power
+import com.gekkotron.nidoo.feature.history.resources.history_no_data
+import com.gekkotron.nidoo.feature.history.resources.history_not_allowed
+import com.gekkotron.nidoo.feature.history.resources.history_not_recorded
+import com.gekkotron.nidoo.feature.history.resources.history_range_1h
+import com.gekkotron.nidoo.feature.history.resources.history_range_1y
+import com.gekkotron.nidoo.feature.history.resources.history_range_24h
+import com.gekkotron.nidoo.feature.history.resources.history_range_30d
+import com.gekkotron.nidoo.feature.history.resources.history_range_6h
+import com.gekkotron.nidoo.feature.history.resources.history_range_7d
+import com.gekkotron.nidoo.feature.history.resources.history_retry
+import com.gekkotron.nidoo.feature.history.resources.history_total
+import com.gekkotron.nidoo.feature.history.resources.history_unavailable
+import com.gekkotron.nidoo.format.FormatLocale
+import com.gekkotron.nidoo.format.formatEpochSeconds
+import com.gekkotron.nidoo.format.formatNumber
+import com.gekkotron.nidoo.format.roundHalfUp
 import com.gekkotron.nidoo.history.HistoryRange
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import org.jetbrains.compose.resources.StringResource
+import org.koin.compose.viewmodel.koinViewModel
+import com.gekkotron.nidoo.feature.history.resources.Res as HistoryRes
 import com.gekkotron.nidoo.designsystem.resources.Res
 import com.gekkotron.nidoo.designsystem.resources.energy_house
 import org.jetbrains.compose.resources.stringResource
@@ -63,7 +101,7 @@ fun HistoryRoute(
     target: HistoryTarget,
     onBack: () -> Unit,
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    viewModel: HistoryViewModel = hiltViewModel(),
+    viewModel: HistoryViewModel = koinViewModel(),
 ) {
     LaunchedEffect(target) { viewModel.bind(target) }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -83,10 +121,10 @@ fun HistoryScreen(
     onMode: (ChartMode) -> Unit,
     onRetry: () -> Unit,
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    zone: ZoneId = ZoneId.systemDefault(),
-    locale: Locale = Locale.getDefault(),
+    timeZoneId: String? = null,
+    locale: FormatLocale = currentFormatLocale(),
 ) {
-    val backLabel = stringResource(R.string.history_back)
+    val backLabel = stringResource(HistoryRes.string.history_back)
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = NidooTheme.colors.content,
@@ -114,13 +152,13 @@ fun HistoryScreen(
             Header(state, locale)
             RangeChips(state.range, onRange)
             if (state.toggle && state.range.bucketed) ModeToggle(state.mode, onMode)
-            Body(state, onRetry, zone, locale)
+            Body(state, onRetry, timeZoneId, locale)
         }
     }
 }
 
 @Composable
-private fun Header(state: HistoryUi, locale: Locale) {
+private fun Header(state: HistoryUi, locale: FormatLocale) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(state.title ?: stringResource(Res.string.energy_house), style = NidooTheme.type.cardName)
         state.room?.let { Text(it, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted) }
@@ -153,46 +191,46 @@ private fun ModeToggle(mode: ChartMode, onMode: (ChartMode) -> Unit) {
                 onClick = { onMode(m) },
                 shape = SegmentedButtonDefaults.itemShape(index, modes.size),
             ) {
-                Text(stringResource(if (m == ChartMode.POWER) R.string.history_mode_power else R.string.history_mode_daily))
+                Text(stringResource(if (m == ChartMode.POWER) HistoryRes.string.history_mode_power else HistoryRes.string.history_mode_daily))
             }
         }
     }
 }
 
 @Composable
-private fun Body(state: HistoryUi, onRetry: () -> Unit, zone: ZoneId, locale: Locale) {
+private fun Body(state: HistoryUi, onRetry: () -> Unit, timeZoneId: String?, locale: FormatLocale) {
     // A missing entity keeps `content = Loading`, so it is checked first; it can be briefly true on a cold start.
-    if (state.missing) return Message(R.string.history_not_recorded)
+    if (state.missing) return Message(HistoryRes.string.history_not_recorded)
     when (val content = state.content) {
         ChartContent.Loading -> ChartSkeleton()
-        is ChartContent.Line -> LineBody(state, content, zone, locale)
-        is ChartContent.Bars -> BarsBody(state, content, zone, locale)
-        ChartContent.NoData -> Message(R.string.history_no_data)
-        ChartContent.NotRecorded -> Message(R.string.history_not_recorded)
-        ChartContent.NotAllowed -> Message(R.string.history_not_allowed)
+        is ChartContent.Line -> LineBody(state, content, timeZoneId, locale)
+        is ChartContent.Bars -> BarsBody(state, content, timeZoneId, locale)
+        ChartContent.NoData -> Message(HistoryRes.string.history_no_data)
+        ChartContent.NotRecorded -> Message(HistoryRes.string.history_not_recorded)
+        ChartContent.NotAllowed -> Message(HistoryRes.string.history_not_allowed)
         ChartContent.Unavailable -> {
-            Message(R.string.history_unavailable)
-            Button(onClick = onRetry) { Text(stringResource(R.string.history_retry)) }
+            Message(HistoryRes.string.history_unavailable)
+            Button(onClick = onRetry) { Text(stringResource(HistoryRes.string.history_retry)) }
         }
     }
 }
 
 @Composable
-private fun Message(res: Int) {
+private fun Message(res: StringResource) {
     Text(stringResource(res), style = NidooTheme.type.body, color = NidooTheme.colors.contentMuted, modifier = Modifier.padding(vertical = 24.dp))
 }
 
 @Composable
-private fun LineBody(state: HistoryUi, line: ChartContent.Line, zone: ZoneId, locale: Locale) {
+private fun LineBody(state: HistoryUi, line: ChartContent.Line, timeZoneId: String?, locale: FormatLocale) {
     val unit = state.unit
     val title = state.title ?: stringResource(Res.string.energy_house)
-    val formatTime = timeFormatter(state.range, zone, locale)
+    val formatTime = timeFormatter(state.range, locale, timeZoneId)
     if (state.binary) {
         // Binary sensors chart as 0/1 steps: use max within each bucket as "was active at any point".
         val points = remember(line) { line.series.points.map { ChartPoint(it.t, if (it.max >= 0.5) 1.0 else 0.0, 0.0, 1.0) } }
         val on = stringResource(binaryOnLabel(state.binaryClass))
         val off = stringResource(binaryOffLabel(state.binaryClass))
-        val description = stringResource(R.string.history_cd_step, title, stringResource(rangeDescription(state.range)))
+        val description = stringResource(HistoryRes.string.history_cd_step, title, stringResource(rangeDescription(state.range)))
         HistoryLineChart(
             points = points,
             color = NidooTheme.colors.water,
@@ -205,44 +243,45 @@ private fun LineBody(state: HistoryUi, line: ChartContent.Line, zone: ZoneId, lo
     }
     val points = remember(line) { line.series.points.map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val description = stringResource(
-        R.string.history_cd_line, title, stringResource(rangeDescription(state.range)),
+        HistoryRes.string.history_cd_line, title, stringResource(rangeDescription(state.range)),
         withUnit(line.min, unit, locale), withUnit(line.max, unit, locale),
     )
     val color = if (state.energy) NidooTheme.colors.solar else NidooTheme.colors.water
     // As on the hub: the day-spanning ranges are buckets, so their min/max spread is a band; shorter ones are raw samples.
     val band = state.range.bucketed && points.any { it.min < it.max }
-    val bandLine = stringResource(R.string.history_band)
+    // formatBand is not composable: resolve the template once, with markers where the two values go.
+    val bandLine = stringResource(HistoryRes.string.history_band, BAND_LO, BAND_HI)
     HistoryLineChart(
         points = points,
         color = color,
         formatValue = { withUnit(it, unit, locale) },
         formatTime = formatTime,
         contentDescription = description,
-        formatBand = if (band) { lo, hi -> bandLine.format(locale, withUnit(lo, unit, locale), withUnit(hi, unit, locale)) } else null,
+        formatBand = if (band) { lo, hi -> bandLine.replace(BAND_LO, withUnit(lo, unit, locale)).replace(BAND_HI, withUnit(hi, unit, locale)) } else null,
     )
-    if (band) HistoryBandKey(color, stringResource(R.string.history_key_average), stringResource(R.string.history_key_band))
+    if (band) HistoryBandKey(color, stringResource(HistoryRes.string.history_key_average), stringResource(HistoryRes.string.history_key_band))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-        Stat(R.string.history_min, withUnit(line.min, unit, locale))
-        Stat(R.string.history_avg, withUnit(line.avg, unit, locale))
-        Stat(R.string.history_max, withUnit(line.max, unit, locale))
+        Stat(HistoryRes.string.history_min, withUnit(line.min, unit, locale))
+        Stat(HistoryRes.string.history_avg, withUnit(line.avg, unit, locale))
+        Stat(HistoryRes.string.history_max, withUnit(line.max, unit, locale))
     }
 }
 
 /** Device-class labels for binary sensors: door/window open vs. closed, motion/occupancy detected vs. clear, else on/off. */
-internal fun binaryOnLabel(deviceClass: String?): Int = when (deviceClass) {
-    "door", "window", "garage_door", "opening" -> R.string.history_binary_open
-    "motion", "occupancy", "presence", "moving" -> R.string.history_binary_detected
-    else -> R.string.history_binary_on
+internal fun binaryOnLabel(deviceClass: String?): StringResource = when (deviceClass) {
+    "door", "window", "garage_door", "opening" -> HistoryRes.string.history_binary_open
+    "motion", "occupancy", "presence", "moving" -> HistoryRes.string.history_binary_detected
+    else -> HistoryRes.string.history_binary_on
 }
 
-internal fun binaryOffLabel(deviceClass: String?): Int = when (deviceClass) {
-    "door", "window", "garage_door", "opening" -> R.string.history_binary_closed
-    "motion", "occupancy", "presence", "moving" -> R.string.history_binary_clear
-    else -> R.string.history_binary_off
+internal fun binaryOffLabel(deviceClass: String?): StringResource = when (deviceClass) {
+    "door", "window", "garage_door", "opening" -> HistoryRes.string.history_binary_closed
+    "motion", "occupancy", "presence", "moving" -> HistoryRes.string.history_binary_clear
+    else -> HistoryRes.string.history_binary_off
 }
 
 @Composable
-private fun Stat(label: Int, value: String) {
+private fun Stat(label: StringResource, value: String) {
     Column {
         Text(stringResource(label), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
         Text(value, style = NidooTheme.type.cardValue)
@@ -250,60 +289,65 @@ private fun Stat(label: Int, value: String) {
 }
 
 @Composable
-private fun BarsBody(state: HistoryUi, bars: ChartContent.Bars, zone: ZoneId, locale: Locale) {
+private fun BarsBody(state: HistoryUi, bars: ChartContent.Bars, timeZoneId: String?, locale: FormatLocale) {
     val chartBars = remember(bars) { bars.days.days.map { ChartBar(it.t, it.kwh) } }
     val title = state.title ?: stringResource(Res.string.energy_house)
     val total = format(bars.total, 1, locale)
     val avg = format(bars.avg, 1, locale)
-    val description = stringResource(R.string.history_cd_bars, title, stringResource(rangeDescription(state.range)), total, avg)
+    val description = stringResource(HistoryRes.string.history_cd_bars, title, stringResource(rangeDescription(state.range)), total, avg)
     DailyBarsChart(
         bars = chartBars,
         average = bars.avg,
         color = NidooTheme.colors.solar,
         formatValue = { format(it, 1, locale) },
-        formatDay = timeFormatter(HistoryRange.D30, zone, locale),
+        formatDay = timeFormatter(HistoryRange.D30, locale, timeZoneId),
         contentDescription = description,
     )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-        Text(stringResource(R.string.history_total, total, bars.days.days.size), style = NidooTheme.type.body)
-        Text(stringResource(R.string.history_avg_per_day, avg), style = NidooTheme.type.body)
+        Text(stringResource(HistoryRes.string.history_total, total, bars.days.days.size), style = NidooTheme.type.body)
+        Text(stringResource(HistoryRes.string.history_avg_per_day, avg), style = NidooTheme.type.body)
     }
 }
 
 private fun rangeLabel(range: HistoryRange) = when (range) {
-    HistoryRange.H1 -> R.string.history_range_1h
-    HistoryRange.H6 -> R.string.history_range_6h
-    HistoryRange.H24 -> R.string.history_range_24h
-    HistoryRange.D7 -> R.string.history_range_7d
-    HistoryRange.D30 -> R.string.history_range_30d
-    HistoryRange.Y1 -> R.string.history_range_1y
+    HistoryRange.H1 -> HistoryRes.string.history_range_1h
+    HistoryRange.H6 -> HistoryRes.string.history_range_6h
+    HistoryRange.H24 -> HistoryRes.string.history_range_24h
+    HistoryRange.D7 -> HistoryRes.string.history_range_7d
+    HistoryRange.D30 -> HistoryRes.string.history_range_30d
+    HistoryRange.Y1 -> HistoryRes.string.history_range_1y
 }
 
 private fun rangeDescription(range: HistoryRange) = when (range) {
-    HistoryRange.H1 -> R.string.history_cd_range_1h
-    HistoryRange.H6 -> R.string.history_cd_range_6h
-    HistoryRange.H24 -> R.string.history_cd_range_24h
-    HistoryRange.D7 -> R.string.history_cd_range_7d
-    HistoryRange.D30 -> R.string.history_cd_range_30d
-    HistoryRange.Y1 -> R.string.history_cd_range_1y
+    HistoryRange.H1 -> HistoryRes.string.history_cd_range_1h
+    HistoryRange.H6 -> HistoryRes.string.history_cd_range_6h
+    HistoryRange.H24 -> HistoryRes.string.history_cd_range_24h
+    HistoryRange.D7 -> HistoryRes.string.history_cd_range_7d
+    HistoryRange.D30 -> HistoryRes.string.history_cd_range_30d
+    HistoryRange.Y1 -> HistoryRes.string.history_cd_range_1y
 }
 
-/** 1 h, 6 h, 24 h → `HH:mm`; 7 d → `EEE HH:mm`; 30 d and days → `d MMM`; 1 y → `MMM yy`. */
-private fun timeFormatter(range: HistoryRange, zone: ZoneId, locale: Locale): (Long) -> String {
+private const val BAND_LO = "{lo}"
+private const val BAND_HI = "{hi}"
+
+/** 1 h, 6 h, 24 h → `HH:mm`; 7 d → `EEE HH:mm`; 30 d and days → `d MMM`; 1 y → `MMM yy`. A null [timeZoneId] is the system zone. */
+internal fun timeFormatter(range: HistoryRange, locale: FormatLocale, timeZoneId: String? = null): (Long) -> String {
     val pattern = when (range) {
         HistoryRange.H1, HistoryRange.H6, HistoryRange.H24 -> "HH:mm"
         HistoryRange.D7 -> "EEE HH:mm"
         HistoryRange.D30 -> "d MMM"
         HistoryRange.Y1 -> "MMM yy"
     }
-    val formatter = DateTimeFormatter.ofPattern(pattern, locale).withZone(zone)
-    return { seconds -> formatter.format(Instant.ofEpochSecond(seconds)) }
+    return { seconds -> formatEpochSeconds(seconds, pattern, locale, timeZoneId) }
 }
 
-private fun format(value: Double, decimals: Int, locale: Locale) = String.format(locale, "%.${decimals}f", value)
+// String.format, which this replaces, rounded half up and never grouped thousands; formatNumber rounds half-even
+// (6.25 → "6.2") and groups by default, so round first and turn grouping off to keep the same text.
+private fun format(value: Double, decimals: Int, locale: FormatLocale) =
+    formatNumber(roundHalfUp(value, decimals), locale, decimals, decimals, grouping = false)
 
 /** One decimal, none for watts. */
-private fun withUnit(value: Double, unit: String?, locale: Locale): String {
+private fun withUnit(value: Double, unit: String?, locale: FormatLocale): String {
     val number = format(value, if (unit == "W") 0 else 1, locale)
     return if (unit.isNullOrBlank()) number else "$number $unit"
 }

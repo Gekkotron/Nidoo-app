@@ -19,7 +19,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.ZoneOffset
 import java.util.Locale
 import kotlin.test.assertEquals
 
@@ -43,7 +42,7 @@ class HistoryScreenTest {
         NidooTheme(ThemeChoice.NIGHT_GLASS) {
             HistoryScreen(
                 state, onBack = { backs++ }, onRange = { ranges += it }, onMode = { modes += it }, onRetry = { retries++ },
-                zone = ZoneOffset.UTC, locale = Locale.UK,
+                timeZoneId = "UTC", locale = Locale.UK,
             )
         }
     }

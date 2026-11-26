@@ -70,7 +70,7 @@ jobs:
               :feature:home:testAndroidHostTest
               :feature:onboarding:testAndroidHostTest
               :feature:energy:testAndroidHostTest
-              :feature:history:test
+              :feature:history:testAndroidHostTest
               :feature:security:test
               :feature:automations:test
               :feature:settings:testAndroidHostTest

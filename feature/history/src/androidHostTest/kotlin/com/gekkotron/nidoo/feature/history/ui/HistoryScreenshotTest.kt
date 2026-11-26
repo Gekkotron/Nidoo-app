@@ -22,7 +22,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.ZoneOffset
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.pow
@@ -68,7 +67,7 @@ class HistoryScreenshotTest {
                 NidooBackground {
                     HistoryScreen(
                         state, onBack = {}, onRange = {}, onMode = {}, onRetry = {},
-                        zone = ZoneOffset.UTC, locale = Locale.UK,
+                        timeZoneId = "UTC", locale = Locale.UK,
                     )
                 }
             }
