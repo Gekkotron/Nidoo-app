@@ -43,3 +43,7 @@ internal fun nearestIndex(times: List<Long>, t: Double): Int {
 
 /** A line needs two samples; with fewer the iOS charts draw only the frame. */
 internal fun canDrawLine(count: Int): Boolean = count >= 2
+
+/** Where an x position falls in the plot spanning [left]..[right], as 0..1; a tap in a gutter clamps to the nearest edge. */
+internal fun plotFraction(x: Float, left: Float, right: Float): Float =
+    if (right <= left) 0f else ((x - left) / (right - left)).coerceIn(0f, 1f)

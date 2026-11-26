@@ -32,17 +32,20 @@ private const val GridAlpha = 0.3f
 /** Everything a chart draws besides its data: the plot rectangle and the text style the axes use. */
 internal class ChartSurface(val measurer: TextMeasurer, val style: TextStyle, val muted: Color, val card: Color, val content: Color)
 
+/** The rectangle the data was last drawn in: [drawAxes] sets it, so a tap is resolved against what is on screen. */
+internal class PlotHolder { var rect: Rect? = null }
+
 /**
- * The 220 dp Canvas both iOS charts share. [onTap] gets the tap's x in px and the canvas size, and returns the marker
- * index (or null); [draw] receives that index.
+ * The 220 dp Canvas both iOS charts share. [pick] gets a tap's x as a 0..1 share of the plot (clamped) and returns
+ * the marker index (or null); [draw] receives that index.
  */
 @Composable
 internal fun ChartCanvas(
     modifier: Modifier,
     contentDescription: String,
     resetKey: Any,
-    pick: (x: Float, size: Size) -> Int?,
-    draw: DrawScope.(surface: ChartSurface, marker: Int?) -> Unit,
+    pick: (share: Float) -> Int?,
+    draw: DrawScope.(surface: ChartSurface, marker: Int?, plot: PlotHolder) -> Unit,
 ) {
     val surface = ChartSurface(
         measurer = rememberTextMeasurer(),
@@ -52,14 +55,15 @@ internal fun ChartCanvas(
         content = NidooTheme.colors.content,
     )
     var marker by remember(resetKey) { mutableStateOf<Int?>(null) }
+    val holder = remember { PlotHolder() }
     Canvas(
         modifier.fillMaxWidth().height(ChartHeight)
             .semantics { this.contentDescription = contentDescription }
-            .pointerInput(resetKey) { detectTapGestures { offset -> marker = pick(offset.x, size.toSize()) } },
-    ) { draw(surface, marker) }
+            .pointerInput(resetKey) { detectTapGestures { offset ->
+                marker = holder.rect?.let { pick(plotFraction(offset.x, it.left, it.right)) }
+            } },
+    ) { draw(surface, marker, holder) }
 }
-
-private fun androidx.compose.ui.unit.IntSize.toSize() = Size(width.toFloat(), height.toFloat())
 
 /** Draws the y grid with its labels and the x labels; returns the rectangle left for the data. */
 internal fun DrawScope.drawAxes(
@@ -68,6 +72,7 @@ internal fun DrawScope.drawAxes(
     scale: ValueScale,
     formatValue: (Double) -> String,
     xLabels: List<Pair<String, Float>>, // label and its centre as a 0..1 share of the plot width
+    holder: PlotHolder,
     xInset: Float = 0f,
 ): Rect {
     val yLabels = yTicks.map { surface.measurer.measure(formatValue(it), surface.style) }
@@ -76,6 +81,7 @@ internal fun DrawScope.drawAxes(
     val left = (yLabels.maxOfOrNull { it.size.width } ?: 0) + gap
     val bottomLabel = (xMeasured.maxOfOrNull { it.size.height } ?: 0)
     val plot = Rect(left, 4.dp.toPx(), size.width - 4.dp.toPx(), size.height - bottomLabel - gap)
+    holder.rect = plot
     val grid = surface.muted.copy(alpha = GridAlpha)
     yTicks.forEachIndexed { i, tick ->
         val y = plot.bottom - scale.fraction(tick) * plot.height

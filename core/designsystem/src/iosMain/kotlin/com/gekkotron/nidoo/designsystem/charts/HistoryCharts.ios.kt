@@ -5,16 +5,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.gekkotron.nidoo.designsystem.NidooTheme
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -44,21 +43,13 @@ actual fun HistoryLineChart(
         modifier = modifier,
         contentDescription = contentDescription,
         resetKey = points,
-        pick = { x, size ->
-            if (!canDrawLine(points.size)) null else {
-                // The plot's left edge depends on the label widths; the 0..1 share is close enough for picking.
-                val share = (x / size.width).coerceIn(0f, 1f)
-                nearestIndex(times, first + share * span.toDouble())
-            }
-        },
-    ) { surface, marker ->
-        if (!canDrawLine(points.size)) {
-            drawAxes(surface, axisTicks(scale), scale, formatValue, emptyList())
-            return@ChartCanvas
-        }
+        pick = { share -> if (canDrawLine(points.size)) nearestIndex(times, first + share * span.toDouble()) else null },
+    ) { surface, marker, holder ->
+        holder.rect = null
+        if (!canDrawLine(points.size)) return@ChartCanvas // just the frame: no data, no labels
         val xLabels = timeTicks(first, points.last().t, AxisLabelCount)
             .mapIndexed { i, t -> formatTime(t) to i / (AxisLabelCount - 1f) }
-        val plot = drawAxes(surface, axisTicks(scale), scale, formatValue, xLabels)
+        val plot = drawAxes(surface, axisTicks(scale), scale, formatValue, xLabels, holder)
         fun x(t: Long) = plot.left + (t - first) / span * plot.width
         fun y(v: Double) = plot.bottom - scale.fraction(v) * plot.height
         if (band != null) {
@@ -107,20 +98,16 @@ actual fun DailyBarsChart(
         modifier = modifier,
         contentDescription = contentDescription,
         resetKey = bars,
-        pick = { x, size ->
-            if (bars.isEmpty()) null else (x / size.width * bars.size).toInt().coerceIn(0, bars.size - 1)
-        },
-    ) { surface, marker ->
-        if (bars.isEmpty()) {
-            drawAxes(surface, axisTicks(scale), scale, formatValue, emptyList())
-            return@ChartCanvas
-        }
+        pick = { share -> if (bars.isEmpty()) null else (share * bars.size).toInt().coerceIn(0, bars.size - 1) },
+    ) { surface, marker, holder ->
+        holder.rect = null
+        if (bars.isEmpty()) return@ChartCanvas // just the frame: no data, no labels
         val last = bars.size - 1
         val xLabels = List(min(AxisLabelCount, bars.size)) { i ->
             val index = if (bars.size == 1) 0 else (last * i / (min(AxisLabelCount, bars.size) - 1f)).toInt()
             formatDay(bars[index].t) to (index + 0.5f) / bars.size
         }
-        val plot = drawAxes(surface, axisTicks(scale), scale, formatValue, xLabels)
+        val plot = drawAxes(surface, axisTicks(scale), scale, formatValue, xLabels, holder)
         val slot = plot.width / bars.size
         val barWidth = min(8.dp.toPx(), slot * 0.7f)
         fun centre(i: Int) = plot.left + slot * (i + 0.5f)
@@ -131,7 +118,7 @@ actual fun DailyBarsChart(
             drawRoundRect(
                 color,
                 Offset(centre(i) - barWidth / 2f, min(top, zero)),
-                Size(barWidth, kotlin.math.abs(zero - top).coerceAtLeast(1f)),
+                Size(barWidth, abs(zero - top).coerceAtLeast(1f)),
                 CornerRadius(2.dp.toPx()),
             )
         }

@@ -34,4 +34,12 @@ class ChartGeometryTest {
         assertFalse(canDrawLine(1))
         assertTrue(canDrawLine(2))
     }
+
+    @Test fun plotFractionMapsThePlotRectToZeroAndOne() {
+        assertEquals(0f, plotFraction(40f, 40f, 140f))
+        assertEquals(1f, plotFraction(140f, 40f, 140f))
+        assertEquals(0.5f, plotFraction(90f, 40f, 140f))
+        assertEquals(0f, plotFraction(10f, 40f, 140f)) // in the gutter
+        assertEquals(1f, plotFraction(200f, 40f, 140f))
+    }
 }
