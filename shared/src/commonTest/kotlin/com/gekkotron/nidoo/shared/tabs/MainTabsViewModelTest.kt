@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -62,6 +63,53 @@ class MainTabsViewModelTest {
 
         profiles.value = b
         assertFalse(vm.status.value.alarmArmed)
+
+        collecting.cancel()
+        store.clear()
+    }
+
+    @Test
+    fun anEqualProfileAfterNoneAsksForTheSourceAgain() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val a = ProfileState.Ready(ConnectionProfile.Demo)
+        val profiles = MutableStateFlow<ProfileState>(a)
+        var calls = 0
+        val store = ViewModelStore()
+        val vm = ViewModelProvider.create(
+            store,
+            viewModelFactory { initializer { MainTabsViewModel(profiles) { calls++; armedSource() } } },
+        )[MainTabsViewModel::class]
+
+        val collecting = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.status.collect { } }
+        assertEquals(1, calls)
+        assertTrue(vm.status.value.alarmArmed)
+
+        profiles.value = ProfileState.None
+        assertEquals(1, calls)
+        assertEquals(TabStatus(), vm.status.value)
+
+        profiles.value = a
+        assertEquals(2, calls)
+        assertTrue(vm.status.value.alarmArmed)
+
+        collecting.cancel()
+        store.clear()
+    }
+
+    @Test
+    fun loadingAsTheFirstValueNeverAsksForASource() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val profiles = MutableStateFlow<ProfileState>(ProfileState.Loading)
+        var calls = 0
+        val store = ViewModelStore()
+        val vm = ViewModelProvider.create(
+            store,
+            viewModelFactory { initializer { MainTabsViewModel(profiles) { calls++; armedSource() } } },
+        )[MainTabsViewModel::class]
+
+        val collecting = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.status.collect { } }
+        assertEquals(0, calls)
+        assertEquals(TabStatus(), vm.status.value)
 
         collecting.cancel()
         store.clear()

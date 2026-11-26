@@ -2,6 +2,7 @@ package com.gekkotron.nidoo.shared.tabs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.model.AlarmState
 import com.gekkotron.nidoo.model.EnergyRole
 import com.gekkotron.nidoo.model.Entity
@@ -10,7 +11,6 @@ import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.PowerUnits
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.source.EntitySource
-import com.gekkotron.nidoo.data.ProfileState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
