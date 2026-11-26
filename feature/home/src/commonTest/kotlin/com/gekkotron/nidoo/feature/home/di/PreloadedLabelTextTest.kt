@@ -67,4 +67,28 @@ class PreloadedLabelTextTest {
         advanceUntilIdle()
         assertEquals(1, loads)
     }
+
+    @Test
+    fun aFailedFirstLoadIsRetried() = runTest {
+        var loads = 0
+        val labels = PreloadedLabelText(loadScope(), { en }, {
+            loads++
+            if (loads == 1) error("boom")
+            mapOf("door" to "Porte")
+        })
+        advanceUntilIdle()
+        assertEquals("Porte", labels("Door"))
+        assertEquals(2, loads)
+    }
+
+    @Test
+    fun retriesStopAfterFourAttempts() = runTest {
+        var loads = 0
+        val labels = PreloadedLabelText(loadScope(), { en }, { loads++; error("boom") })
+        advanceUntilIdle()
+        assertEquals(4, loads)
+        assertNull(labels("Door"))
+        advanceUntilIdle()
+        assertEquals(4, loads)
+    }
 }

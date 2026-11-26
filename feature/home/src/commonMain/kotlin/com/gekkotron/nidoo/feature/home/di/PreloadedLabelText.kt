@@ -7,11 +7,14 @@ import com.gekkotron.nidoo.format.systemLocale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /** Every known entity label (normalised) with its translation in the current language. */
 suspend fun loadEntityLabels(): Map<String, String> =
@@ -21,12 +24,15 @@ suspend fun loadEntityLabels(): Map<String, String> =
  * Entity-label translations for the ViewModels. CMP strings are suspend, but [invoke] is not, so the map is loaded
  * ahead and looked up synchronously. A label is unknown (null, shown as published) until the first load lands, and
  * [updates] then tells the ViewModels to rebuild. When the language changes, [invoke] starts one reload for the new
- * one and keeps answering from the old map until it lands.
+ * one and keeps answering from the old map until it lands. A failed load is retried after each of [retryDelays]
+ * (1 s, 2 s and 4 s: four attempts in all); once the last one fails, the previous labels (or none) are recorded for
+ * that locale and nothing retries until the language changes, rather than on every lookup.
  */
 class PreloadedLabelText(
     private val scope: CoroutineScope,
     private val locale: () -> FormatLocale = ::systemLocale,
     private val load: suspend () -> Map<String, String> = ::loadEntityLabels,
+    private val retryDelays: List<Duration> = listOf(1.seconds, 2.seconds, 4.seconds),
 ) : LabelText {
     private class Loaded(val locale: FormatLocale, val labels: Map<String, String>)
 
@@ -56,7 +62,7 @@ class PreloadedLabelText(
         if (!loading.compareAndSet(null, wanted)) return
         scope.launch {
             val labels = try {
-                load()
+                loadWithRetries()
             } catch (e: CancellationException) {
                 loading.value = null
                 throw e
@@ -68,5 +74,19 @@ class PreloadedLabelText(
             loading.value = null
             loaded.value = Loaded(wanted, labels)
         }
+    }
+
+    /** Tries [load], then once more after each of [retryDelays]; the last failure propagates. */
+    private suspend fun loadWithRetries(): Map<String, String> {
+        for (pause in retryDelays) {
+            try {
+                return load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                delay(pause)
+            }
+        }
+        return load()
     }
 }
