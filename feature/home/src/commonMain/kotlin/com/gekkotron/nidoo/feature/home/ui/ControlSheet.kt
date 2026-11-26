@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.alarm.AlarmControls
 import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.currentFormatLocale
 import com.gekkotron.nidoo.feature.home.resources.*
 import com.gekkotron.nidoo.feature.home.presentation.CardFormatter
 import com.gekkotron.nidoo.feature.home.presentation.CardUi

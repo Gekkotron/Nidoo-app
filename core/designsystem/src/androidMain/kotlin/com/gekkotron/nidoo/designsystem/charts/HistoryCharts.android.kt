@@ -1,19 +1,13 @@
 package com.gekkotron.nidoo.designsystem.charts
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.graphics.Paint
 import android.graphics.Path
@@ -59,32 +53,19 @@ import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.core.cartesian.marker.LineCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 
-/** One history sample: `t` is unix seconds. */
-data class ChartPoint(val t: Long, val mean: Double, val min: Double, val max: Double)
-
-/** One daily bar: `t` is unix seconds. */
-data class ChartBar(val t: Long, val value: Double)
-
-private val ChartHeight = 220.dp
 private const val AxisLabelCount = 4
 private const val BandAlpha = 0.15f
-private const val BandKeyAlpha = 0.3f
 
 @Composable
-fun HistoryLineChart(
+actual fun HistoryLineChart(
     points: List<ChartPoint>,
     color: Color,
     formatValue: (Double) -> String,
     formatTime: (Long) -> String,
     contentDescription: String,
-    modifier: Modifier = Modifier,
-    /** True draws just the mean with square steps (binary sensors). */
-    step: Boolean = false,
-    /**
-     * Non-null shades the min/max band behind the mean and adds this line ("min 3,0 °C · max 21,5 °C")
-     * to the tooltip; null draws the mean alone. Ignored with [step].
-     */
-    formatBand: ((min: Double, max: Double) -> String)? = null,
+    modifier: Modifier,
+    step: Boolean,
+    formatBand: ((min: Double, max: Double) -> String)?,
 ) {
     val band = formatBand?.takeUnless { step }
     val frame = modifier.fillMaxWidth().height(ChartHeight)
@@ -166,23 +147,6 @@ fun HistoryLineChart(
     }
 }
 
-/** The key under a banded chart: the line is the average, the shaded band the min–max range (as on the hub). */
-@Composable
-fun HistoryBandKey(color: Color, averageLabel: String, bandLabel: String, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        KeyItem(Modifier.size(16.dp, 2.dp).background(color, RoundedCornerShape(1.dp)), averageLabel)
-        KeyItem(Modifier.size(12.dp, 8.dp).background(color.copy(alpha = BandKeyAlpha), RoundedCornerShape(2.dp)), bandLabel)
-    }
-}
-
-@Composable
-private fun KeyItem(swatch: Modifier, label: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(swatch)
-        Text(label, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
-    }
-}
-
 /**
  * Shades between the line layer's first two series (min, max) under the lines. Vico 2.1 only fills
  * a line down to a constant, so this maps the entries to pixels the way `LineCartesianLayer` does.
@@ -216,15 +180,14 @@ private class MinMaxBand(color: Int) : Decoration {
 }
 
 @Composable
-fun DailyBarsChart(
+actual fun DailyBarsChart(
     bars: List<ChartBar>,
-    /** Drawn as a line across the bars; null draws none. */
     average: Double?,
     color: Color,
     formatValue: (Double) -> String,
     formatDay: (Long) -> String,
     contentDescription: String,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
 ) {
     val frame = modifier.fillMaxWidth().height(ChartHeight)
         .semantics { this.contentDescription = contentDescription }
@@ -289,14 +252,6 @@ private fun rememberAverageLine(average: Double): HorizontalLine {
         thickness = 1.5.dp,
     )
     return remember(average, line) { HorizontalLine(y = { average }, line = line, labelComponent = null) }
-}
-
-@Composable
-fun ChartSkeleton(modifier: Modifier = Modifier) {
-    Box(
-        modifier.fillMaxWidth().height(ChartHeight)
-            .background(NidooTheme.colors.card, RoundedCornerShape(12.dp)),
-    )
 }
 
 /** Pinch-zoom and pan: opens on the whole span, never zooms out past it, nor in past [maxZoomSpan]. */
