@@ -13,6 +13,7 @@ import com.gekkotron.nidoo.feature.settings.di.settingsModule
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.push.PushStatusSource
+import com.gekkotron.nidoo.shared.di.mainTabsModule
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.transport.MqttTransport
 import dagger.hilt.EntryPoint
@@ -62,6 +63,6 @@ fun startNidooKoin(app: Application, bridge: KoinBridgeEntryPoint) {
     stopKoin()
     startKoin {
         androidContext(app)
-        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, settingsModule, androidSettingsModule)
+        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, settingsModule, androidSettingsModule, mainTabsModule)
     }
 }

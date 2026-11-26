@@ -1,4 +1,4 @@
-package com.gekkotron.nidoo.navigation
+package com.gekkotron.nidoo.shared.tabs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,18 +10,15 @@ import com.gekkotron.nidoo.model.Kind
 import com.gekkotron.nidoo.model.PowerUnits
 import com.gekkotron.nidoo.model.StateValue
 import com.gekkotron.nidoo.source.EntitySource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /** Live decorations for the tab bar: an armed shield, a producing bolt (nav icon states §A). */
 data class TabStatus(val alarmArmed: Boolean = false, val solarActive: Boolean = false)
 
-@HiltViewModel
-class MainTabsViewModel @Inject constructor(source: EntitySource) : ViewModel() {
+class MainTabsViewModel(source: EntitySource) : ViewModel() {
     val status: StateFlow<TabStatus> = combine(source.entities, source.states()) { entities, states ->
         TabStatus(alarmArmed = alarmArmed(entities, states), solarActive = solarActive(entities, states))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TabStatus())

@@ -113,6 +113,7 @@ dependencies {
     // Koin next to Hilt while modules move to common code (iOS spec §9); Hilt hands its singletons over.
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
+    implementation(libs.koin.compose.viewmodel)
     implementation(libs.androidx.lifecycle.process)
     // Firebase ships in release (tester) builds only; debug builds carry none of it.
     releaseImplementation(platform(libs.firebase.bom))

@@ -67,3 +67,7 @@ kotlin {
         }
     }
 }
+
+compose.resources {
+    packageOfResClass = "com.gekkotron.nidoo.shared.resources"
+}

@@ -1,4 +1,4 @@
-package com.gekkotron.nidoo.navigation
+package com.gekkotron.nidoo.shared.tabs
 
 import com.gekkotron.nidoo.model.AlarmState
 import com.gekkotron.nidoo.model.Bindings
@@ -25,7 +25,7 @@ private fun state(id: String, value: StateValue): Pair<String, EntityState> = id
 
 class TabStatusTest {
     @Test
-    fun `alarm armed when any panel is in an active alarm state`() {
+    fun alarmArmedWhenAnyPanelIsInAnActiveAlarmState() {
         val panel = entity("alarm", Kind.ALARM_PANEL)
         assertTrue(alarmArmed(mapOf("alarm" to panel), mapOf(state("alarm", StateValue.Alarm(AlarmState.ARMED_AWAY)))))
         assertTrue(alarmArmed(mapOf("alarm" to panel), mapOf(state("alarm", StateValue.Alarm(AlarmState.TRIGGERED)))))
@@ -33,7 +33,7 @@ class TabStatusTest {
     }
 
     @Test
-    fun `alarm not armed when disarmed or no panel`() {
+    fun alarmNotArmedWhenDisarmedOrNoPanel() {
         val panel = entity("alarm", Kind.ALARM_PANEL)
         assertFalse(alarmArmed(mapOf("alarm" to panel), mapOf(state("alarm", StateValue.Alarm(AlarmState.DISARMED)))))
         assertFalse(alarmArmed(emptyMap(), emptyMap()))
@@ -43,13 +43,13 @@ class TabStatusTest {
     }
 
     @Test
-    fun `solar active when a producing panel is over the idle threshold`() {
+    fun solarActiveWhenAProducingPanelIsOverTheIdleThreshold() {
         val panel = entity("solar", Kind.SENSOR, unit = "W", ui = UiOverride(energyRole = EnergyRole.SOLAR))
         assertTrue(solarActive(mapOf("solar" to panel), mapOf(state("solar", StateValue.Numeric(50.0)))))
     }
 
     @Test
-    fun `solar inactive below idle, when night, or with no solar role`() {
+    fun solarInactiveBelowIdleAtNightOrWithNoSolarRole() {
         val panel = entity("solar", Kind.SENSOR, unit = "W", ui = UiOverride(energyRole = EnergyRole.SOLAR))
         assertFalse(solarActive(mapOf("solar" to panel), mapOf(state("solar", StateValue.Numeric(5.0)))))
         assertFalse(solarActive(mapOf("solar" to panel), mapOf(state("solar", StateValue.Numeric(-100.0)))))
@@ -60,7 +60,7 @@ class TabStatusTest {
     }
 
     @Test
-    fun `solar sums panels so two tiny inverters still turn the bolt on together`() {
+    fun solarSumsPanelsSoTwoTinyInvertersStillTurnTheBoltOn() {
         val a = entity("inv_a", Kind.SENSOR, unit = "W", ui = UiOverride(energyRole = EnergyRole.SOLAR))
         val b = entity("inv_b", Kind.SENSOR, unit = "W", ui = UiOverride(energyRole = EnergyRole.SOLAR))
         assertTrue(
