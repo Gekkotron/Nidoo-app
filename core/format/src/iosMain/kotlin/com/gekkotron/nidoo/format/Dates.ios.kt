@@ -4,7 +4,6 @@ import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSCalendarUnitHour
 import platform.Foundation.NSDate
-import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSTimeZone
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.localTimeZone
@@ -21,10 +20,7 @@ actual fun formatEpochSeconds(
     locale: FormatLocale,
     timeZoneId: String?,
 ): String {
-    val formatter = NSDateFormatter()
-    formatter.dateFormat = pattern
-    formatter.locale = locale.toNSLocale()
-    formatter.timeZone = zone(timeZoneId)
+    val formatter = dateFormatter(pattern, locale, timeZoneId)
     return formatter.stringFromDate(date(seconds))
 }
 
