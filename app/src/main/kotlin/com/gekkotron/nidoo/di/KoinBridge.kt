@@ -10,6 +10,7 @@ import com.gekkotron.nidoo.feature.energy.di.energyModule
 import com.gekkotron.nidoo.feature.history.di.historyModule
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
+import com.gekkotron.nidoo.feature.security.di.securityModule
 import com.gekkotron.nidoo.feature.settings.di.androidSettingsModule
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
 import com.gekkotron.nidoo.flows.FlowsRepository
@@ -65,6 +66,6 @@ fun startNidooKoin(app: Application, bridge: KoinBridgeEntryPoint) {
     stopKoin()
     startKoin {
         androidContext(app)
-        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, energyModule, historyModule, settingsModule, androidSettingsModule, mainTabsModule)
+        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, energyModule, securityModule, historyModule, settingsModule, androidSettingsModule, mainTabsModule)
     }
 }
