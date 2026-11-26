@@ -24,6 +24,9 @@ import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.demo.DemoBroker
+import com.gekkotron.nidoo.feature.energy.di.energyModule
+import com.gekkotron.nidoo.feature.history.di.historyModule
+import com.gekkotron.nidoo.shared.di.mainTabsModule
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
@@ -119,7 +122,7 @@ class NidooAppTest {
         }
     }
 
-    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, countingHome) } }
+    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, mainTabsModule, countingHome) } }
 
     private fun showApp() {
         compose.setContent { KoinIsolatedContext(koinApp) { NidooApp() } }
@@ -265,5 +268,25 @@ class NidooAppTest {
         systemBack()
         waitForHome()
         assertEquals(1, homeCreations.get())
+    }
+
+    @Test
+    fun homeShowsTheTabBarAndOpensEnergy() {
+        demoHome()
+        compose.onNodeWithText("Home").assertExists()
+        compose.onNodeWithText("Energy").assertExists()
+        compose.onNodeWithText("Security").assertDoesNotExist()
+        compose.onNodeWithText("Energy").performClick()
+        // The Energy screen has no settings gear of Home's; Home's gear leaves composition.
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithText("Home").performClick()
+        waitForHome()
+    }
+
+    @Test
+    fun settingsHasNoTabBar() {
+        demoHome()
+        openSettings()
+        compose.onNodeWithText("Energy").assertDoesNotExist()
     }
 }
