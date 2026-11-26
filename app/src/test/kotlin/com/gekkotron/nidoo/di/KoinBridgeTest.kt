@@ -17,15 +17,22 @@ import com.gekkotron.nidoo.feature.home.presentation.DashboardViewModel
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
 import com.gekkotron.nidoo.feature.home.rooms.RoomsViewModel
 import com.gekkotron.nidoo.feature.onboarding.OnboardingViewModel
+import com.gekkotron.nidoo.feature.settings.presentation.AndroidSettingsViewModel
+import com.gekkotron.nidoo.feature.settings.presentation.PresenceSettingsViewModel
+import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
+import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderViewModel
 import com.gekkotron.nidoo.flows.FlowsClient
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.HistoryClient
+import com.gekkotron.nidoo.push.PushStatus
+import com.gekkotron.nidoo.push.PushStatusSource
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.transport.MqttTransport
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.junit.After
 import org.junit.Rule
@@ -83,6 +90,12 @@ class KoinBridgeTest {
         override fun flows() = flows
         override fun climate() = climate
         override fun transport(): MqttTransport = transport
+        val push = object : PushStatusSource {
+            override val status = MutableStateFlow<PushStatus>(PushStatus.Waiting)
+            override fun refresh() = Unit
+            override fun registerAgain() = Unit
+        }
+        override fun pushStatus(): PushStatusSource = push
     }
 
     @Test
@@ -114,6 +127,17 @@ class KoinBridgeTest {
         koin.get<CustomizeViewModel>()
         assertSame(hilt.dashboards, koin.get<DashboardsRepository>())
         assertSame(hilt.transport, koin.get<MqttTransport>())
+    }
+
+    /** Settings' ViewModels come from Koin too: the common ones, and the Android-only pages' two. */
+    @Test
+    fun settingsViewModelsResolve() {
+        startNidooKoin(app, FakeBridge(liveSource = true))
+        val koin = GlobalContext.get()
+        koin.get<SettingsViewModel>()
+        koin.get<RoomOrderViewModel>()
+        koin.get<AndroidSettingsViewModel>()
+        koin.get<PresenceSettingsViewModel>()
     }
 
     @Test

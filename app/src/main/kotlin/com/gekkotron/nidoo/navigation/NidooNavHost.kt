@@ -46,6 +46,7 @@ import com.gekkotron.nidoo.feature.onboarding.ui.NotificationsRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.nidoo.feature.settings.licences.LicencesRoute
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
+import com.gekkotron.nidoo.feature.settings.ui.AndroidSettingsPage
 import com.gekkotron.nidoo.feature.settings.ui.SettingsPageRoute
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderRoute
 import com.gekkotron.nidoo.feature.settings.ui.SettingsRoute
@@ -247,6 +248,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         onSetUpAgain = viewModel::setUpAgain,
                         onOpenLicences = { push(backStack, LicencesKey) },
                         onBack = { pop(backStack, key) },
+                        platformPage = { page, snackbar -> AndroidSettingsPage(page, snackbar) },
                     )
                 }
                 entry<RoomOrderKey> {

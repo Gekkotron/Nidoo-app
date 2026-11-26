@@ -28,11 +28,13 @@ kotlin {
             implementation(project(":core:connection"))
             implementation(project(":feature:onboarding"))
             implementation(project(":feature:home"))
+            implementation(project(":feature:settings"))
             implementation(project(":core:history"))
             implementation(project(":core:flows"))
             implementation(project(":core:dashboards"))
             implementation(project(":core:climate"))
-            implementation(libs.cmp.ui.backhandler)
+            implementation(libs.cmp.navigation3.ui)
+            implementation(libs.cmp.lifecycle.viewmodel.navigation3)
             implementation(project(":core:designsystem"))
             implementation(project.dependencies.platform(libs.koin.bom))
             implementation(libs.koin.core)
@@ -44,6 +46,10 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.coil.network.ktor3) // Home's media covers over Ktor
             implementation(libs.ktor.client.darwin)
+        }
+        // Compose UI tests of the iOS runtime (run in CI only).
+        iosTest.dependencies {
+            implementation(libs.cmp.ui.test)
         }
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutines.test)
@@ -60,8 +66,4 @@ kotlin {
             implementation(libs.compose.ui.test.manifest)
         }
     }
-}
-
-compose.resources {
-    packageOfResClass = "com.gekkotron.nidoo.shared.resources"
 }

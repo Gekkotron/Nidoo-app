@@ -1,0 +1,104 @@
+package com.gekkotron.nidoo.feature.settings.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.gekkotron.nidoo.data.PresenceConfig
+import com.gekkotron.nidoo.designsystem.NidooDimens
+import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.feature.settings.resources.*
+import com.gekkotron.nidoo.feature.settings.presentation.PresenceSettingsUi
+
+@Composable
+fun PresenceSection(
+    ui: PresenceSettingsUi,
+    permissionStatus: PresencePermissionStatus,
+    onToggle: (Boolean) -> Unit,
+    onAliasChange: (String) -> Unit,
+    onUseCurrentLocation: () -> Unit,
+    onRadiusChange: (Int) -> Unit,
+    onRequestPermission: () -> Unit,
+    /** Off on the Presence page, whose top bar already says "Presence". */
+    showTitle: Boolean = true,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (showTitle) {
+            Text(
+                stringResource(Res.string.presence_section_title),
+                style = NidooTheme.type.label,
+                color = NidooTheme.colors.contentMuted,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
+        val toggleEnabled = permissionStatus == PresencePermissionStatus.Granted
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = NidooDimens.minTouch)
+                .toggleable(value = ui.enabled && toggleEnabled, enabled = toggleEnabled, role = Role.Switch, onValueChange = onToggle)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(Res.string.presence_toggle_label), style = NidooTheme.type.body, modifier = Modifier.weight(1f))
+            Switch(checked = ui.enabled && toggleEnabled, onCheckedChange = null, enabled = toggleEnabled)
+        }
+        Text(stringResource(Res.string.presence_toggle_summary), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+        when (permissionStatus) {
+            PresencePermissionStatus.FineMissing -> PermissionRow(stringResource(Res.string.presence_permission_fine), onRequestPermission)
+            PresencePermissionStatus.BackgroundMissing -> PermissionRow(stringResource(Res.string.presence_permission_background), onRequestPermission)
+            PresencePermissionStatus.Denied -> Text(stringResource(Res.string.presence_permission_denied), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+            PresencePermissionStatus.Granted -> {}
+        }
+        OutlinedTextField(
+            value = ui.alias,
+            onValueChange = onAliasChange,
+            label = { Text(stringResource(Res.string.presence_alias_label)) },
+            supportingText = { Text(stringResource(Res.string.presence_alias_hint), style = NidooTheme.type.label) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val home = ui.home
+        if (home != null) {
+            Text(stringResource(Res.string.presence_home_set, "%.5f".format(home.first), "%.5f".format(home.second)), style = NidooTheme.type.body)
+        } else {
+            Text(stringResource(Res.string.presence_home_unset), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+        }
+        OutlinedButton(onClick = onUseCurrentLocation, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.presence_use_current_location))
+        }
+        Text(stringResource(Res.string.presence_radius_label, ui.radiusM), style = NidooTheme.type.body)
+        Slider(
+            value = ui.radiusM.toFloat(),
+            onValueChange = { onRadiusChange(it.toInt()) },
+            valueRange = PresenceConfig.MIN_RADIUS_M.toFloat()..PresenceConfig.MAX_RADIUS_M.toFloat(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun PermissionRow(message: String, onGrant: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(message, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+        OutlinedButton(onClick = onGrant, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.presence_grant_permission))
+        }
+    }
+}
+
+enum class PresencePermissionStatus { Granted, FineMissing, BackgroundMissing, Denied }

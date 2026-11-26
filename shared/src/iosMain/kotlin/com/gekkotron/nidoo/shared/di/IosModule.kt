@@ -26,6 +26,8 @@ import com.gekkotron.nidoo.data.nidooDataPath
 import com.gekkotron.nidoo.data.nidooDeviceOnlyPath
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.flows.HttpFlowsClient
+import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
+import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.shared.iosLog
 import com.gekkotron.nidoo.source.EntitySource
@@ -112,6 +114,8 @@ fun iosModule(mqttPortFactory: () -> MqttClientPort): Module = module {
     }
     // Unscoped, as on Android: each screen gets the source for the profile saved right now.
     factory<EntitySource> { get<EntitySourceSession>().current((get<ProfileRepository>().state.value as? ProfileState.Ready)?.profile) }
+    // No push, presence or voice on iOS (spec §3): Settings lists no platform rows.
+    single<PlatformSettings> { NoPlatformSettings }
     single<ConnectionTester> {
         val profiles: ProfileRepository = get()
         DirectConnectionTester(clientId = { setupClientIdFor(profiles.installId()) }, direct = direct, gatewayApi = gatewayApi)

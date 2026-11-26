@@ -1,11 +1,13 @@
 package com.gekkotron.nidoo.shared
 
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
@@ -23,6 +25,10 @@ import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.demo.DemoBroker
 import com.gekkotron.nidoo.feature.home.di.homeModule
+import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
+import com.gekkotron.nidoo.feature.settings.di.settingsModule
+import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
+import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
 import com.gekkotron.nidoo.flows.FlowsClient
 import com.gekkotron.nidoo.flows.FlowsRepository
@@ -42,10 +48,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.compose.KoinIsolatedContext
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlin.test.assertEquals
 
@@ -53,7 +61,7 @@ import kotlin.test.assertEquals
 @RunWith(AndroidJUnit4::class)
 class NidooAppTest {
     @get:Rule
-    val compose = createComposeRule()
+    val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val dir = FileSystem.SYSTEM_TEMPORARY_DIRECTORY.resolve("nidoo-app-${Random.nextLong().toULong()}")
@@ -90,9 +98,28 @@ class NidooAppTest {
             get<EntitySourceSession>().current((get<ProfileRepository>().state.value as? ProfileState.Ready)?.profile).also { sources += it }
         }
         single { ConnectionTester { emptyFlow() } }
+        single<PlatformSettings> { NoPlatformSettings }
     }
 
-    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule) } }
+    /** Counts Home's ViewModels, built as `homeModule` builds them (Koin lets a later definition replace an earlier one). */
+    private val homeCreations = AtomicInteger()
+    private val countingHome = module {
+        viewModel {
+            homeCreations.incrementAndGet()
+            HomeViewModel(
+                source = get(),
+                savedState = get(),
+                defaultDispatcher = Dispatchers.Default,
+                labels = get(),
+                history = get(),
+                preferences = get(),
+                climate = get(),
+                transport = get(),
+            )
+        }
+    }
+
+    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, countingHome) } }
 
     private fun showApp() {
         compose.setContent { KoinIsolatedContext(koinApp) { NidooApp() } }
@@ -112,10 +139,7 @@ class NidooAppTest {
         waitFor("Try the demo")
         compose.onNodeWithText("Try the demo").performClick()
         waitForHome()
-        compose.onNodeWithContentDescription("Settings").performClick()
-        waitFor("Set up again")
-        compose.onNodeWithText("Set up again").performClick()
-        waitFor("Try the demo")
+        setUpAgainFromSettings()
 
         compose.onNodeWithText("Scan setup code").assertIsEnabled()
         compose.onNodeWithText("Enter manually").assertIsEnabled()
@@ -128,14 +152,13 @@ class NidooAppTest {
         waitFor("Try the demo")
         compose.onNodeWithText("Try the demo").performClick()
         waitForHome()
-        compose.onNodeWithContentDescription("Settings").performClick()
-        waitFor("Set up again")
-        compose.onNodeWithText("Set up again").performClick()
-        waitFor("Try the demo")
+        setUpAgainFromSettings()
         compose.onNodeWithText("Try the demo").performClick()
         waitForHome()
 
         assertEquals(2, sources.size)
+        // The rule behind it: a new house gets a new HomeViewModel, one per house.
+        assertEquals(2, homeCreations.get())
     }
 
     @Test
@@ -156,16 +179,91 @@ class NidooAppTest {
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Floor lamp", substring = true).fetchSemanticsNodes().isNotEmpty() }
     }
 
-    @Test
-    fun settingsOffersSetUpAgain() {
+    /** Settings › Connection › "Set up connection again" › confirm. */
+    private fun setUpAgainFromSettings() {
+        openSettings()
+        compose.onNodeWithText("Connection").performScrollTo().performClick()
+        waitFor("Set up connection again")
+        compose.onNodeWithText("Set up connection again").performScrollTo().performClick()
+        waitFor("Set up again?")
+        compose.onNodeWithText("Set up again").performClick()
+        waitFor("Try the demo")
+    }
+
+    private fun demoHome() {
         showApp()
         waitFor("Try the demo")
         compose.onNodeWithText("Try the demo").performClick()
         waitForHome()
+    }
+
+    private fun openSettings() {
         compose.onNodeWithContentDescription("Settings").performClick()
-        waitFor("Set up again")
-        compose.onNodeWithText("Set up again").performClick()
-        waitFor("Try the demo")
+        waitFor("Appearance")
+    }
+
+    private fun systemBack() = compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+
+    @Test
+    fun settingsOpensTheRealSettings() {
+        demoHome()
+        openSettings()
+        compose.onNodeWithText("Connection").assertExists()
+        compose.onNodeWithText("Notifications").assertDoesNotExist()
+    }
+
+    @Test
+    fun setUpAgainFromConnectionReturnsToWelcome() {
+        demoHome()
+        setUpAgainFromSettings()
         compose.onNodeWithText("Scan setup code").assertIsEnabled()
+    }
+
+    @Test
+    fun backFromASettingsPageReturnsToTheList() {
+        demoHome()
+        openSettings()
+        compose.onNodeWithText("Appearance").performScrollTo().performClick()
+        waitFor("Theme")
+        systemBack()
+        waitFor("Appearance")
+        compose.onNodeWithText("Theme").assertDoesNotExist()
+        systemBack()
+        waitForHome()
+    }
+
+    @Test
+    fun backOnHomeStaysOnHome() {
+        demoHome()
+        systemBack()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Settings").assertExists()
+    }
+
+    @Test
+    fun roomOrderOpensFromSettings() {
+        demoHome()
+        openSettings()
+        compose.onNodeWithText("Rooms").performClick()
+        waitFor("Drag to change the order of the room chips on Home.")
+    }
+
+    @Test
+    fun homeKeepsItsViewModelWhenTheProfileIsEdited() {
+        showApp()
+        waitFor("Try the demo")
+        val profiles = koinApp.koin.get<ProfileRepository>()
+        runBlocking {
+            profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local")))
+            profiles.finishRooms()
+        }
+        waitForHome()
+        assertEquals(1, homeCreations.get())
+        openSettings()
+        runBlocking { profiles.setHistoryUrl("http://hub.lan:8090") }
+        compose.waitForIdle()
+        systemBack()
+        waitForHome()
+        assertEquals(1, homeCreations.get())
     }
 }
