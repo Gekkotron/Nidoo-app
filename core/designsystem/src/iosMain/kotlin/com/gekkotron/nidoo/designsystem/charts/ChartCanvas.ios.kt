@@ -1,7 +1,9 @@
 package com.gekkotron.nidoo.designsystem.charts
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -59,9 +61,14 @@ internal fun ChartCanvas(
     Canvas(
         modifier.fillMaxWidth().height(ChartHeight)
             .semantics { this.contentDescription = contentDescription }
-            .pointerInput(resetKey) { detectTapGestures { offset ->
-                marker = holder.rect?.let { pick(plotFraction(offset.x, it.left, it.right)) }
-            } },
+            // Not detectTapGestures: it consumes the tap, and Home's tile around the chart must still open History.
+            .pointerInput(resetKey) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    val up = waitForUpOrCancellation()
+                    if (up != null) marker = holder.rect?.let { pick(plotFraction(up.position.x, it.left, it.right)) }
+                }
+            },
     ) { draw(surface, marker, holder) }
 }
 

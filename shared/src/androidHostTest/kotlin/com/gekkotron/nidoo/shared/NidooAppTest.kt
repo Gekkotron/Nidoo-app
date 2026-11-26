@@ -59,6 +59,7 @@ import java.util.IdentityHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** The iOS shell, run on Robolectric: what the user sees across "Set up again". */
 @RunWith(AndroidJUnit4::class)
@@ -277,8 +278,12 @@ class NidooAppTest {
         compose.onNodeWithText("Energy").assertExists()
         compose.onNodeWithText("Security").assertDoesNotExist()
         compose.onNodeWithText("Energy").performClick()
-        // The Energy screen has no settings gear of Home's; Home's gear leaves composition.
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty() }
+        // Energy's own content (its empty state's button, or the live subtitle) shows, and Home's gear is gone.
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Go to Home").fetchSemanticsNodes().isNotEmpty() ||
+                compose.onAllNodesWithText("Live", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Home").performClick()
         waitForHome()
     }

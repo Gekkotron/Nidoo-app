@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.rememberResourceEnvironment
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.nidoo.data.EnergyViewPreference
@@ -102,10 +103,11 @@ fun EnergyRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val view by viewModel.energyView.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val environment = rememberResourceEnvironment()
     LaunchedEffect(viewModel, snackbar) {
         viewModel.events.collect { event ->
             when (event) {
-                EnergyEvent.SaveFailed -> snackbar.showSnackbar(getString(EnergyRes.string.energy_save_failed))
+                EnergyEvent.SaveFailed -> snackbar.showSnackbar(getString(environment, EnergyRes.string.energy_save_failed))
             }
         }
     }

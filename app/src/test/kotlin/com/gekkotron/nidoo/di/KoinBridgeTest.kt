@@ -12,6 +12,8 @@ import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.create
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyViewModel
+import com.gekkotron.nidoo.feature.history.presentation.HistoryViewModel
 import com.gekkotron.nidoo.feature.home.presentation.CustomizeViewModel
 import com.gekkotron.nidoo.feature.home.presentation.DashboardViewModel
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
@@ -23,9 +25,11 @@ import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderViewModel
 import com.gekkotron.nidoo.flows.FlowsClient
 import com.gekkotron.nidoo.flows.FlowsRepository
+import com.gekkotron.nidoo.history.EnergyHistory
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.push.PushStatus
 import com.gekkotron.nidoo.push.PushStatusSource
+import com.gekkotron.nidoo.shared.tabs.MainTabsViewModel
 import com.gekkotron.nidoo.source.EntitySource
 import com.gekkotron.nidoo.transport.MqttTransport
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
@@ -146,6 +150,26 @@ class KoinBridgeTest {
         startNidooKoin(app, hilt)
         val koin = GlobalContext.get()
         assertNotSame(koin.get<EntitySource>(), koin.get<EntitySource>())
+        assertEquals(2, hilt.sourcesHandedOut)
+    }
+
+    /** Energy, History and the tab bar come from Koin too. */
+    @Test
+    fun energyHistoryAndTabViewModelsResolve() {
+        startNidooKoin(app, FakeBridge(liveSource = true))
+        val koin = GlobalContext.get()
+        koin.get<EnergyViewModel>()
+        koin.get<HistoryViewModel>()
+        koin.get<MainTabsViewModel>()
+    }
+
+    /** EnergyHistory reads an unscoped EntitySource, so each one asks Hilt again instead of pinning the first. */
+    @Test
+    fun energyHistoryIsAskedForItsSourceEachTime() {
+        val hilt = FakeBridge()
+        startNidooKoin(app, hilt)
+        val koin = GlobalContext.get()
+        assertNotSame(koin.get<EnergyHistory>(), koin.get<EnergyHistory>())
         assertEquals(2, hilt.sourcesHandedOut)
     }
 

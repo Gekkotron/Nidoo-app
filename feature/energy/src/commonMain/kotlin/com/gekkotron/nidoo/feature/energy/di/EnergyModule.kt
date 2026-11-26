@@ -17,7 +17,8 @@ import kotlin.time.Clock
  * its constructor has defaults that Koin would not use.
  */
 val energyModule: Module = module {
-    single<EnergyHistory> { EnergyHistoryImpl(get(), get()) }
+    // A factory: EntitySource is unscoped (a new profile gets a new source), so the history must not pin the first.
+    factory<EnergyHistory> { EnergyHistoryImpl(get(), get()) }
     viewModel {
         EnergyViewModel(
             source = get(),
