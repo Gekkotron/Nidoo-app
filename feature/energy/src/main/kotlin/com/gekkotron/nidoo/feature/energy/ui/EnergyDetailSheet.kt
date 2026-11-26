@@ -252,7 +252,7 @@ private fun iconLabel(icon: ConsumerIcon): String = stringResource(
 private fun sensorValueText(sensor: SensorUi, locale: Locale): String = when {
     sensor.status == NodeStatus.UNAVAILABLE -> stringResource(R.string.energy_unavailable)
     sensor.value == null -> stringResource(R.string.energy_unknown)
-    else -> EnergyFormat.amount(sensor.value, sensor.unit, locale)
+    else -> EnergyFormat.amount(sensor.value!!, sensor.unit, locale)
 }
 
 @Composable

@@ -3,9 +3,11 @@ package com.gekkotron.nidoo.transport
 import com.gekkotron.nidoo.crypto.EnvelopeCrypto
 import io.github.gekkotron.athena.gateway.client.AthenaGatewayClient
 import io.github.gekkotron.athena.gateway.client.Broker
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -26,6 +28,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /** The real SDK against MockWebServer playing the gateway (replies sealed with our own EnvelopeCrypto). */
 class AthenaGatewayApiTest {
@@ -204,5 +207,16 @@ class AthenaGatewayApiTest {
         val api = AthenaGatewayApi(AthenaGatewayClient(server.url("/").toString(), key.toHex(), OkHttpClient()), null, publishTimeout = 200.milliseconds)
         val e = assertFailsWith<PublishFailed> { api.publish("nidoo/x/set", "on".encodeToByteArray(), 1, false) }
         assertEquals("publish timed out", e.message)
+    }
+
+    /** A caller's own withTimeout must cancel through publish untouched, not come out as a PublishFailed. */
+    @Test
+    fun `a caller timeout is not a publish timeout`() = runBlocking {
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+        val api = AthenaGatewayApi(AthenaGatewayClient(server.url("/").toString(), key.toHex(), OkHttpClient()), null, publishTimeout = 5.seconds)
+        assertFailsWith<TimeoutCancellationException> {
+            withTimeout(200.milliseconds) { api.publish("nidoo/x/set", "on".encodeToByteArray(), 1, false) }
+        }
+        Unit
     }
 }

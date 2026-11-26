@@ -27,6 +27,12 @@ kotlin {
             implementation(project(":core:data"))
             implementation(project(":core:connection"))
             implementation(project(":feature:onboarding"))
+            implementation(project(":feature:home"))
+            implementation(project(":core:history"))
+            implementation(project(":core:flows"))
+            implementation(project(":core:dashboards"))
+            implementation(project(":core:climate"))
+            implementation(libs.cmp.ui.backhandler)
             implementation(project(":core:designsystem"))
             implementation(project.dependencies.platform(libs.koin.bom))
             implementation(libs.koin.core)
@@ -34,6 +40,10 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.cmp.lifecycle.viewmodel.compose)
             implementation(libs.cmp.lifecycle.runtime.compose)
+        }
+        iosMain.dependencies {
+            implementation(libs.coil.network.ktor3) // Home's media covers over Ktor
+            implementation(libs.ktor.client.darwin)
         }
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutines.test)

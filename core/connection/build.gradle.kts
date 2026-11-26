@@ -14,6 +14,7 @@ kotlin {
             api(project(":core:data"))
             api(project(":core:source"))
             implementation(project(":core:flows"))
+            implementation(project(":core:history"))
             implementation(project(":core:dashboards"))
             implementation(project(":core:climate"))
             implementation(project(":core:demo"))

@@ -3,18 +3,26 @@ package com.gekkotron.nidoo.shared
 import com.gekkotron.nidoo.connection.EntitySourceSession
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ConnectionProfile
+import com.gekkotron.nidoo.data.GatewayConfig
 import com.gekkotron.nidoo.data.LocalBroker
 import com.gekkotron.nidoo.data.ProfileRepository
 import com.gekkotron.nidoo.data.ProfileState
+import com.gekkotron.nidoo.data.RoutePreference
 import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.ThemePreference
 import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.transport.Route
 import com.gekkotron.nidoo.transport.testing.FakeMqttTransport
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -48,19 +56,33 @@ class AppShellViewModelTest {
         override fun decrypt(cipher: ByteArray) = encrypt(cipher)
     }
 
-    private class Shell(val profiles: ProfileRepository, val preferences: AppPreferences, val session: EntitySourceSession, val vm: AppShellViewModel)
+    private class Shell(val profiles: ProfileRepository, val preferences: AppPreferences, val session: EntitySourceSession, val vm: AppShellViewModel, val store: ViewModelStore)
 
     private fun TestScope.shell(): Shell {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         val profiles = ProfileRepository.create(dir.resolve(ProfileRepository.FILE), XorSecrets, backgroundScope)
         val preferences = AppPreferences.create(dir.resolve(AppPreferences.FILE), backgroundScope)
         val session = EntitySourceSession(FakeMqttTransport(), backgroundScope)
-        return Shell(profiles, preferences, session, AppShellViewModel(profiles, preferences, session))
+        val store = ViewModelStore()
+        val vm = ViewModelProvider.create(store, viewModelFactory { initializer { AppShellViewModel(profiles, preferences, session) } })[AppShellViewModel::class]
+        return Shell(profiles, preferences, session, vm, store)
+    }
+
+    /**
+     * Clears the ViewModel inside the test, before backgroundScope is cancelled and Main is reset: its launches on
+     * DataStore's IO thread must not outlive the test and surface in the next one.
+     */
+    private fun shellTest(body: suspend TestScope.(Shell) -> Unit) = runTest {
+        val s = shell()
+        try {
+            body(s)
+        } finally {
+            s.store.clear()
+        }
     }
 
     @Test
-    fun setUpAgainForgetsTheProfileAndTheSource() = runTest {
-        val s = shell()
+    fun setUpAgainForgetsTheProfileAndTheSource() = shellTest { s ->
         s.profiles.save(ConnectionProfile.Demo)
         s.profiles.state.first { it is ProfileState.Ready }
         s.session.current(ConnectionProfile.Demo)
@@ -72,18 +94,26 @@ class AppShellViewModelTest {
     }
 
     @Test
-    fun themeFollowsThePreference() = runTest {
-        val s = shell()
+    fun themeFollowsThePreference() = shellTest { s ->
         s.preferences.setTheme(ThemePreference.IVOIRE)
         assertEquals(ThemeChoice.IVOIRE, s.vm.theme.first { it == ThemeChoice.IVOIRE })
     }
 
     @Test
-    fun finishNotificationsClearsTheStep() = runTest {
-        val s = shell()
+    fun finishNotificationsClearsTheStep() = shellTest { s ->
         s.profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local")))
         assertIs<ProfileState.Ready>(s.profiles.state.first { it is ProfileState.Ready && it.notificationsPending })
         s.vm.finishNotifications()
         assertFalse((s.profiles.state.first { it is ProfileState.Ready && !it.notificationsPending } as ProfileState.Ready).notificationsPending)
+    }
+
+    @Test
+    fun setRouteSavesThePreference() = shellTest { s ->
+        s.profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local"), gateway = GatewayConfig("https://gw.example", ByteArray(GatewayConfig.KEY_BYTES), "broker.local")))
+        s.profiles.state.first { it is ProfileState.Ready }
+        s.vm.route.first { it != null }
+        s.vm.setRoute(Route.GATEWAY)
+        advanceUntilIdle()
+        assertEquals(RoutePreference.GATEWAY, s.profiles.route.first { it == RoutePreference.GATEWAY })
     }
 }

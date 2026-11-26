@@ -1,11 +1,17 @@
 package com.gekkotron.nidoo.di
 
 import android.app.Application
+import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.connection.ConnectionTester
+import com.gekkotron.nidoo.dashboards.DashboardsRepository
 import com.gekkotron.nidoo.data.AppPreferences
 import com.gekkotron.nidoo.data.ProfileRepository
+import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
+import com.gekkotron.nidoo.flows.FlowsRepository
+import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.source.EntitySource
+import com.gekkotron.nidoo.transport.MqttTransport
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -26,6 +32,11 @@ interface KoinBridgeEntryPoint {
     fun preferences(): AppPreferences
     fun entitySource(): EntitySource
     fun connectionTester(): ConnectionTester
+    fun historyClient(): HistoryClient
+    fun dashboards(): DashboardsRepository
+    fun flows(): FlowsRepository
+    fun climate(): ClimateRepository
+    fun transport(): MqttTransport
 }
 
 /** Each type is a factory that asks Hilt, so Hilt keeps owning the lifetimes (EntitySource is unscoped there). */
@@ -34,6 +45,11 @@ fun hiltBridgeModule(bridge: KoinBridgeEntryPoint): Module = module {
     factory { bridge.preferences() }
     factory { bridge.entitySource() }
     factory { bridge.connectionTester() }
+    factory { bridge.historyClient() }
+    factory { bridge.dashboards() }
+    factory { bridge.flows() }
+    factory { bridge.climate() }
+    factory { bridge.transport() }
 }
 
 /** Starts (or restarts, if a previous Application in this process started it) the app's Koin graph. */
@@ -41,6 +57,6 @@ fun startNidooKoin(app: Application, bridge: KoinBridgeEntryPoint) {
     stopKoin()
     startKoin {
         androidContext(app)
-        modules(hiltBridgeModule(bridge), onboardingModule)
+        modules(hiltBridgeModule(bridge), onboardingModule, homeModule)
     }
 }

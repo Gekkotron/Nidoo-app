@@ -41,7 +41,7 @@ data class OnboardingUiState(
  * Welcome → Scan | Manual → Connect & discover (spec §5). The draft profile, with its secrets, lives
  * only in this ViewModel, never in saved state. Saving a profile makes the app switch to Home.
  */
-class OnboardingViewModel constructor(
+class OnboardingViewModel(
     private val profiles: ProfileRepository,
     private val tester: ConnectionTester,
 ) : ViewModel() {

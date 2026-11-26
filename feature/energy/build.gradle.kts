@@ -11,6 +11,7 @@ android {
 dependencies {
     implementation(project(":core:source"))
     implementation(project(":core:history"))
+    implementation(project(":core:energy"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:data"))
     implementation(libs.androidx.lifecycle.viewmodel.compose)

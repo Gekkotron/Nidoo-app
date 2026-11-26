@@ -5,8 +5,7 @@ import io.github.gekkotron.athena.gateway.client.Broker
 import io.github.gekkotron.athena.gateway.client.GatewayException
 import io.github.gekkotron.athena.gateway.client.MqttEvent
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapNotNull
@@ -44,10 +43,12 @@ class AthenaGatewayApi internal constructor(
             if (publishTimeout == null) {
                 client.publish(topic, payload.decodeToString(), qos, retain, broker)
             } else {
-                withTimeout(publishTimeout) { client.publish(topic, payload.decodeToString(), qos, retain, broker) }
+                // withTimeoutOrNull: only our own deadline ends in null; a caller's withTimeout cancels through untouched.
+                withTimeoutOrNull(publishTimeout) {
+                    client.publish(topic, payload.decodeToString(), qos, retain, broker)
+                    true
+                } ?: throw PublishFailed("publish timed out")
             }
-        } catch (e: TimeoutCancellationException) {
-            throw PublishFailed("publish timed out")
         } catch (e: CancellationException) {
             throw e
         } catch (e: GatewayException) {

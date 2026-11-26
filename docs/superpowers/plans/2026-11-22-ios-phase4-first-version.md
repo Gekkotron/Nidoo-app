@@ -232,4 +232,4 @@ Add `foregroundDrivesTheTransport` to `core/transport`'s `ActiveTransportTest` o
 3. Leave the house Wi-Fi: the pill goes Reconnecting, then Gateway. Come back: Direct.
 4. Background the app for over 30 s, then return: the pill reconnects.
 5. "Set up again" returns to Welcome; "Try the demo" shows Demo.
-6. Deny the camera, open Settings, allow it, then return: the scanner shows.
+6. Deny the camera, then allow it in Settings: iOS restarts Nidoo, which opens on Welcome; Scan then shows the camera.
