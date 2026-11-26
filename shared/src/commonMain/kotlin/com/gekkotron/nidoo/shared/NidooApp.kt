@@ -28,7 +28,9 @@ import com.gekkotron.nidoo.feature.energy.ui.EnergyRoute
 import com.gekkotron.nidoo.feature.history.HistoryTarget
 import com.gekkotron.nidoo.feature.history.ui.HistoryRoute
 import com.gekkotron.nidoo.feature.home.rooms.RoomsRoute
+import com.gekkotron.nidoo.feature.home.ui.CustomizeEntitySheet
 import com.gekkotron.nidoo.feature.home.ui.HomeRoute
+import com.gekkotron.nidoo.feature.security.ui.SecurityRoute
 import com.gekkotron.nidoo.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderRoute
@@ -121,6 +123,17 @@ private fun Screens(shell: AppShellViewModel, root: NavKey) {
                         onOpenHome = { selectTab(backStack, MainTab.HOME) },
                         windowInsets = tabInsets,
                         onOpenHistory = { id -> push(backStack, HistoryKey((id?.let(HistoryTarget::Entity) ?: HistoryTarget.House).encode())) },
+                        onOpenConnectionSettings = openConnectionSettings,
+                        route = route,
+                        onRouteChange = shell::setRoute,
+                    )
+                }
+                entry<SecurityKey> {
+                    // No recent-alerts section on iOS yet (Phase 6): alertsSection and alertsEffects stay null.
+                    SecurityRoute(
+                        windowInsets = tabInsets,
+                        customizeSheet = { id, onDismiss, onSaveFailed -> CustomizeEntitySheet(id, onDismiss, onSaveFailed) },
+                        onOpenHistory = { push(backStack, HistoryKey(HistoryTarget.Entity(it).encode())) },
                         onOpenConnectionSettings = openConnectionSettings,
                         route = route,
                         onRouteChange = shell::setRoute,
