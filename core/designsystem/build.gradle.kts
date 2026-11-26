@@ -16,6 +16,8 @@ kotlin {
             api(project(":core:model"))
             // LinkState for the shared connection pill.
             implementation(project(":core:transport"))
+            // FormatLocale for currentFormatLocale().
+            api(project(":core:format"))
             // Res.string.* / stringResource are part of this module's API (feature modules read Res.string.energy_*).
             api(libs.cmp.components.resources)
             api(libs.cmp.material3)

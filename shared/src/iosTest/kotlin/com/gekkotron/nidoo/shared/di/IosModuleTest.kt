@@ -4,6 +4,10 @@ import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.connection.ConnectionTester
 import com.gekkotron.nidoo.connection.EntitySourceSession
 import com.gekkotron.nidoo.dashboards.DashboardsRepository
+import com.gekkotron.nidoo.feature.energy.di.energyModule
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyViewModel
+import com.gekkotron.nidoo.feature.history.di.historyModule
+import com.gekkotron.nidoo.feature.history.presentation.HistoryViewModel
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
 import com.gekkotron.nidoo.feature.home.presentation.LabelText
@@ -14,6 +18,7 @@ import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderViewModel
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.shared.AppShellViewModel
+import com.gekkotron.nidoo.shared.tabs.MainTabsViewModel
 import com.gekkotron.nidoo.transport.MqttClientPort
 import com.gekkotron.nidoo.transport.MqttPortListener
 import com.gekkotron.nidoo.transport.TransportSpec
@@ -31,7 +36,7 @@ class IosModuleTest {
 
     @Test
     fun iosGraphResolves() {
-        val app = koinApplication { modules(iosModule { NoopPort }, sharedModule, onboardingModule, homeModule, settingsModule) }
+        val app = koinApplication { modules(iosModule { NoopPort }, sharedModule, onboardingModule, homeModule, settingsModule, energyModule, historyModule, mainTabsModule) }
         try {
             val koin = app.koin
             koin.get<EntitySourceSession>()
@@ -45,6 +50,9 @@ class IosModuleTest {
             koin.get<SettingsViewModel>()
             koin.get<RoomOrderViewModel>()
             koin.get<PlatformSettings>()
+            koin.get<EnergyViewModel>()
+            koin.get<HistoryViewModel>()
+            koin.get<MainTabsViewModel>()
         } finally {
             app.close()
         }

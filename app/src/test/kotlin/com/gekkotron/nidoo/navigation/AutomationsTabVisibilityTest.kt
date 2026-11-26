@@ -22,6 +22,8 @@ import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
 import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
 import com.gekkotron.nidoo.designsystem.icons.StaticIcon
+import com.gekkotron.nidoo.shared.tabs.MainTab
+import com.gekkotron.nidoo.shared.tabs.MainTabBar
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,13 +43,13 @@ class AutomationsTabVisibilityTest {
 
     @Test
     fun `the Automations tab shows when the profile allows it`() {
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = {}, showAutomations = true) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(tabs = ALL_TABS, selected = MainTab.HOME, onSelect = {}) } }
         compose.onNodeWithText("Routines").assertIsDisplayed()
     }
 
     @Test
     fun `the Automations tab is hidden under the demo`() {
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = {}, showAutomations = false) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(tabs = ALL_TABS - MainTab.AUTOMATIONS, selected = MainTab.HOME, onSelect = {}) } }
         compose.onNodeWithText("Security").assertIsDisplayed()
         assertEquals(0, compose.onAllNodesWithTextCount("Routines"))
     }
@@ -55,14 +57,14 @@ class AutomationsTabVisibilityTest {
     @Test
     fun `tapping Automations selects it`() {
         val picked = mutableListOf<NavKey>()
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = { picked += it }) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(tabs = ALL_TABS, selected = MainTab.HOME, onSelect = { picked += it.key() }) } }
         compose.onNodeWithText("Routines").performClick()
         assertEquals(listOf<NavKey>(AutomationsKey), picked)
     }
 
     @Test
     fun `tab bar order is Home, Energy, Security, Automations`() {
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = {}) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(tabs = ALL_TABS, selected = MainTab.HOME, onSelect = {}) } }
         val lefts = listOf("Home", "Energy", "Security", "Routines")
             .map { compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot.left }
         assertEquals(lefts.sorted(), lefts)
@@ -107,7 +109,7 @@ class AutomationsTabVisibilityTest {
     @Test
     @Config(qualifiers = "fr-w360dp-h640dp-xxhdpi")
     fun `the French tab bar fits four labels at 360dp`() {
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { NidooBackground { MainTabBar(selected = HomeKey, onSelect = {}, showAutomations = true) } } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { NidooBackground { MainTabBar(tabs = ALL_TABS, selected = MainTab.HOME, onSelect = {}) } } }
         val label = compose.onNodeWithText("Routines", useUnmergedTree = true).fetchSemanticsNode()
         val other = compose.onNodeWithText("Sécurité", useUnmergedTree = true).fetchSemanticsNode()
         assertEquals(other.boundsInRoot.height, label.boundsInRoot.height, 0.5f)
@@ -128,3 +130,5 @@ class AutomationsTabVisibilityTest {
     private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTextCount(text: String) =
         onAllNodesWithText(text).fetchSemanticsNodes().size
 }
+
+private val ALL_TABS = MainTab.entries

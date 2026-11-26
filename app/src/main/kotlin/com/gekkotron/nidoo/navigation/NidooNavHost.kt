@@ -28,6 +28,10 @@ import com.gekkotron.nidoo.R
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.designsystem.permissions.AskForNotificationsOnLaunch
+import com.gekkotron.nidoo.shared.tabs.MainTab
+import com.gekkotron.nidoo.shared.tabs.MainTabBar
+import com.gekkotron.nidoo.shared.tabs.MainTabsViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.gekkotron.nidoo.feature.alerts.ui.AlertDetailRoute
 import com.gekkotron.nidoo.feature.alerts.ui.AlertsRoute
 import com.gekkotron.nidoo.feature.alerts.ui.DeviceSheet
@@ -196,9 +200,17 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             if (tabs) {
-                val tabsVm: MainTabsViewModel = hiltViewModel()
+                val tabsVm = koinViewModel<MainTabsViewModel>()
                 val status by tabsVm.status.collectAsStateWithLifecycle()
-                MainTabBar(selected = top, onSelect = { selectTab(backStack, it) }, status = status, showAutomations = showAutomations)
+                MainTabBar(
+                    tabs = listOfNotNull(
+                        MainTab.HOME, MainTab.ENERGY, MainTab.SECURITY,
+                        MainTab.AUTOMATIONS.takeIf { showAutomations },
+                    ),
+                    selected = top?.mainTab(),
+                    onSelect = { selectTab(backStack, it.key()) },
+                    status = status,
+                )
             }
         },
     ) { padding ->

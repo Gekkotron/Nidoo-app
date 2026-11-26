@@ -8,6 +8,8 @@ import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.shared.tabs.MainTab
+import com.gekkotron.nidoo.shared.tabs.MainTabBar
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,7 +85,7 @@ class MainTabsTest {
     @Test
     fun `tapping energy selects it`() {
         val picked = mutableListOf<NavKey>()
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = { picked += it }) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(tabs = ALL_TABS, selected = MainTab.HOME, onSelect = { picked += it.key() }) } }
         compose.onNodeWithText("Energy").performClick()
         assertEquals(listOf<NavKey>(EnergyKey), picked)
     }
@@ -120,7 +122,7 @@ class MainTabsTest {
     @Test
     fun `tapping security selects it`() {
         val picked = mutableListOf<NavKey>()
-        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = { picked += it }) } }
+        compose.setContent { NidooTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(tabs = ALL_TABS, selected = MainTab.HOME, onSelect = { picked += it.key() }) } }
         compose.onNodeWithText("Security").performClick()
         assertEquals(listOf<NavKey>(SecurityKey), picked)
     }
@@ -130,4 +132,12 @@ class MainTabsTest {
         assertEquals(false, showsTabBar(AlertsKey))
         assertEquals(false, showsTabBar(AlertDetailKey("a1")))
     }
+
+    @Test
+    fun mainTabRoundTripsThroughItsKey() {
+        MainTab.entries.forEach { assertEquals(it, it.key().mainTab()) }
+        assertEquals(null, SettingsKey.mainTab())
+    }
 }
+
+private val ALL_TABS = MainTab.entries

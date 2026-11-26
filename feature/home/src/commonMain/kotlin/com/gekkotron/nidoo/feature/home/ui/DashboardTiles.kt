@@ -27,6 +27,9 @@ import com.gekkotron.nidoo.dashboards.WidgetKind
 import com.gekkotron.nidoo.dashboards.WidgetRange
 import com.gekkotron.nidoo.designsystem.NidooDimens
 import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.currentFormatLocale
+import com.gekkotron.nidoo.designsystem.charts.ChartPoint
+import com.gekkotron.nidoo.designsystem.charts.HistoryLineChart
 import com.gekkotron.nidoo.designsystem.components.NidooCard
 import com.gekkotron.nidoo.designsystem.components.PendingDot
 import com.gekkotron.nidoo.designsystem.icons.NidooGlyph
@@ -154,7 +157,7 @@ private fun metricLabel(metric: EnergyMetric): StringResource = when (metric) {
 @Composable
 private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpenHistory: ((String) -> Unit)?) {
     val locale = currentFormatLocale()
-    val points = history.points.orEmpty()
+    val points = remember(history.points) { history.points.orEmpty().map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val time = remember(history.range, locale) { timeFormat(history.range, locale) }
     val value = { v: Double -> listOfNotNull(formatNumber(v, locale, 1, 1, grouping = false), history.unit).joinToString(" ") }
     // As on the hub: the day-spanning ranges are buckets, so their min/max spread shades a band.
@@ -162,7 +165,7 @@ private fun HistoryTile(history: TileContent.History, modifier: Modifier, onOpen
     val bandLine = stringResource(Res.string.widget_history_band)
     NidooCard(modifier = modifier.fillMaxWidth().testTag("history-${history.entityId}"), onClick = onOpenHistory?.let { open -> { open(history.entityId) } }) {
         Text(history.title, style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        HistoryChart(
+        HistoryLineChart(
             points = points,
             color = NidooTheme.colors.water,
             formatValue = value,

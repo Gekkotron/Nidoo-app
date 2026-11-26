@@ -4,9 +4,12 @@ import androidx.navigation3.runtime.NavKey
 import com.gekkotron.nidoo.data.ConnectionProfile
 import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
+import com.gekkotron.nidoo.shared.tabs.MainTab
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ShellBackStackTest {
     @Test
@@ -43,5 +46,24 @@ class ShellBackStackTest {
         assertEquals(OnboardingKey, rootFor(ProfileState.Locked))
         assertEquals(RoomsKey, rootFor(ready.copy(roomsPending = true)))
         assertEquals(HomeKey, rootFor(ready.copy(notificationsPending = true)))
+    }
+
+    @Test
+    fun energyTabSelectsOnceAndHomePopsIt() {
+        val stack = mutableListOf<NavKey>(HomeKey)
+        selectTab(stack, MainTab.ENERGY)
+        assertEquals(listOf<NavKey>(HomeKey, EnergyKey), stack)
+        selectTab(stack, MainTab.ENERGY)
+        assertEquals(listOf<NavKey>(HomeKey, EnergyKey), stack)
+        selectTab(stack, MainTab.HOME)
+        assertEquals(listOf<NavKey>(HomeKey), stack)
+    }
+
+    @Test
+    fun historyHidesTheTabBar() {
+        assertTrue(showsTabBar(HomeKey))
+        assertTrue(showsTabBar(EnergyKey))
+        assertFalse(showsTabBar(HistoryKey("x")))
+        assertFalse(showsTabBar(SettingsKey))
     }
 }

@@ -69,8 +69,8 @@ jobs:
             tasks: >-
               :feature:home:testAndroidHostTest
               :feature:onboarding:testAndroidHostTest
-              :feature:energy:test
-              :feature:history:test
+              :feature:energy:testAndroidHostTest
+              :feature:history:testAndroidHostTest
               :feature:security:test
               :feature:automations:test
               :feature:settings:testAndroidHostTest
@@ -166,8 +166,10 @@ jobs:
           :core:flows:iosSimulatorArm64Test
           :core:climate:iosSimulatorArm64Test
           :core:assist:iosSimulatorArm64Test
+          :core:designsystem:iosSimulatorArm64Test
           :feature:onboarding:iosSimulatorArm64Test
           :feature:home:iosSimulatorArm64Test
+          :feature:history:iosSimulatorArm64Test
           :feature:settings:iosSimulatorArm64Test
           :shared:iosSimulatorArm64Test
           :shared:linkDebugFrameworkIosArm64
