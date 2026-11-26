@@ -69,7 +69,7 @@ jobs:
             tasks: >-
               :feature:home:testAndroidHostTest
               :feature:onboarding:testAndroidHostTest
-              :feature:energy:test
+              :feature:energy:testAndroidHostTest
               :feature:history:test
               :feature:security:test
               :feature:automations:test

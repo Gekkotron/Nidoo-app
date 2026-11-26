@@ -1,0 +1,318 @@
+package com.gekkotron.nidoo.feature.energy.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.getString
+import org.koin.compose.viewmodel.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gekkotron.nidoo.data.EnergyViewPreference
+import com.gekkotron.nidoo.designsystem.NidooDimens
+import com.gekkotron.nidoo.designsystem.NidooTheme
+import com.gekkotron.nidoo.designsystem.components.LinkPill
+import com.gekkotron.nidoo.designsystem.components.LinkSheet
+import com.gekkotron.nidoo.designsystem.components.NidooCard
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyEvent
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyFormat
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyHint
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyNode
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyUiState
+import com.gekkotron.nidoo.feature.energy.presentation.EnergyViewModel
+import com.gekkotron.nidoo.feature.energy.presentation.Flow
+import com.gekkotron.nidoo.feature.energy.presentation.NodeKind
+import com.gekkotron.nidoo.feature.energy.presentation.NodeStatus
+import com.gekkotron.nidoo.feature.energy.presentation.SensorEdit
+import com.gekkotron.nidoo.transport.Route
+import com.gekkotron.nidoo.format.FormatLocale
+import com.gekkotron.nidoo.designsystem.resources.Res
+import com.gekkotron.nidoo.designsystem.resources.energy_battery
+import com.gekkotron.nidoo.designsystem.resources.energy_consumer
+import com.gekkotron.nidoo.designsystem.resources.energy_grid
+import com.gekkotron.nidoo.designsystem.resources.energy_house
+import com.gekkotron.nidoo.designsystem.resources.energy_solar
+import com.gekkotron.nidoo.designsystem.resources.energy_water
+import org.jetbrains.compose.resources.stringResource
+import com.gekkotron.nidoo.feature.energy.resources.Res as EnergyRes
+import com.gekkotron.nidoo.feature.energy.resources.energy_check_sign
+import com.gekkotron.nidoo.feature.energy.resources.energy_empty
+import com.gekkotron.nidoo.feature.energy.resources.energy_go_home
+import com.gekkotron.nidoo.feature.energy.resources.energy_live
+import com.gekkotron.nidoo.feature.energy.resources.energy_live_self
+import com.gekkotron.nidoo.feature.energy.resources.energy_no_meter
+import com.gekkotron.nidoo.feature.energy.resources.energy_save_failed
+import com.gekkotron.nidoo.feature.energy.resources.energy_stale
+import com.gekkotron.nidoo.feature.energy.resources.energy_title
+import com.gekkotron.nidoo.feature.energy.resources.energy_today
+import com.gekkotron.nidoo.feature.energy.resources.energy_unavailable
+import com.gekkotron.nidoo.feature.energy.resources.energy_unknown
+import com.gekkotron.nidoo.feature.energy.resources.energy_water_meter
+import com.gekkotron.nidoo.designsystem.currentFormatLocale
+
+@Composable
+fun EnergyRoute(
+    onOpenHome: () -> Unit,
+    windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    /** An entity's history, or the derived house's for null. */
+    onOpenHistory: (entityId: String?) -> Unit = {},
+    /** Null shows the link pill as a plain status. */
+    onOpenConnectionSettings: (() -> Unit)? = null,
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
+    viewModel: EnergyViewModel = koinViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val view by viewModel.energyView.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel, snackbar) {
+        viewModel.events.collect { event ->
+            when (event) {
+                EnergyEvent.SaveFailed -> snackbar.showSnackbar(getString(EnergyRes.string.energy_save_failed))
+            }
+        }
+    }
+    EnergyScreen(
+        state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar, view = view,
+        onOpenConnectionSettings = onOpenConnectionSettings, route = route, onRouteChange = onRouteChange,
+    )
+}
+
+/** Room left above the diagram for the title, its subtitle and the link pill. */
+private val DIAGRAM_HEADROOM: Dp = 140.dp
+
+/** The diagram is never squeezed below this, however short the window. */
+private val DIAGRAM_MIN: Dp = 280.dp
+
+@Composable
+fun EnergyScreen(
+    state: EnergyUiState,
+    onOpenHome: () -> Unit,
+    windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    locale: FormatLocale = currentFormatLocale(),
+    onSave: (String, SensorEdit) -> Unit = { _, _ -> },
+    onOpenHistory: (entityId: String?) -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    view: EnergyViewPreference = EnergyViewPreference.CLASSIC,
+    /** The link sheet's "Connection settings"; null shows the link pill as a plain status. */
+    onOpenConnectionSettings: (() -> Unit)? = null,
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
+) {
+    val layoutDirection = LocalLayoutDirection.current
+    var consumersSheet by rememberSaveable { mutableStateOf(false) }
+    var linkSheet by rememberSaveable { mutableStateOf(false) }
+    var detailId by rememberSaveable { mutableStateOf<String?>(null) }
+    Scaffold(
+        containerColor = Color.Transparent,
+        contentColor = NidooTheme.colors.content,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = windowInsets,
+    ) { padding ->
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // The diagram's tallest: what the viewport shows under the header, so a landscape tablet or an
+            // open foldable sees it whole instead of a width-sized square running off the bottom.
+            val diagramMax = (maxHeight - padding.calculateTopPadding() - padding.calculateBottomPadding() - DIAGRAM_HEADROOM)
+                .coerceAtLeast(DIAGRAM_MIN)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = padding.calculateStartPadding(layoutDirection) + 16.dp,
+                    end = padding.calculateEndPadding(layoutDirection) + 16.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 24.dp,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
+                verticalArrangement = Arrangement.spacedBy(NidooDimens.gridGap),
+            ) {
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
+                    EnergyHeader(state, onPillClick = onOpenConnectionSettings?.let { { linkSheet = true } })
+                }
+                when {
+                    state.loading -> Unit
+                    state.empty -> item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 24.dp)) {
+                            Text(stringResource(EnergyRes.string.energy_empty), style = NidooTheme.type.body)
+                            Button(onClick = onOpenHome, modifier = Modifier.heightIn(min = NidooDimens.minTouch)) { Text(stringResource(EnergyRes.string.energy_go_home)) }
+                        }
+                    }
+                    else -> {
+                        if (state.hint == EnergyHint.CHECK_SIGN) {
+                            item(key = "hint", span = { GridItemSpan(maxLineSpan) }) {
+                                Text(stringResource(EnergyRes.string.energy_check_sign), style = NidooTheme.type.label, color = NidooTheme.colors.warning)
+                            }
+                        }
+                        item(key = "diagram", span = { GridItemSpan(maxLineSpan) }) {
+                            NidooCard(Modifier.fillMaxWidth()) {
+                                val onMore = { consumersSheet = true }
+                                val onNode = { n: EnergyNode -> detailId = n.id }
+                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                    when (view) {
+                                        // Classic is drawn for its width at a fixed ratio: narrowed until it fits the height.
+                                        EnergyViewPreference.CLASSIC -> FlowDiagram(
+                                            state, locale, onMore = onMore, onNode = onNode,
+                                            modifier = Modifier.widthIn(max = diagramMax * FlowLayout.ASPECT).padding(8.dp),
+                                        )
+                                        // Flux turns horizontal on wide windows, so it already fits.
+                                        EnergyViewPreference.FLUX -> FluxDiagram(state, locale, onMore = onMore, onNode = onNode, modifier = Modifier.padding(8.dp))
+                                        EnergyViewPreference.ORBITE -> OrbiteDiagram(
+                                            state, locale, onMore = onMore, onNode = onNode,
+                                            modifier = Modifier.padding(8.dp), maxSide = diagramMax,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        items(state.cards, key = { "card-${it.id}" }) { node -> EnergyValueCard(node, locale, onClick = { detailId = node.id }) }
+                    }
+                }
+            }
+        }
+    }
+    if (linkSheet && onOpenConnectionSettings != null) {
+        LinkSheet(
+            state.link, route = route, onRouteChange = onRouteChange,
+            onOpenSettings = { linkSheet = false; onOpenConnectionSettings() },
+            onDismiss = { linkSheet = false },
+        )
+    }
+    if (consumersSheet) {
+        ConsumersSheet(state.consumers, locale, onSelect = { consumersSheet = false; detailId = it.id }, onDismiss = { consumersSheet = false })
+    }
+    // A node that left Energy (its role was cleared) closes its sheet.
+    val detail = detailId?.let { id -> state.node(id) ?: state.consumers.firstOrNull { it.id == id } }
+    if (detail != null) {
+        // History closes the sheet first: one left open would show over History during a back swipe and swallow it.
+        EnergyDetailSheet(detail, state, locale, onSave = onSave, onOpenHistory = { detailId = null; onOpenHistory(it) }, onDismiss = { detailId = null })
+    }
+}
+
+@Composable
+private fun EnergyHeader(state: EnergyUiState, onPillClick: (() -> Unit)?) {
+    Column(Modifier.padding(top = 8.dp)) {
+        Text(stringResource(EnergyRes.string.energy_title), style = NidooTheme.type.display)
+        Text(
+            state.selfConsumption?.let { stringResource(EnergyRes.string.energy_live_self, it) } ?: stringResource(EnergyRes.string.energy_live),
+            style = NidooTheme.type.body,
+            color = NidooTheme.colors.contentMuted,
+        )
+        Spacer(Modifier.height(8.dp))
+        LinkPill(state.link, onClick = onPillClick)
+    }
+}
+
+@Composable
+private fun EnergyValueCard(node: EnergyNode, locale: FormatLocale, onClick: () -> Unit) {
+    val staleText = stringResource(EnergyRes.string.energy_stale)
+    // Water keeps its own reading; every other card shows the node's lifetime energy counter.
+    val water = node.kind == NodeKind.WATER
+    val status = if (water) node.status else node.totalStatus
+    NidooCard(
+        Modifier
+            .fillMaxWidth()
+            .testTag("energy-card-${node.id}")
+            .alpha(statusAlpha(status))
+            .semantics(mergeDescendants = true) { if (status == NodeStatus.STALE) stateDescription = staleText },
+        onClick = onClick,
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(nodeLabel(node), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+            Text(if (water) nodeValueText(node, locale) else cardValueText(node, locale), style = NidooTheme.type.body)
+            if (!water && !node.hasMeter) {
+                Text(stringResource(EnergyRes.string.energy_no_meter), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+            }
+            TodayText(node, locale)
+            if (water && node.waterTotal != null) {
+                Text(
+                    stringResource(EnergyRes.string.energy_water_meter, EnergyFormat.meter(node.waterTotal!!, node.waterTotalUnit, locale)),
+                    style = NidooTheme.type.label,
+                    color = NidooTheme.colors.contentMuted,
+                )
+            }
+        }
+    }
+}
+
+/** "3.4 kWh today" under a node's value, when history answered for it. */
+@Composable
+internal fun TodayText(node: EnergyNode, locale: FormatLocale) {
+    val kwh = node.todayKwh ?: return
+    Text(stringResource(EnergyRes.string.energy_today, EnergyFormat.energy(kwh, locale)), style = NidooTheme.type.label, color = NidooTheme.colors.contentMuted)
+}
+
+@Composable
+internal fun nodeLabel(node: EnergyNode): String = node.name ?: stringResource(
+    when (node.kind) {
+        NodeKind.SOLAR -> Res.string.energy_solar
+        NodeKind.GRID -> Res.string.energy_grid
+        NodeKind.BATTERY -> Res.string.energy_battery
+        NodeKind.HOUSE -> Res.string.energy_house
+        NodeKind.WATER -> Res.string.energy_water
+        NodeKind.CONSUMER, NodeKind.MORE -> Res.string.energy_consumer
+    },
+)
+
+/** A card's lifetime energy: "—" without a meter or a reading, "Unavailable", or "1,234.5 kWh". */
+@Composable
+private fun cardValueText(node: EnergyNode, locale: FormatLocale): String = when {
+    !node.hasMeter -> stringResource(EnergyRes.string.energy_unknown)
+    node.totalStatus == NodeStatus.UNAVAILABLE -> stringResource(EnergyRes.string.energy_unavailable)
+    node.totalKwh == null -> stringResource(EnergyRes.string.energy_unknown)
+    else -> EnergyFormat.energy(node.totalKwh!!, locale)
+}
+
+/** "—", "Unavailable", or the value; grid and battery get ↙ (into the house) or ↗ (out of it). */
+@Composable
+internal fun nodeValueText(node: EnergyNode, locale: FormatLocale): String {
+    if (node.status == NodeStatus.UNAVAILABLE) return stringResource(EnergyRes.string.energy_unavailable)
+    val v = node.value ?: return stringResource(EnergyRes.string.energy_unknown)
+    if (node.kind == NodeKind.WATER) return EnergyFormat.amount(v, node.unit, locale)
+    val arrow = if (node.kind == NodeKind.GRID || node.kind == NodeKind.BATTERY) {
+        when (node.flow) {
+            Flow.IN -> "↙ "
+            Flow.OUT -> "↗ "
+            Flow.IDLE -> ""
+        }
+    } else {
+        ""
+    }
+    return arrow + EnergyFormat.power(v, locale)
+}
