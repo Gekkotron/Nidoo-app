@@ -4,6 +4,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import com.gekkotron.nidoo.feature.automations.di.automationsModule
 import com.gekkotron.nidoo.feature.energy.di.energyModule
 import com.gekkotron.nidoo.feature.history.di.historyModule
 import com.gekkotron.nidoo.feature.home.di.homeModule
@@ -27,7 +28,7 @@ fun MainViewController(mqttPortFactory: () -> MqttClientPort): UIViewController 
     // Home's media covers are http(s) images: Coil needs its Ktor fetcher (Darwin engine) registered on iOS.
     SingletonImageLoader.setSafe { context -> ImageLoader.Builder(context).components { add(KtorNetworkFetcherFactory()) }.build() }
     return ComposeUIViewController {
-        KoinApplication(configuration = koinConfiguration { modules(iosModule(mqttPortFactory), sharedModule, onboardingModule, homeModule, settingsModule, energyModule, historyModule, securityModule, mainTabsModule) }) {
+        KoinApplication(configuration = koinConfiguration { modules(iosModule(mqttPortFactory), sharedModule, onboardingModule, homeModule, settingsModule, energyModule, historyModule, securityModule, automationsModule, mainTabsModule) }) {
             NidooApp()
         }
     }

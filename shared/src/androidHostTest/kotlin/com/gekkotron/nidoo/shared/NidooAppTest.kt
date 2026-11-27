@@ -32,6 +32,7 @@ import com.gekkotron.nidoo.feature.history.di.historyModule
 import com.gekkotron.nidoo.shared.di.mainTabsModule
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
+import com.gekkotron.nidoo.feature.automations.di.automationsModule
 import com.gekkotron.nidoo.feature.security.di.securityModule
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
 import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
@@ -127,7 +128,7 @@ class NidooAppTest {
         }
     }
 
-    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, mainTabsModule, countingHome) } }
+    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, automationsModule, mainTabsModule, countingHome) } }
 
     private fun showApp() {
         compose.setContent { KoinIsolatedContext(koinApp) { NidooApp() } }
@@ -290,6 +291,13 @@ class NidooAppTest {
         assertTrue(compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Home").performClick()
         waitForHome()
+    }
+
+    @Test
+    fun routinesTabIsHiddenUnderTheDemo() {
+        demoHome()
+        compose.onNodeWithText("Security").assertExists()
+        compose.onNodeWithText("Routines").assertDoesNotExist()
     }
 
     @Test

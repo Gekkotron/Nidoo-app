@@ -31,6 +31,7 @@ import com.gekkotron.nidoo.designsystem.permissions.AskForNotificationsOnLaunch
 import com.gekkotron.nidoo.shared.tabs.MainTab
 import com.gekkotron.nidoo.shared.tabs.MainTabBar
 import com.gekkotron.nidoo.shared.tabs.MainTabsViewModel
+import com.gekkotron.nidoo.shared.tabs.mainTabsFor
 import org.koin.compose.viewmodel.koinViewModel
 import com.gekkotron.nidoo.feature.alerts.ui.AlertDetailRoute
 import com.gekkotron.nidoo.feature.alerts.ui.AlertsRoute
@@ -191,7 +192,8 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val top = backStack.lastOrNull()
     val tabs = showsTabBar(top)
     // The demo has no hub: hide the tab, and leave it if the demo is switched on while it is open.
-    val showAutomations = (profile as? ProfileState.Ready)?.profile != ConnectionProfile.Demo
+    val tabList = mainTabsFor(profile)
+    val showAutomations = MainTab.AUTOMATIONS in tabList
     LaunchedEffect(showAutomations, top) { if (!showAutomations && top == AutomationsKey) selectTab(backStack, HomeKey) }
     // The bar owns the bottom inset on the main tabs; their own Scaffolds then only pad top and sides.
     val tabInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
@@ -203,10 +205,7 @@ fun NidooNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 val tabsVm = koinViewModel<MainTabsViewModel>()
                 val status by tabsVm.status.collectAsStateWithLifecycle()
                 MainTabBar(
-                    tabs = listOfNotNull(
-                        MainTab.HOME, MainTab.ENERGY, MainTab.SECURITY,
-                        MainTab.AUTOMATIONS.takeIf { showAutomations },
-                    ),
+                    tabs = tabList,
                     selected = top?.mainTab(),
                     onSelect = { selectTab(backStack, it.key()) },
                     status = status,
