@@ -12,7 +12,13 @@ class SpeechEndpointerTest {
     private class Harness(scope: TestScope) {
         var silences = 0
         var nothingHeard = 0
-        val endpointer = SpeechEndpointer(scope.backgroundScope, onSilence = { silences++ }, onNothingHeard = { nothingHeard++ })
+        var overdue = 0
+        val endpointer = SpeechEndpointer(
+            scope.backgroundScope,
+            onSilence = { silences++ },
+            onNothingHeard = { nothingHeard++ },
+            onFinalOverdue = { overdue++ },
+        )
     }
 
     @Test
@@ -49,5 +55,33 @@ class SpeechEndpointerTest {
         advanceTimeBy(10_000)
         assertEquals(0, h.silences)
         assertEquals(0, h.nothingHeard)
+    }
+
+    @Test
+    fun finalOverdueFiresAfterSilenceWhenNothingArrives() = runTest {
+        val h = Harness(this)
+        h.endpointer.start()
+        h.endpointer.heard()
+        advanceTimeBy(SILENCE_END_MS + 1)
+        assertEquals(1, h.silences)
+        assertEquals(0, h.overdue)
+        advanceTimeBy(FINAL_WAIT_MS + 1)
+        assertEquals(1, h.overdue)
+        advanceTimeBy(10_000)
+        assertEquals(1, h.silences)
+        assertEquals(1, h.overdue)
+        assertEquals(0, h.nothingHeard)
+    }
+
+    @Test
+    fun stopAfterSilenceCancelsTheFinalWait() = runTest {
+        val h = Harness(this)
+        h.endpointer.start()
+        h.endpointer.heard()
+        advanceTimeBy(SILENCE_END_MS + 1)
+        assertEquals(1, h.silences)
+        h.endpointer.stop()
+        advanceTimeBy(10_000)
+        assertEquals(0, h.overdue)
     }
 }

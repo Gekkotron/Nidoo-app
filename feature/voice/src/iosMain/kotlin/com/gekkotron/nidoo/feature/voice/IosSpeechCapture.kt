@@ -25,7 +25,8 @@ private const val TAP_FRAMES = 1024u
 /**
  * Listens with SFSpeechRecognizer, on the phone only (iOS spec §7.5, as on Android), in [localeTag]. The recognizer
  * doesn't end the sentence on silence, so a [SpeechEndpointer] ends the audio [SILENCE_END_MS] after the last partial
- * and reports [SpeechError.NO_SPEECH] when nothing is heard within [NO_SPEECH_MS].
+ * and reports [SpeechError.NO_SPEECH] when nothing is heard within [NO_SPEECH_MS]. When the final result is still
+ * missing [FINAL_WAIT_MS] after the audio ended, the last partial becomes the final (or NO_SPEECH without one).
  *
  * [start] and [cancel] run on the main thread, like the voice session. The recognizer and the audio tap call back on
  * other queues: every callback is posted to the main queue, and only while its own [start] is current, so a cancelled
@@ -50,6 +51,7 @@ class IosSpeechCapture(private val localeTag: String = VOICE_LOCALE) : SpeechCap
         cancel()
         val gen = generation
         var ended = false
+        var lastPartial = ""
 
         /** Ends this listen once: the microphone is released before [deliver] runs, which may start the next one. */
         fun end(deliver: () -> Unit) {
@@ -95,6 +97,10 @@ class IosSpeechCapture(private val localeTag: String = VOICE_LOCALE) : SpeechCap
             scope,
             onSilence = { if (gen == generation && !ended) stopAudio() },
             onNothingHeard = { end { callbacks.onError(SpeechError.NO_SPEECH) } },
+            // The recognizer went quiet after the audio ended: the last partial is the sentence, so listening ends.
+            onFinalOverdue = {
+                end { if (lastPartial.isNotBlank()) callbacks.onFinal(lastPartial) else callbacks.onError(SpeechError.NO_SPEECH) }
+            },
         )
         this.endpointer = endpointer
 
@@ -107,6 +113,7 @@ class IosSpeechCapture(private val localeTag: String = VOICE_LOCALE) : SpeechCap
                     final -> end { if (text.isBlank()) callbacks.onError(SpeechError.NO_SPEECH) else callbacks.onFinal(text) }
                     failure != null -> end { callbacks.onError(failure) }
                     gen == generation && !ended && text.isNotBlank() -> {
+                        lastPartial = text
                         callbacks.onPartial(text)
                         endpointer.heard()
                     }
