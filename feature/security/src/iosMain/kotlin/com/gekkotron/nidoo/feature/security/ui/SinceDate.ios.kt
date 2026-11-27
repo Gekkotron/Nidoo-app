@@ -4,12 +4,12 @@ import androidx.compose.runtime.Composable
 import com.gekkotron.nidoo.designsystem.currentFormatLocale
 import com.gekkotron.nidoo.format.FormatLocale
 import com.gekkotron.nidoo.format.formatEpochSeconds
+import com.gekkotron.nidoo.format.toNSLocale
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSCalendarUnitDay
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
-import platform.Foundation.NSLocale
 import platform.Foundation.NSTimeZone
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.localTimeZone
@@ -34,6 +34,6 @@ internal fun sinceDate(at: Instant, now: Instant, locale: FormatLocale, timeZone
         daysBack <= 6L -> "EEEjm"
         else -> "dMMMjm"
     }
-    val pattern = NSDateFormatter.dateFormatFromTemplate(skeleton, 0u, NSLocale(locale.identifier)) ?: skeleton
+    val pattern = NSDateFormatter.dateFormatFromTemplate(skeleton, 0u, locale.toNSLocale()) ?: skeleton
     return formatEpochSeconds(at.epochSeconds, pattern, locale, timeZoneId)
 }

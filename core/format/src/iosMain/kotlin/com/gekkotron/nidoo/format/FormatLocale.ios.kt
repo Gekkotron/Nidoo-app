@@ -18,4 +18,11 @@ actual fun systemLocale(): FormatLocale = FormatLocale(NSLocale.currentLocale.lo
 actual fun formatLocale(languageTag: String): FormatLocale =
     FormatLocale(NSLocale.canonicalLocaleIdentifierFromString(languageTag))
 
-internal fun FormatLocale.toNSLocale(): NSLocale = NSLocale(localeIdentifier = identifier)
+/**
+ * The Foundation locale for this one. For the current locale this is `NSLocale.currentLocale` itself, because only
+ * it carries the user's overrides such as the 12/24-hour clock switch.
+ */
+fun FormatLocale.toNSLocale(): NSLocale = localeFor(identifier, NSLocale.currentLocale)
+
+internal fun localeFor(identifier: String, current: NSLocale): NSLocale =
+    if (current.localeIdentifier == identifier) current else NSLocale(localeIdentifier = identifier)
