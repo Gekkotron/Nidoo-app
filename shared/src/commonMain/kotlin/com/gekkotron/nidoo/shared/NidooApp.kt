@@ -24,6 +24,7 @@ import com.gekkotron.nidoo.data.ProfileState
 import com.gekkotron.nidoo.designsystem.NidooBackground
 import com.gekkotron.nidoo.designsystem.NidooTheme
 import com.gekkotron.nidoo.designsystem.ThemeChoice
+import com.gekkotron.nidoo.feature.automations.ui.AutomationsRoute
 import com.gekkotron.nidoo.feature.energy.ui.EnergyRoute
 import com.gekkotron.nidoo.feature.history.HistoryTarget
 import com.gekkotron.nidoo.feature.history.ui.HistoryRoute
@@ -39,6 +40,7 @@ import com.gekkotron.nidoo.feature.settings.ui.SettingsRoute
 import com.gekkotron.nidoo.shared.tabs.MainTab
 import com.gekkotron.nidoo.shared.tabs.MainTabBar
 import com.gekkotron.nidoo.shared.tabs.MainTabsViewModel
+import com.gekkotron.nidoo.shared.tabs.mainTabsFor
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The iOS app (spec §7.6 phase 4): onboarding until a profile is saved, then the Rooms step for a new setup, then Home and Settings. */
@@ -55,7 +57,7 @@ fun NidooApp(shell: AppShellViewModel = koinViewModel()) {
             if (theme != null && root != null) {
                 // No push on iOS (spec §3): the notification step is closed without being shown.
                 if ((p as? ProfileState.Ready)?.notificationsPending == true) LaunchedEffect(Unit) { shell.finishNotifications() }
-                Screens(shell, root)
+                Screens(shell, root, p)
             }
         }
     }
@@ -67,11 +69,15 @@ fun NidooApp(shell: AppShellViewModel = koinViewModel()) {
  * state list is enough.
  */
 @Composable
-private fun Screens(shell: AppShellViewModel, root: NavKey) {
+private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileState) {
     val route by shell.route.collectAsStateWithLifecycle()
     val backStack = remember { mutableStateListOf(root) }
     LaunchedEffect(root) { resetToRoot(backStack, root) }
     val top = backStack.lastOrNull()
+    val tabs = mainTabsFor(profile)
+    // The demo has no hub: leave Routines if the demo is switched on while it is open.
+    val showAutomations = MainTab.AUTOMATIONS in tabs
+    LaunchedEffect(showAutomations, top) { if (!showAutomations && top == AutomationsKey) selectTab(backStack, MainTab.HOME) }
     val openConnectionSettings = {
         push(backStack, SettingsKey)
         push(backStack, SettingsPageKey(SettingsPage.CONNECTION))
@@ -85,7 +91,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey) {
             if (showsTabBar(top)) {
                 val tabsVm = koinViewModel<MainTabsViewModel>()
                 val status by tabsVm.status.collectAsStateWithLifecycle()
-                MainTabBar(IOS_TABS, top?.mainTab(), { selectTab(backStack, it) }, status)
+                MainTabBar(tabs, top?.mainTab(), { selectTab(backStack, it) }, status)
             }
         },
     ) { padding ->
@@ -139,6 +145,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey) {
                         onRouteChange = shell::setRoute,
                     )
                 }
+                entry<AutomationsKey> { AutomationsRoute(windowInsets = tabInsets) }
                 entry<HistoryKey> { key ->
                     val target = HistoryTarget.decode(key.target)
                     if (target == null) LaunchedEffect(key) { pop(backStack, key) }

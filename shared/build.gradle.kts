@@ -32,6 +32,7 @@ kotlin {
             implementation(project(":feature:energy"))
             implementation(project(":feature:history"))
             implementation(project(":feature:security"))
+            implementation(project(":feature:automations"))
             implementation(project(":core:history"))
             implementation(project(":core:flows"))
             implementation(project(":core:dashboards"))

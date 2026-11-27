@@ -72,7 +72,7 @@ jobs:
               :feature:energy:testAndroidHostTest
               :feature:history:testAndroidHostTest
               :feature:security:testAndroidHostTest
-              :feature:automations:test
+              :feature:automations:testAndroidHostTest
               :feature:settings:testAndroidHostTest
               :feature:alerts:test
               :feature:widget:test
@@ -171,6 +171,7 @@ jobs:
           :feature:home:iosSimulatorArm64Test
           :feature:history:iosSimulatorArm64Test
           :feature:security:iosSimulatorArm64Test
+          :feature:automations:iosSimulatorArm64Test
           :feature:settings:iosSimulatorArm64Test
           :shared:iosSimulatorArm64Test
           :shared:linkDebugFrameworkIosArm64

@@ -87,4 +87,23 @@ class ShellBackStackTest {
         assertTrue(showsTabBar(SecurityKey))
         assertEquals(MainTab.SECURITY, SecurityKey.mainTab())
     }
+
+    @Test
+    fun routinesIsASideTab() {
+        val stack = mutableListOf<NavKey>(HomeKey)
+        selectTab(stack, MainTab.AUTOMATIONS)
+        assertEquals(listOf<NavKey>(HomeKey, AutomationsKey), stack)
+        selectTab(stack, MainTab.SECURITY)
+        assertEquals(listOf<NavKey>(HomeKey, SecurityKey), stack)
+        selectTab(stack, MainTab.AUTOMATIONS)
+        assertEquals(listOf<NavKey>(HomeKey, AutomationsKey), stack)
+        selectTab(stack, MainTab.HOME)
+        assertEquals(listOf<NavKey>(HomeKey), stack)
+    }
+
+    @Test
+    fun routinesShowsTheTabBar() {
+        assertTrue(showsTabBar(AutomationsKey))
+        assertEquals(MainTab.AUTOMATIONS, AutomationsKey.mainTab())
+    }
 }

@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.shared
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -32,6 +33,7 @@ import com.gekkotron.nidoo.feature.history.di.historyModule
 import com.gekkotron.nidoo.shared.di.mainTabsModule
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
+import com.gekkotron.nidoo.feature.automations.di.automationsModule
 import com.gekkotron.nidoo.feature.security.di.securityModule
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
 import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
@@ -127,7 +129,7 @@ class NidooAppTest {
         }
     }
 
-    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, mainTabsModule, countingHome) } }
+    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, automationsModule, mainTabsModule, countingHome) } }
 
     private fun showApp() {
         compose.setContent { KoinIsolatedContext(koinApp) { NidooApp() } }
@@ -276,6 +278,29 @@ class NidooAppTest {
     }
 
     @Test
+    fun routinesShowsForAHubAndLeavesWhenTheDemoTurnsOn() {
+        showApp()
+        waitFor("Try the demo")
+        val profiles = koinApp.koin.get<ProfileRepository>()
+        runBlocking {
+            profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local")))
+            profiles.finishRooms()
+        }
+        waitForHome()
+        compose.onNodeWithText("Routines").assertExists()
+        compose.onNodeWithText("Routines").performClick()
+        waitFor("Flows")
+        systemBack()
+        waitForHome()
+        compose.onNodeWithText("Routines").performClick()
+        waitFor("Flows")
+        // The demo keeps roomsPending false, so the root stays Home: only the demo-leave effect moves the user.
+        runBlocking { profiles.save(ConnectionProfile.Demo) }
+        waitForHome()
+        compose.onAllNodesWithText("Routines").assertCountEquals(0)
+    }
+
+    @Test
     fun homeShowsTheTabBarAndOpensEnergy() {
         demoHome()
         compose.onNodeWithText("Home").assertExists()
@@ -290,6 +315,13 @@ class NidooAppTest {
         assertTrue(compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Home").performClick()
         waitForHome()
+    }
+
+    @Test
+    fun routinesTabIsHiddenUnderTheDemo() {
+        demoHome()
+        compose.onNodeWithText("Security").assertExists()
+        compose.onNodeWithText("Routines").assertDoesNotExist()
     }
 
     @Test

@@ -16,15 +16,13 @@ internal data class SettingsPageKey(val page: SettingsPage) : NavKey
 internal data object RoomOrderKey : NavKey
 internal data object EnergyKey : NavKey
 internal data object SecurityKey : NavKey
+internal data object AutomationsKey : NavKey
 
 /** History of one entity or the house; [target] is a `HistoryTarget.encode()` string. */
 internal data class HistoryKey(val target: String) : NavKey
 
-/** The tabs iOS shows so far; Automations comes with its phase. */
-internal val IOS_TABS: List<MainTab> = listOf(MainTab.HOME, MainTab.ENERGY, MainTab.SECURITY)
-
-/** Energy and Security sit on top of Home, so back always returns to Home (the same rule as Android's side tabs). */
-private val SIDE_TABS: Set<NavKey> = setOf(EnergyKey, SecurityKey)
+/** Energy, Security and Routines sit on top of Home, so back always returns to Home (the same rule as Android's side tabs). */
+private val SIDE_TABS: Set<NavKey> = setOf(EnergyKey, SecurityKey, AutomationsKey)
 
 /** The saved profile picks the root: Loading → none yet; none or locked → onboarding; Ready → Rooms for a new setup, else Home. */
 internal fun rootFor(profile: ProfileState): NavKey? = when (profile) {
@@ -64,12 +62,13 @@ internal fun selectTab(stack: MutableList<NavKey>, tab: MainTab) {
     stack.add(key)
 }
 
-internal fun showsTabBar(top: NavKey?): Boolean = top == HomeKey || top == EnergyKey || top == SecurityKey
+internal fun showsTabBar(top: NavKey?): Boolean = top == HomeKey || top == EnergyKey || top == SecurityKey || top == AutomationsKey
 
 internal fun NavKey.mainTab(): MainTab? = when (this) {
     HomeKey -> MainTab.HOME
     EnergyKey -> MainTab.ENERGY
     SecurityKey -> MainTab.SECURITY
+    AutomationsKey -> MainTab.AUTOMATIONS
     else -> null
 }
 
@@ -77,5 +76,5 @@ private fun MainTab.key(): NavKey? = when (this) {
     MainTab.HOME -> HomeKey
     MainTab.ENERGY -> EnergyKey
     MainTab.SECURITY -> SecurityKey
-    MainTab.AUTOMATIONS -> null
+    MainTab.AUTOMATIONS -> AutomationsKey
 }
