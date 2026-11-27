@@ -22,4 +22,11 @@ class SinceDateIosTest {
         assertContains(older, "1 janv.")
         assertContains(older, "11:00")
     }
+
+    @Test
+    fun aFutureDayKeepsItsWeekday() {
+        val tomorrow = sinceDate(Instant.parse("2025-01-16T10:00:00Z"), now, fr, paris)
+        assertTrue(tomorrow.startsWith("jeu."), tomorrow)
+        assertTrue(tomorrow.endsWith("11:00"), tomorrow)
+    }
 }

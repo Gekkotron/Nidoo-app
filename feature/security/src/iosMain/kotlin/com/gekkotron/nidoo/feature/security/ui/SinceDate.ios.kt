@@ -30,7 +30,7 @@ internal fun sinceDate(at: Instant, now: Instant, locale: FormatLocale, timeZone
     val today = calendar.startOfDayForDate(NSDate.dateWithTimeIntervalSince1970(now.epochSeconds.toDouble()))
     val daysBack = calendar.components(NSCalendarUnitDay, fromDate = atDay, toDate = today, options = 0u).day
     val skeleton = when {
-        daysBack <= 0L -> "jm"
+        daysBack == 0L -> "jm"
         daysBack <= 6L -> "EEEjm"
         else -> "dMMMjm"
     }

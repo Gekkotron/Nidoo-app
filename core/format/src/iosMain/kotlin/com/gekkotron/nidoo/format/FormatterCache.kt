@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.gekkotron.nidoo.format
 
-import kotlin.concurrent.AtomicReference
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterDecimalStyle
@@ -17,10 +20,10 @@ internal class FormatterCache<K : Any, V : Any>(private val limit: Int = 64) {
     private val entries = AtomicReference<Map<K, V>>(emptyMap())
 
     fun getOrPut(key: K, create: () -> V): V {
-        entries.value[key]?.let { return it }
+        entries.load()[key]?.let { return it }
         val created = create()
         while (true) {
-            val current = entries.value
+            val current = entries.load()
             current[key]?.let { return it }
             val next = if (current.size >= limit) mapOf(key to created) else current + (key to created)
             if (entries.compareAndSet(current, next)) return created

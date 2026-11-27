@@ -14,6 +14,7 @@ import com.gekkotron.nidoo.data.SecretStore
 import com.gekkotron.nidoo.data.create
 import com.gekkotron.nidoo.feature.energy.presentation.EnergyViewModel
 import com.gekkotron.nidoo.feature.history.presentation.HistoryViewModel
+import com.gekkotron.nidoo.feature.security.presentation.SecurityViewModel
 import com.gekkotron.nidoo.feature.home.presentation.CustomizeViewModel
 import com.gekkotron.nidoo.feature.home.presentation.DashboardViewModel
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
@@ -161,6 +162,7 @@ class KoinBridgeTest {
         koin.get<EnergyViewModel>()
         koin.get<HistoryViewModel>()
         koin.get<MainTabsViewModel>()
+        koin.get<SecurityViewModel>()
     }
 
     /** EnergyHistory reads an unscoped EntitySource, so each one asks Hilt again instead of pinning the first. */

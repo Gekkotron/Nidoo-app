@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.rememberResourceEnvironment
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -88,25 +89,26 @@ fun SecurityRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(viewModel, snackbar) {
+    val environment = rememberResourceEnvironment()
+    LaunchedEffect(viewModel, snackbar, environment) {
         viewModel.events.collect { event ->
             when (event) {
                 is SecurityEvent.NotConfirmed -> {
                     val result = snackbar.showSnackbar(
-                        message = getString(Res.string.security_not_confirmed),
-                        actionLabel = getString(Res.string.security_retry),
+                        message = getString(environment, Res.string.security_not_confirmed),
+                        actionLabel = getString(environment, Res.string.security_retry),
                     )
                     if (result == SnackbarResult.ActionPerformed) viewModel.send(event.id, event.command)
                 }
-                is SecurityEvent.Rejected -> snackbar.showSnackbar(getString(Res.string.security_rejected, event.reason))
-                SecurityEvent.SaveFailed -> snackbar.showSnackbar(getString(Res.string.security_save_failed))
-                SecurityEvent.WaitingForConnection -> snackbar.showSnackbar(getString(Res.string.security_waiting))
+                is SecurityEvent.Rejected -> snackbar.showSnackbar(getString(environment, Res.string.security_rejected, event.reason))
+                SecurityEvent.SaveFailed -> snackbar.showSnackbar(getString(environment, Res.string.security_save_failed))
+                SecurityEvent.WaitingForConnection -> snackbar.showSnackbar(getString(environment, Res.string.security_waiting))
             }
         }
     }
     alertsEffects?.invoke(snackbar)
     val scope = rememberCoroutineScope()
-    val saveFailed = { scope.launch { snackbar.showSnackbar(getString(Res.string.security_save_failed)) }; Unit }
+    val saveFailed = { scope.launch { snackbar.showSnackbar(getString(environment, Res.string.security_save_failed)) }; Unit }
     SecurityScreen(
         state, windowInsets,
         onSend = viewModel::send,
