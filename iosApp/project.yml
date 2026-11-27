@@ -40,6 +40,8 @@ targets:
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
         NSLocalNetworkUsageDescription: Nidoo talks to your home hub on the local network.
+        NSMicrophoneUsageDescription: Nidoo listens to your voice commands for your home hub.
+        NSSpeechRecognitionUsageDescription: Nidoo turns your voice commands into text on this iPhone.
         NSCameraUsageDescription: Nidoo scans your hub's setup code.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

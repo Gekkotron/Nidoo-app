@@ -36,8 +36,17 @@ import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
 import com.gekkotron.nidoo.feature.automations.di.automationsModule
 import com.gekkotron.nidoo.feature.security.di.securityModule
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
-import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
+import com.gekkotron.nidoo.assist.AssistClient
+import com.gekkotron.nidoo.assist.AssistReply
+import com.gekkotron.nidoo.assist.AssistResult
 import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
+import com.gekkotron.nidoo.feature.settings.presentation.VoicePlatformSettings
+import com.gekkotron.nidoo.feature.voice.AudioPlayer
+import com.gekkotron.nidoo.feature.voice.SpeechAvailability
+import com.gekkotron.nidoo.feature.voice.SpeechCapture
+import com.gekkotron.nidoo.feature.voice.SpeechCaptureFactory
+import com.gekkotron.nidoo.feature.voice.VoicePermissions
+import com.gekkotron.nidoo.feature.voice.di.voiceModule
 import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
 import com.gekkotron.nidoo.flows.FlowsClient
 import com.gekkotron.nidoo.flows.FlowsRepository
@@ -108,7 +117,34 @@ class NidooAppTest {
             get<EntitySourceSession>().current((get<ProfileRepository>().state.value as? ProfileState.Ready)?.profile).also { sources += it }
         }
         single { ConnectionTester { emptyFlow() } }
-        single<PlatformSettings> { NoPlatformSettings }
+        single<PlatformSettings> { VoicePlatformSettings(get(), SpeechAvailability.Status.Ready) }
+        single<AssistClient> { NoAssist }
+        single<AudioPlayer> { SilentPlayer }
+        // The sheet only needs a capture to exist; these tests never hear anything.
+        single<SpeechCaptureFactory> { { IdleCapture } }
+        single<VoicePermissions> { micPermission }
+    }
+
+    /** What the fake permission answers; each test sets it before opening the sheet. */
+    private var micGranted = true
+    private val micPermission = object : VoicePermissions {
+        override suspend fun request() = micGranted
+    }
+
+    private object NoAssist : AssistClient {
+        override suspend fun send(text: String): AssistResult = AssistResult.NoHub
+        override suspend fun answer(reply: AssistReply): AssistResult = AssistResult.NoHub
+        override suspend fun speech(text: String): ByteArray? = null
+    }
+
+    private object SilentPlayer : AudioPlayer {
+        override suspend fun play(wav: ByteArray) = true
+        override fun stop() = Unit
+    }
+
+    private object IdleCapture : SpeechCapture {
+        override fun start(callbacks: SpeechCapture.Callbacks) = Unit
+        override fun cancel() = Unit
     }
 
     /** Counts Home's ViewModels, built as `homeModule` builds them (Koin lets a later definition replace an earlier one). */
@@ -129,7 +165,7 @@ class NidooAppTest {
         }
     }
 
-    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, automationsModule, mainTabsModule, countingHome) } }
+    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, automationsModule, mainTabsModule, voiceModule, countingHome) } }
 
     private fun showApp() {
         compose.setContent { KoinIsolatedContext(koinApp) { NidooApp() } }
@@ -341,5 +377,36 @@ class NidooAppTest {
         demoHome()
         openSettings()
         compose.onNodeWithText("Energy").assertDoesNotExist()
+    }
+
+    private fun enableVoice() = runBlocking { koinApp.koin.get<AppPreferences>().setVoiceEnabled(true) }
+
+    @Test
+    fun micHiddenWhileVoiceIsOff() {
+        demoHome()
+        compose.onNodeWithContentDescription("Say a command").assertDoesNotExist()
+    }
+
+    @Test
+    fun micOpensTheVoiceSheet() {
+        showApp()
+        enableVoice()
+        waitFor("Try the demo")
+        compose.onNodeWithText("Try the demo").performClick()
+        waitForDescription("Say a command")
+        compose.onNodeWithContentDescription("Say a command").performClick()
+        waitFor("Listening…")
+    }
+
+    @Test
+    fun deniedPermissionShowsPermissionError() {
+        micGranted = false
+        showApp()
+        enableVoice()
+        waitFor("Try the demo")
+        compose.onNodeWithText("Try the demo").performClick()
+        waitForDescription("Say a command")
+        compose.onNodeWithContentDescription("Say a command").performClick()
+        waitFor("Microphone permission needed")
     }
 }

@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.shared
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,12 +9,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -37,10 +45,14 @@ import com.gekkotron.nidoo.feature.settings.presentation.SettingsPage
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderRoute
 import com.gekkotron.nidoo.feature.settings.ui.SettingsPageRoute
 import com.gekkotron.nidoo.feature.settings.ui.SettingsRoute
+import com.gekkotron.nidoo.feature.settings.ui.VoiceSettingsPage
+import com.gekkotron.nidoo.feature.voice.VoicePermissions
+import com.gekkotron.nidoo.feature.voice.ui.VoiceRoute
 import com.gekkotron.nidoo.shared.tabs.MainTab
 import com.gekkotron.nidoo.shared.tabs.MainTabBar
 import com.gekkotron.nidoo.shared.tabs.MainTabsViewModel
 import com.gekkotron.nidoo.shared.tabs.mainTabsFor
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The iOS app (spec §7.6 phase 4): onboarding until a profile is saved, then the Rooms step for a new setup, then Home and Settings. */
@@ -73,6 +85,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
     val route by shell.route.collectAsStateWithLifecycle()
     val backStack = remember { mutableStateListOf(root) }
     LaunchedEffect(root) { resetToRoot(backStack, root) }
+    var voiceOpen by remember { mutableStateOf(false) }
     val top = backStack.lastOrNull()
     val tabs = mainTabsFor(profile)
     // The demo has no hub: leave Routines if the demo is switched on while it is open.
@@ -84,6 +97,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
     }
     // The bar owns the bottom inset on the main tabs; their own Scaffolds then only pad top and sides.
     val tabInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0),
@@ -113,7 +127,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
                     })
                 }
                 entry<HomeKey> {
-                    // Security and voice are later phases: no callback for them, so Home hides those actions.
+                    // Voice opens the overlay below; the mic shows only while Voice is on.
                     HomeRoute(
                         onOpenSettings = { push(backStack, SettingsKey) },
                         onOpenConnectionSettings = openConnectionSettings,
@@ -122,6 +136,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
                         windowInsets = tabInsets,
                         onOpenHistory = { push(backStack, HistoryKey(HistoryTarget.Entity(it).encode())) },
                         onOpenEnergy = { selectTab(backStack, MainTab.ENERGY) },
+                        onOpenVoice = { voiceOpen = true },
                     )
                 }
                 entry<EnergyKey> {
@@ -165,6 +180,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
                         onRouteChange = shell::setRoute,
                         onSetUpAgain = shell::setUpAgain,
                         onOpenLicences = null, // no licence report is bundled on iOS yet
+                        platformPage = { page, snackbar -> if (page == SettingsPage.VOICE) VoiceSettingsPage(snackbar) },
                         onBack = { pop(backStack, key) },
                     )
                 }
@@ -173,5 +189,34 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
                 }
             },
         )
+    }
+    if (voiceOpen) {
+        val close = {
+            voiceOpen = false
+            onVoiceClosed()
+        }
+        VoiceOverlay(
+            onClose = close,
+            onOpenSettings = {
+                close()
+                push(backStack, SettingsKey)
+                push(backStack, SettingsPageKey(SettingsPage.VOICE))
+            },
+        )
+    }
+    }
+}
+
+/**
+ * The voice sheet over the current screen. It owns its ViewModel store, so every opening starts a new session, and
+ * clears the store when it leaves (VoiceRoute ends the session on dispose, which also frees the recognizer's handler).
+ */
+@Composable
+private fun VoiceOverlay(onClose: () -> Unit, onOpenSettings: () -> Unit) {
+    val store = remember { ViewModelStore() }
+    DisposableEffect(store) { onDispose { store.clear() } }
+    val owner = remember(store) { object : ViewModelStoreOwner { override val viewModelStore = store } }
+    CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+        VoiceRoute(onClose = onClose, onOpenSettings = onOpenSettings, permissions = koinInject<VoicePermissions>())
     }
 }
