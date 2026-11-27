@@ -73,6 +73,7 @@ import com.gekkotron.nidoo.feature.automations.resources.routines_section_wake_u
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.rememberResourceEnvironment
 import org.jetbrains.compose.resources.stringResource
 
 internal const val PLACEHOLDER_ROWS = 4
@@ -95,10 +96,11 @@ fun AutomationsScreen(
     val layoutDirection = LocalLayoutDirection.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val environment = rememberResourceEnvironment()
     // One-shot: acknowledged right away, and shown from the screen's scope so the toast clearing does not cancel it.
     LaunchedEffect(state.toast) {
         state.toast?.let { res ->
-            scope.launch { snackbar.showSnackbar(getString(res)) }
+            scope.launch { snackbar.showSnackbar(getString(environment, res)) }
             onToastShown()
         }
     }

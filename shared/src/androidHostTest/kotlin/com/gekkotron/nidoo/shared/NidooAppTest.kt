@@ -1,5 +1,6 @@
 package com.gekkotron.nidoo.shared
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -274,6 +275,29 @@ class NidooAppTest {
         systemBack()
         waitForHome()
         assertEquals(1, homeCreations.get())
+    }
+
+    @Test
+    fun routinesShowsForAHubAndLeavesWhenTheDemoTurnsOn() {
+        showApp()
+        waitFor("Try the demo")
+        val profiles = koinApp.koin.get<ProfileRepository>()
+        runBlocking {
+            profiles.save(ConnectionProfile.Direct(LocalBroker("broker.local")))
+            profiles.finishRooms()
+        }
+        waitForHome()
+        compose.onNodeWithText("Routines").assertExists()
+        compose.onNodeWithText("Routines").performClick()
+        waitFor("Flows")
+        systemBack()
+        waitForHome()
+        compose.onNodeWithText("Routines").performClick()
+        waitFor("Flows")
+        // The demo keeps roomsPending false, so the root stays Home: only the demo-leave effect moves the user.
+        runBlocking { profiles.save(ConnectionProfile.Demo) }
+        waitForHome()
+        compose.onAllNodesWithText("Routines").assertCountEquals(0)
     }
 
     @Test

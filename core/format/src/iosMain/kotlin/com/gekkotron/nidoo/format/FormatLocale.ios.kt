@@ -18,11 +18,15 @@ actual fun systemLocale(): FormatLocale = FormatLocale(NSLocale.currentLocale.lo
 actual fun formatLocale(languageTag: String): FormatLocale =
     FormatLocale(NSLocale.canonicalLocaleIdentifierFromString(languageTag))
 
+/** The Foundation locale for this one, built from its identifier alone: no user overrides. */
+internal fun FormatLocale.toNSLocale(): NSLocale = NSLocale(localeIdentifier = identifier)
+
 /**
- * The Foundation locale for this one. For the current locale this is `NSLocale.currentLocale` itself, because only
- * it carries the user's overrides such as the 12/24-hour clock switch.
+ * Like [toNSLocale], but for the current locale this is `NSLocale.currentLocale` itself, which carries the user's
+ * clock and number overrides. Only for deriving a pattern from a template; never use it to build a formatter for a
+ * fixed pattern.
  */
-fun FormatLocale.toNSLocale(): NSLocale = localeFor(identifier, NSLocale.currentLocale)
+fun FormatLocale.toUserNSLocale(): NSLocale = localeFor(identifier, NSLocale.currentLocale)
 
 internal fun localeFor(identifier: String, current: NSLocale): NSLocale =
     if (current.localeIdentifier == identifier) current else NSLocale(localeIdentifier = identifier)

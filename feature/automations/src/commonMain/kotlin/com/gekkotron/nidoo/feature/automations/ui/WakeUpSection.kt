@@ -30,6 +30,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -54,7 +55,6 @@ import com.gekkotron.nidoo.feature.automations.resources.wake_up_pick_a_day
 import com.gekkotron.nidoo.feature.automations.resources.wake_up_save
 import com.gekkotron.nidoo.feature.automations.resources.wake_up_unreadable
 import com.gekkotron.nidoo.flows.WakeUpTime
-import com.gekkotron.nidoo.format.FormatLocale
 import com.gekkotron.nidoo.format.firstDayOfWeek
 import com.gekkotron.nidoo.format.shortWeekdayName
 import org.jetbrains.compose.resources.stringResource
@@ -90,7 +90,9 @@ internal fun WakeUpSection(
 @Composable
 private fun AlarmTile(row: AlarmRow, offline: Boolean, onToggle: (String, Boolean) -> Unit, onTapped: (String) -> Unit) {
     val locale = currentFormatLocale()
-    val summary = row.time?.let { alarmSummary(it, locale) } ?: stringResource(Res.string.wake_up_unreadable)
+    val first = remember(locale) { firstDayOfWeek(locale) }
+    val names = remember(locale) { (0 until DAYS_IN_WEEK).map { shortWeekdayName(it, locale) } }
+    val summary = row.time?.let { alarmSummary(it, first, names) } ?: stringResource(Res.string.wake_up_unreadable)
     NidooCard(Modifier.fillMaxWidth(), minHeight = 0.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(
@@ -116,12 +118,12 @@ private fun AlarmTile(row: AlarmRow, offline: Boolean, onToggle: (String, Boolea
 }
 
 @Composable
-private fun alarmSummary(time: WakeUpTime, locale: FormatLocale): String {
+private fun alarmSummary(time: WakeUpTime, first: Int, names: List<String>): String {
     val clock = "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
     val days = if (time.days.size == DAYS_IN_WEEK) {
         stringResource(Res.string.wake_up_every_day)
     } else {
-        weekdayText(time.days, firstDayOfWeek(locale)) { shortWeekdayName(it, locale) }
+        weekdayText(time.days, first) { names[it] }
     }
     return "$clock · $days"
 }
@@ -136,13 +138,15 @@ internal fun AlarmEditorSheet(
     onSave: () -> Unit,
 ) {
     val locale = currentFormatLocale()
+    val is24Hour = is24HourClock()
     val picker = rememberTimePickerState(
         initialHour = editor.hour,
         initialMinute = editor.minute,
-        is24Hour = is24HourClock(),
+        is24Hour = is24Hour,
     )
     LaunchedEffect(picker.hour, picker.minute) { onTime(picker.hour, picker.minute) }
-    val first = firstDayOfWeek(locale)
+    val first = remember(locale) { firstDayOfWeek(locale) }
+    val names = remember(locale) { (0 until DAYS_IN_WEEK).map { shortWeekdayName(it, locale) } }
     // Days run from the locale's first day; 0 = Sunday .. 6 = Saturday, the hub's numbering.
     val days = (0 until DAYS_IN_WEEK).map { (first + it) % DAYS_IN_WEEK }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -164,7 +168,7 @@ internal fun AlarmEditorSheet(
                         selected = idx in editor.days,
                         onClick = { onDayToggled(idx) },
                         enabled = !editor.saving,
-                        label = { Text(shortWeekdayName(idx, locale)) },
+                        label = { Text(names[idx]) },
                         modifier = Modifier.testTag("alarm_day_$idx"),
                     )
                 }
