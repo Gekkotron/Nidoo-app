@@ -29,6 +29,8 @@ kotlin {
             implementation(project(":feature:onboarding"))
             implementation(project(":feature:home"))
             implementation(project(":feature:settings"))
+            implementation(project(":feature:voice"))
+            implementation(project(":core:assist"))
             implementation(project(":feature:energy"))
             implementation(project(":feature:history"))
             implementation(project(":feature:security"))

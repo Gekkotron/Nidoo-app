@@ -1,5 +1,5 @@
 // Settings in Compose Multiplatform (iOS spec §7.6): the list, pages and rooms run on both platforms with Koin
-// ViewModels. Push, presence and voice are Android-only and live in androidMain behind PlatformSettings.
+// ViewModels. Push and presence are Android-only and live in androidMain behind PlatformSettings; Voice is common.
 plugins {
     id("nidoo.kmp.library")
     id("nidoo.kmp.compose")
@@ -17,6 +17,7 @@ kotlin {
             implementation(project(":core:designsystem"))
             implementation(project(":core:transport"))
             implementation(project(":core:model"))
+            implementation(project(":feature:voice"))
             implementation(libs.cmp.lifecycle.viewmodel.compose)
             implementation(libs.cmp.lifecycle.runtime.compose)
             implementation(project.dependencies.platform(libs.koin.bom))
@@ -27,7 +28,6 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(project(":core:push"))
-            implementation(project(":feature:voice"))
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
             implementation(libs.koin.android)

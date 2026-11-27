@@ -5,6 +5,7 @@ import com.gekkotron.nidoo.feature.settings.presentation.AndroidSettingsViewMode
 import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
 import com.gekkotron.nidoo.feature.settings.presentation.PresenceSettingsViewModel
 import com.gekkotron.nidoo.feature.voice.SpeechAvailability
+import com.gekkotron.nidoo.feature.voice.androidSpeechAvailability
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -15,7 +16,7 @@ import org.koin.dsl.module
  * graph, and the Android context from `androidContext()`.
  */
 val androidSettingsModule: Module = module {
-    factory<SpeechAvailability.Status> { SpeechAvailability.check(androidContext()) }
+    factory<SpeechAvailability.Status> { androidSpeechAvailability(androidContext()) }
     factory<PlatformSettings> { AndroidPlatformSettings(get(), get(), get()) }
     viewModel { AndroidSettingsViewModel(get(), get(), get()) }
     viewModel { PresenceSettingsViewModel(get()) }

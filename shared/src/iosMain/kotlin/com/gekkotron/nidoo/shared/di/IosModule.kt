@@ -26,8 +26,18 @@ import com.gekkotron.nidoo.data.nidooDataPath
 import com.gekkotron.nidoo.data.nidooDeviceOnlyPath
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.flows.HttpFlowsClient
-import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
+import com.gekkotron.nidoo.assist.AssistClient
+import com.gekkotron.nidoo.assist.HttpAssistClient
 import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
+import com.gekkotron.nidoo.feature.settings.presentation.VoicePlatformSettings
+import com.gekkotron.nidoo.feature.voice.AudioPlayer
+import com.gekkotron.nidoo.feature.voice.IosAudioPlayer
+import com.gekkotron.nidoo.feature.voice.IosSpeechCapture
+import com.gekkotron.nidoo.feature.voice.IosVoicePermissions
+import com.gekkotron.nidoo.feature.voice.SpeechAvailability
+import com.gekkotron.nidoo.feature.voice.SpeechCaptureFactory
+import com.gekkotron.nidoo.feature.voice.VoicePermissions
+import com.gekkotron.nidoo.feature.voice.iosSpeechAvailability
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.shared.iosLog
 import com.gekkotron.nidoo.source.EntitySource
@@ -52,6 +62,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.module.Module
+import org.koin.core.scope.Scope
 import org.koin.dsl.module
 
 /**
@@ -89,15 +100,18 @@ fun iosModule(mqttPortFactory: () -> MqttClientPort): Module = module {
         // History answers are small (1 MiB, as on Android); anything bigger is not ours.
         ProfileHistoryClient(get<ProfileRepository>().state, get = { lanOrGateway.get(it, 1L shl 20) }, scope = get())
     }
-    single {
+    // Toggles and voice commands go to the same host as the hub's history API; the demo and no profile have no hub.
+    fun Scope.hubBaseUrl(): suspend () -> String? {
         val profiles: ProfileRepository = get()
+        return {
+            val ready = profiles.state.first { it !is ProfileState.Loading } as? ProfileState.Ready
+            (ready?.profile as? ConnectionProfile.Direct)?.effectiveHistoryUrl()
+        }
+    }
+    single {
         val lanOrGateway: KtorLanOrGatewayGet = get()
-        // Toggles go to the same host as the hub's history API; the demo and no profile have no hub.
         val client = HttpFlowsClient(
-            baseUrl = {
-                val ready = profiles.state.first { it !is ProfileState.Loading } as? ProfileState.Ready
-                (ready?.profile as? ConnectionProfile.Direct)?.effectiveHistoryUrl()
-            },
+            baseUrl = hubBaseUrl(),
             post = { url, json -> lanOrGateway.post(url, json) },
         )
         FlowsRepository(client, get(), log = { iosLog("NidooFlows", it) })
@@ -114,8 +128,22 @@ fun iosModule(mqttPortFactory: () -> MqttClientPort): Module = module {
     }
     // Unscoped, as on Android: each screen gets the source for the profile saved right now.
     factory<EntitySource> { get<EntitySourceSession>().current((get<ProfileRepository>().state.value as? ProfileState.Ready)?.profile) }
-    // No push, presence or voice on iOS (spec §3): Settings lists no platform rows.
-    single<PlatformSettings> { NoPlatformSettings }
+    single<AssistClient> {
+        val lanOrGateway: KtorLanOrGatewayGet = get()
+        HttpAssistClient(
+            baseUrl = hubBaseUrl(),
+            clientId = get<AppPreferences>()::assistClientId,
+            // A command is not sent twice: a gateway refusal or timeout is shown, never retried behind the user's back.
+            post = { url, json -> lanOrGateway.post(url, json, resendViaGateway = false) },
+            get = { url, max -> lanOrGateway.get(url, max) },
+        )
+    }
+    single<AudioPlayer> { IosAudioPlayer() }
+    single<SpeechCaptureFactory> { SpeechCaptureFactory { IosSpeechCapture() } }
+    single<VoicePermissions> { IosVoicePermissions }
+    factory<SpeechAvailability.Status> { iosSpeechAvailability() }
+    // No push or presence on iOS (spec §3): Settings lists Voice only.
+    factory<PlatformSettings> { VoicePlatformSettings(get(), get()) }
     single<ConnectionTester> {
         val profiles: ProfileRepository = get()
         DirectConnectionTester(clientId = { setupClientIdFor(profiles.installId()) }, direct = direct, gatewayApi = gatewayApi)

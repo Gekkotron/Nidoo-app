@@ -36,6 +36,10 @@
 	<string>Nidoo scans your hub's setup code.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Nidoo talks to your home hub on the local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Nidoo listens to your voice commands for your home hub.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Nidoo turns your voice commands into text on this iPhone.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>

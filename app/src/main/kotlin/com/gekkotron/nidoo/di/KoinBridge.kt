@@ -1,6 +1,7 @@
 package com.gekkotron.nidoo.di
 
 import android.app.Application
+import com.gekkotron.nidoo.assist.AssistClient
 import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.connection.ConnectionTester
 import com.gekkotron.nidoo.dashboards.DashboardsRepository
@@ -14,6 +15,8 @@ import com.gekkotron.nidoo.feature.onboarding.di.onboardingModule
 import com.gekkotron.nidoo.feature.security.di.securityModule
 import com.gekkotron.nidoo.feature.settings.di.androidSettingsModule
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
+import com.gekkotron.nidoo.feature.voice.di.androidVoiceModule
+import com.gekkotron.nidoo.feature.voice.di.voiceModule
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.HistoryClient
 import com.gekkotron.nidoo.push.PushStatusSource
@@ -46,6 +49,7 @@ interface KoinBridgeEntryPoint {
     fun climate(): ClimateRepository
     fun transport(): MqttTransport
     fun pushStatus(): PushStatusSource
+    fun assistClient(): AssistClient
 }
 
 /** Each type is a factory that asks Hilt, so Hilt keeps owning the lifetimes (EntitySource is unscoped there). */
@@ -60,6 +64,7 @@ fun hiltBridgeModule(bridge: KoinBridgeEntryPoint): Module = module {
     factory { bridge.climate() }
     factory { bridge.transport() }
     factory { bridge.pushStatus() }
+    factory { bridge.assistClient() }
 }
 
 /** Starts (or restarts, if a previous Application in this process started it) the app's Koin graph. */
@@ -67,6 +72,6 @@ fun startNidooKoin(app: Application, bridge: KoinBridgeEntryPoint) {
     stopKoin()
     startKoin {
         androidContext(app)
-        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, energyModule, securityModule, automationsModule, historyModule, settingsModule, androidSettingsModule, mainTabsModule)
+        modules(hiltBridgeModule(bridge), onboardingModule, homeModule, energyModule, securityModule, automationsModule, historyModule, settingsModule, androidSettingsModule, voiceModule, androidVoiceModule, mainTabsModule)
     }
 }

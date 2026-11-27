@@ -8,8 +8,6 @@ kotlin {
         commonMain.dependencies {
             api(libs.kotlinx.coroutines.core)
             api(libs.kotlinx.serialization.json)
-        }
-        jvmMain.dependencies {
             api(project(":core:transport"))
         }
         commonTest.dependencies {
