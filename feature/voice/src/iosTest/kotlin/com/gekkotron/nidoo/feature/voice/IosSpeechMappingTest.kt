@@ -27,12 +27,17 @@ class IosSpeechMappingTest {
 
     @Test
     fun onDeviceRecognizerIsReady() {
-        assertEquals(SpeechAvailability.Status.Ready, availabilityOf(recognizerExists = true, supportsOnDevice = true))
+        assertEquals(SpeechAvailability.Status.Ready, availabilityOf(recognizerExists = true, supportsOnDevice = true, authorizationUndetermined = false))
     }
 
     @Test
     fun serverOnlyOrMissingRecognizerIsNoOnDevice() {
-        assertEquals(SpeechAvailability.Status.NoOnDevice, availabilityOf(recognizerExists = true, supportsOnDevice = false))
-        assertEquals(SpeechAvailability.Status.NoOnDevice, availabilityOf(recognizerExists = false, supportsOnDevice = false))
+        assertEquals(SpeechAvailability.Status.NoOnDevice, availabilityOf(recognizerExists = true, supportsOnDevice = false, authorizationUndetermined = false))
+        assertEquals(SpeechAvailability.Status.NoOnDevice, availabilityOf(recognizerExists = false, supportsOnDevice = false, authorizationUndetermined = false))
+    }
+
+    @Test
+    fun undeterminedAuthorizationCountsAsReady() {
+        assertEquals(SpeechAvailability.Status.Ready, availabilityOf(recognizerExists = true, supportsOnDevice = false, authorizationUndetermined = true))
     }
 }

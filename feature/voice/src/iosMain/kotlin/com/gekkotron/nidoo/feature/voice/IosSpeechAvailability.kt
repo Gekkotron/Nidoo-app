@@ -2,15 +2,32 @@ package com.gekkotron.nidoo.feature.voice
 
 import platform.Foundation.NSLocale
 import platform.Speech.SFSpeechRecognizer
+import platform.Speech.SFSpeechRecognizerAuthorizationStatus
 
 /** Ready when [localeTag] has a recognizer that runs on the phone; iOS listens on-device only, as Android does. */
 fun iosSpeechAvailability(localeTag: String = VOICE_LOCALE): SpeechAvailability.Status {
     val recognizer = speechRecognizerFor(localeTag)
-    return availabilityOf(recognizer != null, recognizer?.supportsOnDeviceRecognition == true)
+    return availabilityOf(
+        recognizerExists = recognizer != null,
+        supportsOnDevice = recognizer?.supportsOnDeviceRecognition == true,
+        authorizationUndetermined = SFSpeechRecognizer.authorizationStatus() == SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusNotDetermined,
+    )
 }
 
-internal fun availabilityOf(recognizerExists: Boolean, supportsOnDevice: Boolean): SpeechAvailability.Status =
-    if (recognizerExists && supportsOnDevice) SpeechAvailability.Status.Ready else SpeechAvailability.Status.NoOnDevice
+/**
+ * Before speech authorization iOS may report no on-device support, and we can't know until the user is asked,
+ * so an existing recognizer with undetermined authorization counts as Ready.
+ */
+internal fun availabilityOf(
+    recognizerExists: Boolean,
+    supportsOnDevice: Boolean,
+    authorizationUndetermined: Boolean,
+): SpeechAvailability.Status =
+    if (recognizerExists && (supportsOnDevice || authorizationUndetermined)) {
+        SpeechAvailability.Status.Ready
+    } else {
+        SpeechAvailability.Status.NoOnDevice
+    }
 
 /** The recognizer for [localeTag], or null when iOS has none for it. */
 internal fun speechRecognizerFor(localeTag: String): SFSpeechRecognizer? =

@@ -30,7 +30,7 @@ class VoiceViewModel(
     fun start() {
         if (started) return
         // The phone can't listen (Android below API 31, no recognizer): no session.
-        val capture = speech()
+        val capture = speech.create()
         if (capture == null) {
             _state.value = VoiceSessionState.Error(ErrorKind.SPEECH)
             return

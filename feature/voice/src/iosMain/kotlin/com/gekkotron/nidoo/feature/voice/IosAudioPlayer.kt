@@ -28,17 +28,25 @@ class IosAudioPlayer : AudioPlayer {
     /** AVAudioPlayer holds its delegate weakly: this keeps it alive while the audio plays. */
     private var delegate: FinishDelegate? = null
 
+    /** The player of the call in flight, so [stop] silences it at once instead of when `play` unwinds. */
+    private var current: AVAudioPlayer? = null
+
     override suspend fun play(wav: ByteArray): Boolean {
         if (wav.isEmpty()) return false
         val player = orNilInit { AVAudioPlayer(data = wav.toNSData(), error = null) } ?: return false
         if (!player.prepareToPlay()) return false
         var playing = false
+        var ownResume: (() -> Unit)? = null
+        var ownDelegate: FinishDelegate? = null
         try {
             withTimeoutOrNull((player.duration * 1000).toLong() + END_GRACE_MS) {
                 suspendCancellableCoroutine { cont ->
                     val resume = { if (cont.isActive) cont.resume(Unit) }
                     finished = resume
-                    delegate = FinishDelegate(resume).also { player.delegate = it }
+                    ownResume = resume
+                    current = player
+                    ownDelegate = FinishDelegate(resume).also { player.delegate = it }
+                    delegate = ownDelegate
                     playing = player.play()
                     if (!playing) resume()
                 }
@@ -46,13 +54,16 @@ class IosAudioPlayer : AudioPlayer {
         } finally {
             player.delegate = null
             player.stop()
-            finished = null
-            delegate = null
+            // A repeat() may already have started the next play: only clear what is still this call's own.
+            if (finished === ownResume) finished = null
+            if (delegate === ownDelegate) delegate = null
+            if (current === player) current = null
         }
         return playing
     }
 
     override fun stop() {
+        current?.stop()
         finished?.invoke()
     }
 }

@@ -15,7 +15,7 @@ val androidVoiceModule: Module = module {
     single<AudioPlayer> { AndroidAudioPlayer(androidContext()) }
     single<SpeechCaptureFactory> {
         val context = androidContext()
-        val factory: SpeechCaptureFactory = {
+        SpeechCaptureFactory {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 null
             } else {
@@ -26,6 +26,5 @@ val androidVoiceModule: Module = module {
                 }
             }
         }
-        factory
     }
 }

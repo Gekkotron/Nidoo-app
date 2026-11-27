@@ -191,10 +191,7 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
         )
     }
     if (voiceOpen) {
-        val close = {
-            voiceOpen = false
-            onVoiceClosed()
-        }
+        val close = { voiceOpen = false }
         VoiceOverlay(
             onClose = close,
             onOpenSettings = {
@@ -214,7 +211,12 @@ private fun Screens(shell: AppShellViewModel, root: NavKey, profile: ProfileStat
 @Composable
 private fun VoiceOverlay(onClose: () -> Unit, onOpenSettings: () -> Unit) {
     val store = remember { ViewModelStore() }
-    DisposableEffect(store) { onDispose { store.clear() } }
+    DisposableEffect(store) {
+        onDispose {
+            store.clear() // VoiceRoute's cancel and onCleared have run: the audio session is idle and can be released
+            onVoiceClosed()
+        }
+    }
     val owner = remember(store) { object : ViewModelStoreOwner { override val viewModelStore = store } }
     CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
         VoiceRoute(onClose = onClose, onOpenSettings = onOpenSettings, permissions = koinInject<VoicePermissions>())

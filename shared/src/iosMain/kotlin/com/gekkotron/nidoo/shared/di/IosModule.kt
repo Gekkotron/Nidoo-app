@@ -139,11 +139,11 @@ fun iosModule(mqttPortFactory: () -> MqttClientPort): Module = module {
         )
     }
     single<AudioPlayer> { IosAudioPlayer() }
-    single<SpeechCaptureFactory> { { IosSpeechCapture() } }
+    single<SpeechCaptureFactory> { SpeechCaptureFactory { IosSpeechCapture() } }
     single<VoicePermissions> { IosVoicePermissions }
     factory<SpeechAvailability.Status> { iosSpeechAvailability() }
     // No push or presence on iOS (spec §3): Settings lists Voice only.
-    single<PlatformSettings> { VoicePlatformSettings(get(), get()) }
+    factory<PlatformSettings> { VoicePlatformSettings(get(), get()) }
     single<ConnectionTester> {
         val profiles: ProfileRepository = get()
         DirectConnectionTester(clientId = { setupClientIdFor(profiles.installId()) }, direct = direct, gatewayApi = gatewayApi)

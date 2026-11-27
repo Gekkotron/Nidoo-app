@@ -45,7 +45,7 @@ class VoiceSettingsViewModelTest {
 
     private fun voiceTest(
         permissions: FakeVoicePermissions,
-        availability: SpeechAvailability.Status = SpeechAvailability.Status.Ready,
+        availability: () -> SpeechAvailability.Status = { SpeechAvailability.Status.Ready },
         before: suspend (AppPreferences) -> Unit = {},
         body: suspend TestScope.(AppPreferences, VoiceSettingsViewModel) -> Unit,
     ) = runTest {
@@ -93,9 +93,24 @@ class VoiceSettingsViewModelTest {
     @Test
     fun notReadyShowsTheToggleOff() = voiceTest(
         FakeVoicePermissions(true),
-        availability = SpeechAvailability.Status.NoOnDevice,
+        availability = { SpeechAvailability.Status.NoOnDevice },
         before = { it.setVoiceEnabled(true) },
     ) { _, vm ->
         assertEquals(VoiceSettingsUi(enabled = true, availability = SpeechAvailability.Status.NoOnDevice), vm.voice.value)
+    }
+
+    @Test
+    fun grantedButNotReadyKeepsVoiceOff() {
+        var calls = 0
+        voiceTest(
+            FakeVoicePermissions(true),
+            availability = { if (calls++ == 0) SpeechAvailability.Status.Ready else SpeechAvailability.Status.NoOnDevice },
+        ) { preferences, vm ->
+            vm.setVoiceEnabled(true)
+            assertEquals(SpeechAvailability.Status.NoOnDevice, vm.voice.first { it.availability != SpeechAvailability.Status.Ready }.availability)
+            assertEquals(false, preferences.voiceEnabled.value)
+            assertEquals(SpeechAvailability.Status.NoOnDevice, vm.voice.value.availability)
+            assertEquals(false, vm.denied.value)
+        }
     }
 }

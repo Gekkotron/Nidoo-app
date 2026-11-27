@@ -121,14 +121,18 @@ class NidooAppTest {
         single<AssistClient> { NoAssist }
         single<AudioPlayer> { SilentPlayer }
         // The sheet only needs a capture to exist; these tests never hear anything.
-        single<SpeechCaptureFactory> { { IdleCapture } }
+        single<SpeechCaptureFactory> { SpeechCaptureFactory { IdleCapture } }
         single<VoicePermissions> { micPermission }
     }
 
     /** What the fake permission answers; each test sets it before opening the sheet. */
     private var micGranted = true
+    private var micAsks = 0
     private val micPermission = object : VoicePermissions {
-        override suspend fun request() = micGranted
+        override suspend fun request(): Boolean {
+            micAsks++
+            return micGranted
+        }
     }
 
     private object NoAssist : AssistClient {
@@ -408,5 +412,21 @@ class NidooAppTest {
         waitForDescription("Say a command")
         compose.onNodeWithContentDescription("Say a command").performClick()
         waitFor("Microphone permission needed")
+    }
+
+    @Test
+    fun retryAfterRefusalAsksAgain() {
+        micGranted = false
+        showApp()
+        enableVoice()
+        waitFor("Try the demo")
+        compose.onNodeWithText("Try the demo").performClick()
+        waitForDescription("Say a command")
+        compose.onNodeWithContentDescription("Say a command").performClick()
+        waitFor("Microphone permission needed")
+        micGranted = true
+        compose.onNodeWithText("Try again").performClick()
+        waitFor("Listening…")
+        assertEquals(2, micAsks)
     }
 }

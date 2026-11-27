@@ -212,3 +212,5 @@
 - A choice question: tap a choice, or "Answer" and speak it. Yes/no works. After 60 s the question shows as expired.
 - Silence → "I didn't hear anything" within ~6 s. Background music ducks while listening and comes back after.
 - Away from home (gateway): a command still reaches the hub.
+- Tap outside while "Listening…" with music playing: the music returns to full volume.
+- Before any prompt, the Voice toggle is enabled; after granting, on an iPhone without on-device French it turns off and says why.
