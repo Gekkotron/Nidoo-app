@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gekkotron.nidoo.assist.AssistClient
 import com.gekkotron.nidoo.climate.ClimateRepository
 import com.gekkotron.nidoo.connection.ConnectionTester
 import com.gekkotron.nidoo.connection.EntitySourceSession
@@ -25,6 +26,7 @@ import com.gekkotron.nidoo.feature.settings.presentation.AndroidSettingsViewMode
 import com.gekkotron.nidoo.feature.settings.presentation.PresenceSettingsViewModel
 import com.gekkotron.nidoo.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.nidoo.feature.settings.rooms.RoomOrderViewModel
+import com.gekkotron.nidoo.feature.voice.VoiceViewModel
 import com.gekkotron.nidoo.flows.FlowsClient
 import com.gekkotron.nidoo.flows.FlowsRepository
 import com.gekkotron.nidoo.history.EnergyHistory
@@ -102,6 +104,7 @@ class KoinBridgeTest {
             override fun registerAgain() = Unit
         }
         override fun pushStatus(): PushStatusSource = push
+        override fun assistClient(): AssistClient = stub()
     }
 
     @Test
@@ -165,6 +168,7 @@ class KoinBridgeTest {
         koin.get<MainTabsViewModel>()
         koin.get<SecurityViewModel>()
         koin.get<AutomationsViewModel>()
+        koin.get<VoiceViewModel>()
     }
 
     /** EnergyHistory reads an unscoped EntitySource, so each one asks Hilt again instead of pinning the first. */

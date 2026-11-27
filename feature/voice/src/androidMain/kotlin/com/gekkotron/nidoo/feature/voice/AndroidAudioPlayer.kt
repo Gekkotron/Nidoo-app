@@ -1,0 +1,102 @@
+package com.gekkotron.nidoo.feature.voice
+
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
+import com.gekkotron.nidoo.assist.WavParser
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
+
+private const val END_MARKER_GRACE_MS = 2_000L
+
+/**
+ * Media usage, so the voice follows the media volume the user sets with the volume keys. USAGE_ASSISTANT goes to a
+ * separate assistant stream that some phones (Samsung) keep at zero, which played the reply in silence.
+ */
+private val SPEECH: AudioAttributes = AudioAttributes.Builder()
+    .setUsage(AudioAttributes.USAGE_MEDIA)
+    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+    .build()
+
+class AndroidAudioPlayer(context: Context) : AudioPlayer {
+    private val audioManager = context.getSystemService(AudioManager::class.java)
+    private val lock = Any()
+    private var track: AudioTrack? = null
+    private var finished: (() -> Unit)? = null
+
+    override suspend fun play(wav: ByteArray): Boolean {
+        val parsed = WavParser.parse(wav) ?: return false
+        val channelMask = when (parsed.channels) {
+            1 -> AudioFormat.CHANNEL_OUT_MONO
+            2 -> AudioFormat.CHANNEL_OUT_STEREO
+            else -> return false
+        }
+        val frameBytes = 2 * parsed.channels
+        val frames = parsed.pcm.size / frameBytes
+        if (parsed.bitsPerSample != 16 || frames == 0) return false
+        val audioTrack = try {
+            AudioTrack.Builder()
+                .setAudioAttributes(SPEECH)
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(parsed.sampleRate)
+                        .setChannelMask(channelMask)
+                        .build(),
+                )
+                .setBufferSizeInBytes(frames * frameBytes)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
+        } catch (e: IllegalArgumentException) {
+            return false
+        } catch (e: UnsupportedOperationException) {
+            return false
+        }
+        // A static track waits in STATE_NO_STATIC_DATA until its samples are written; it is ready only after the write.
+        val ready = audioTrack.state != AudioTrack.STATE_UNINITIALIZED &&
+            audioTrack.write(parsed.pcm, 0, frames * frameBytes) == frames * frameBytes &&
+            audioTrack.state == AudioTrack.STATE_INITIALIZED
+        if (!ready) {
+            audioTrack.release()
+            return false
+        }
+        val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAudioAttributes(SPEECH)
+            .build()
+        try {
+            audioManager.requestAudioFocus(focus)
+            // A device that never reports the end marker must not hold the sheet open: wait at most the audio's length + 2 s.
+            val durationMs = frames * 1000L / parsed.sampleRate
+            withTimeoutOrNull(durationMs + END_MARKER_GRACE_MS) { suspendCancellableCoroutine { cont ->
+                synchronized(lock) {
+                    track = audioTrack
+                    finished = { if (cont.isActive) cont.resume(Unit) }
+                }
+                audioTrack.setPlaybackPositionUpdateListener(object : AudioTrack.OnPlaybackPositionUpdateListener {
+                    override fun onMarkerReached(t: AudioTrack?) { if (cont.isActive) cont.resume(Unit) }
+                    override fun onPeriodicNotification(t: AudioTrack?) = Unit
+                })
+                audioTrack.setNotificationMarkerPosition(frames)
+                audioTrack.play()
+            } }
+            return true
+        } finally {
+            synchronized(lock) {
+                track = null
+                finished = null
+            }
+            audioTrack.stop()
+            audioTrack.release()
+            audioManager.abandonAudioFocusRequest(focus)
+        }
+    }
+
+    override fun stop() {
+        val resume = synchronized(lock) { finished }
+        resume?.invoke()
+    }
+}
