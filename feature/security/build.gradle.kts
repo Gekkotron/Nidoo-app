@@ -1,18 +1,39 @@
+// Security in Compose Multiplatform (iOS spec §7.6): the tiles, sheets and action dialogs run on both platforms with
+// a Koin ViewModel. Strings are CMP resources; only the sheet's "Since 08:42" line has a platform half.
 plugins {
-    id("nidoo.android.library")
-    id("nidoo.android.compose")
-    id("nidoo.hilt")
+    id("nidoo.kmp.library")
+    id("nidoo.kmp.compose")
 }
 
-android {
-    namespace = "com.gekkotron.nidoo.feature.security"
+kotlin {
+    android {
+        namespace = "com.gekkotron.nidoo.feature.security"
+    }
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":core:source"))
+            implementation(project(":core:history"))
+            implementation(project(":core:designsystem"))
+            implementation(project(":core:format"))
+            implementation(libs.cmp.lifecycle.viewmodel.compose)
+            implementation(libs.cmp.lifecycle.runtime.compose)
+            implementation(project.dependencies.platform(libs.koin.bom))
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose.viewmodel)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(libs.junit4)
+            implementation(kotlin("test-junit"))
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.robolectric)
+            implementation(libs.androidx.test.ext.junit)
+            implementation(project.dependencies.platform(libs.compose.bom))
+            implementation(libs.compose.ui.test.junit4)
+            implementation(libs.compose.ui.test.manifest)
+        }
+    }
 }
 
-dependencies {
-    implementation(project(":core:source"))
-    implementation(project(":core:designsystem"))
-    implementation(project(":core:history"))
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+compose.resources {
+    packageOfResClass = "com.gekkotron.nidoo.feature.security.resources"
 }

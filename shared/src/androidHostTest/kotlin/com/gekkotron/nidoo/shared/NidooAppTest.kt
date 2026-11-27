@@ -9,7 +9,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -29,6 +32,7 @@ import com.gekkotron.nidoo.feature.history.di.historyModule
 import com.gekkotron.nidoo.shared.di.mainTabsModule
 import com.gekkotron.nidoo.feature.home.di.homeModule
 import com.gekkotron.nidoo.feature.home.presentation.HomeViewModel
+import com.gekkotron.nidoo.feature.security.di.securityModule
 import com.gekkotron.nidoo.feature.settings.di.settingsModule
 import com.gekkotron.nidoo.feature.settings.presentation.NoPlatformSettings
 import com.gekkotron.nidoo.feature.settings.presentation.PlatformSettings
@@ -123,7 +127,7 @@ class NidooAppTest {
         }
     }
 
-    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, mainTabsModule, countingHome) } }
+    private val koinApp by lazy { koinApplication { modules(platform, onboardingModule, sharedModule, homeModule, settingsModule, energyModule, historyModule, securityModule, mainTabsModule, countingHome) } }
 
     private fun showApp() {
         compose.setContent { KoinIsolatedContext(koinApp) { NidooApp() } }
@@ -276,7 +280,7 @@ class NidooAppTest {
         demoHome()
         compose.onNodeWithText("Home").assertExists()
         compose.onNodeWithText("Energy").assertExists()
-        compose.onNodeWithText("Security").assertDoesNotExist()
+        compose.onNodeWithText("Security").assertExists()
         compose.onNodeWithText("Energy").performClick()
         // Energy's own content (its empty state's button, or the live subtitle) shows, and Home's gear is gone.
         compose.waitUntil(5_000) {
@@ -285,6 +289,18 @@ class NidooAppTest {
         }
         assertTrue(compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Home").performClick()
+        waitForHome()
+    }
+
+    @Test
+    fun securityTabOpensSecurity() {
+        demoHome()
+        compose.onNodeWithText("Security").performClick()
+        // The tab label and the screen title both read "Security"; the Security screen has its own content and Home's gear is gone.
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Security").fetchSemanticsNodes().size >= 2 }
+        assertTrue(compose.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty())
+        // Security's room chips include a "Home" chip, so pick the tab by its role.
+        compose.onNode(hasText("Home") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)).performClick()
         waitForHome()
     }
 
